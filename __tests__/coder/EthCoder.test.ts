@@ -34,6 +34,12 @@ describe('EthCoder', () => {
       )
     })
 
+    test('encode empty list', () => {
+      const list = List.from(Bytes, [])
+
+      EthCoder.encode(list)
+    })
+
     test('encode list of struct', () => {
       const factory = {
         default: () =>
