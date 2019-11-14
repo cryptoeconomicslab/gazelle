@@ -47,5 +47,24 @@ describe('RangeRecord', () => {
       const rangeRecord = new RangeRecord(100, 200, testValue)
       expect(rangeRecord.intersect(0, 300)).toBeTruthy()
     })
+    // other exceptions
+    it('throw error when start or end is negative value', () => {
+      const rangeRecord = new RangeRecord(100, 200, testValue)
+      expect(() => {
+        rangeRecord.intersect(-100, 100)
+      }).toThrow('start must not be negative value.')
+      expect(() => {
+        rangeRecord.intersect(-200, -100)
+      }).toThrow('start must not be negative value.')
+    })
+    it('throw error when end is greater than start', () => {
+      const rangeRecord = new RangeRecord(100, 200, testValue)
+      expect(() => {
+        rangeRecord.intersect(500, 200)
+      }).toThrow('end must be greater than start.')
+      expect(() => {
+        rangeRecord.intersect(-200, -500)
+      }).toThrow('end must be greater than start.')
+    })
   })
 })

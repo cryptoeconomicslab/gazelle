@@ -23,6 +23,12 @@ export class RangeRecord {
     )
   }
   public intersect(start: number, end: number): boolean {
+    if (end <= start) {
+      throw new Error('end must be greater than start.')
+    }
+    if (start < 0) {
+      throw new Error('start must not be negative value.')
+    }
     const maxStart = Math.max(this.start, start)
     const maxEnd = Math.min(this.end, end)
     return maxStart < maxEnd
