@@ -12,3 +12,6 @@ CHANGELOG.md
 coverage.json
 lcov.info
 dist
+
+# vscode
+.vscode
