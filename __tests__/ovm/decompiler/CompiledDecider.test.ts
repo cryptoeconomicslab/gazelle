@@ -22,7 +22,7 @@ describe('CompiledDecider', () => {
     // Sets instance of CompiledDecider TestF
     const compiledDecider = new CompiledDecider(
       TestPredicateAddress,
-      new CompiledPredicate(testSource, deciderManager)
+      new CompiledPredicate(testSource)
     )
     deciderManager.setDecider(TestPredicateAddress, compiledDecider)
 

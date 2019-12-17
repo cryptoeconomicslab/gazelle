@@ -17,7 +17,8 @@ export class CompiledDecider implements Decider {
     const property = this.predicateSource.instantiate(
       inputs[0].intoString(),
       this.originalAddress,
-      inputs
+      inputs,
+      manager.predicateAddressTable
     )
     return manager.decide(property, substitutions)
   }

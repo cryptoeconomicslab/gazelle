@@ -1,13 +1,17 @@
-import { Property } from '../../../src/ovm/types'
+import { Property, FreeVariable } from '../../../src/ovm/types'
 import { Address, Bytes, Integer } from '../../../src/types/Codables'
 import {
   initializeDeciderManager,
   ForAllSuchThatDeciderAddress,
-  LessThanQuantifierAddress
+  LessThanQuantifierAddress,
+  ThereExistsSuchThatDeciderAddress,
+  IsValidSignatureDeciderAddress
 } from '../helpers/initiateDeciderManager'
 import { CompiledPredicate } from '../../../src/ovm/decompiler/CompiledPredicate'
 import Coder from '../../../src/coder'
 import { testSource } from './TestSource'
+import { ethers } from 'ethers'
+import { decodeStructable } from '../../../src/utils/DecoderUtil'
 
 describe('CompiledPredicate', () => {
   const TestPredicateAddress = Address.from(
@@ -17,12 +21,13 @@ describe('CompiledPredicate', () => {
   const deciderManager = initializeDeciderManager()
 
   it('return Property', async () => {
-    const compiledPredicate = new CompiledPredicate(testSource, deciderManager)
+    const compiledPredicate = new CompiledPredicate(testSource)
     // Create an instance of compiled predicate "TestF(TestF, 10)".
     const property = compiledPredicate.instantiate(
       'TestF',
       TestPredicateAddress,
-      [Bytes.fromString('TestF'), Coder.encode(Integer.from(10))]
+      [Bytes.fromString('TestF'), Coder.encode(Integer.from(10))],
+      deciderManager.predicateAddressTable
     )
 
     expect(property).toEqual({
@@ -45,12 +50,46 @@ describe('CompiledPredicate', () => {
   })
 
   it('throw exception because the name is not found', async () => {
-    const compiledPredicate = new CompiledPredicate(testSource, deciderManager)
+    const compiledPredicate = new CompiledPredicate(testSource)
     expect(() => {
-      compiledPredicate.instantiate('NotFound', TestPredicateAddress, [
-        Bytes.fromString('TestF'),
-        Coder.encode(Integer.from(10))
-      ])
+      compiledPredicate.instantiate(
+        'NotFound',
+        TestPredicateAddress,
+        [Bytes.fromString('TestF'), Coder.encode(Integer.from(10))],
+        deciderManager.predicateAddressTable
+      )
     }).toThrowError('cannot find NotFound in contracts')
+  })
+
+  it('fromSource', async () => {
+    const compiledPredicate = CompiledPredicate.fromSource(
+      'def ownership(owner, tx) := SignedBy(tx, owner)'
+    )
+    // Create an instance of compiled predicate "Ownership(owner, tx)".
+    const property = compiledPredicate.instantiate(
+      'OwnershipT',
+      TestPredicateAddress,
+      [
+        Bytes.fromString('OwnershipT'),
+        Bytes.fromHexString('0x0012'),
+        Bytes.fromHexString(ethers.constants.AddressZero)
+      ],
+      deciderManager.predicateAddressTable
+    )
+
+    expect(property).toEqual({
+      deciderAddress: ThereExistsSuchThatDeciderAddress,
+      inputs: [
+        Bytes.fromString('key:signatures:0x0012'),
+        Bytes.fromString('sig'),
+        Coder.encode(
+          new Property(IsValidSignatureDeciderAddress, [
+            Bytes.fromHexString('0x0012'),
+            Bytes.fromHexString(ethers.constants.AddressZero),
+            FreeVariable.from('sig')
+          ]).toStruct()
+        )
+      ]
+    })
   })
 })

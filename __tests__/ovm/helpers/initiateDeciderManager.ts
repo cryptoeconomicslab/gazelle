@@ -120,7 +120,8 @@ export function initializeDeciderManager() {
   )
   deciderManager.setDecider(
     IsValidSignatureDeciderAddress,
-    new IsValidSignatureDecider()
+    new IsValidSignatureDecider(),
+    AtomicPredicate.IsValidSignature
   )
   deciderManager.setDecider(
     EqualDeciderAddress,

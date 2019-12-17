@@ -65,11 +65,11 @@ export class FreeVariable {
 }
 
 export enum LogicalConnective {
-  And,
-  ForAllSuchThat,
-  Not,
-  Or,
-  ThereExistsSuchThat
+  And = 'And',
+  ForAllSuchThat = 'ForAllSuchThat',
+  Not = 'Not',
+  Or = 'Or',
+  ThereExistsSuchThat = 'ThereExistsSuchThat'
 }
 
 export enum AtomicPredicate {

@@ -29,7 +29,7 @@ export class DeciderManager implements DeciderManagerInterface {
   constructor(witnessDb: KeyValueStore) {
     this.witnessDb = witnessDb
     this.deciders = new Map<string, Decider>()
-    this.operators = new Map<LogicalConnective, Address>()
+    this.operators = new Map<LogicalConnective | AtomicPredicate, Address>()
     this.quantifiers = new Map<string, Quantifier>()
   }
   /**
@@ -73,6 +73,13 @@ export class DeciderManager implements DeciderManagerInterface {
       throw new Error("initialization isn't done")
     }
   }
+  public get predicateAddressTable(): Map<
+    LogicalConnective | AtomicPredicate,
+    Address
+  > {
+    return this.operators
+  }
+
   /**
    * Sets quantifier with address
    * @param address

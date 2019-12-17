@@ -5,10 +5,11 @@ import {
   convertStringToAtomicPredicate,
   FreeVariable
 } from '../types'
-import { transpiler } from 'ovm-compiler'
+import { parser, transpiler } from 'ovm-compiler'
 import { DeciderManager } from '../DeciderManager'
 import Coder from '../../coder'
 import { replaceHint } from '../deciders/getWitnesses'
+import { LogicalConnective, AtomicPredicate } from '../types'
 
 /**
  * When we have a property below, We can use CompiledPredicate  class to make a property from predicate and concrete inputs.
@@ -28,24 +29,38 @@ import { replaceHint } from '../deciders/getWitnesses'
  */
 export class CompiledPredicate {
   compiled: transpiler.CompiledPredicate
-  manager: DeciderManager
-  constructor(compiled: transpiler.CompiledPredicate, manager: DeciderManager) {
+
+  constructor(compiled: transpiler.CompiledPredicate) {
     this.compiled = compiled
-    this.manager = manager
   }
+
+  static fromSource(source: string): CompiledPredicate {
+    const propertyParser = new parser.Parser()
+    return new CompiledPredicate(
+      transpiler.transpilePropertyDefsToCompiledPredicate(
+        propertyParser.parse(source)
+      )[0]
+    )
+  }
+
   instantiate(
     name: string,
     originalAddress: Address,
-    inputs: Bytes[]
+    inputs: Bytes[],
+    predicateTable: Map<LogicalConnective | AtomicPredicate, Address>
   ): Property {
     const c = this.compiled.contracts.find(c => c.definition.name == name)
     if (!c) {
       throw new Error(`cannot find ${name} in contracts`)
     }
 
-    const predicateAddress = this.manager.getDeciderAddress(
+    const predicateAddress = predicateTable.get(
       convertStringToLogicalConnective(c.definition.predicate)
     )
+
+    if (predicateAddress === undefined) {
+      throw new Error(`predicateAddress ${c.definition.predicate} not found`)
+    }
 
     return new Property(
       predicateAddress,
@@ -63,16 +78,24 @@ export class CompiledPredicate {
           }
           return Bytes.fromString(i)
         } else if (i.predicate.type == 'AtomicPredicate') {
-          let atomicPredicateAddress: Address
+          let atomicPredicateAddress: Address | undefined
           const atomicPredicate = convertStringToAtomicPredicate(
             i.predicate.source
           )
           if (atomicPredicate) {
-            atomicPredicateAddress = this.manager.getDeciderAddress(
-              atomicPredicate
-            )
+            atomicPredicateAddress = predicateTable.get(atomicPredicate)
+            if (predicateAddress === undefined) {
+              throw new Error(
+                `predicateAddress ${c.definition.predicate} not found`
+              )
+            }
           } else {
             atomicPredicateAddress = originalAddress
+          }
+          if (atomicPredicateAddress === undefined) {
+            throw new Error(
+              `predicateAddress ${atomicPredicateAddress} not found`
+            )
           }
           return Coder.encode(
             this.createChildProperty(
