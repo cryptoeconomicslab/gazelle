@@ -9,6 +9,8 @@ import { parser, transpiler } from 'ovm-compiler'
 import Coder from '../../coder'
 import { replaceHint } from '../deciders/getWitnesses'
 import { LogicalConnective, AtomicPredicate } from '../types'
+import { decodeStructable } from '../../utils/DecoderUtil'
+import { NormalInput } from 'ovm-compiler/dist/transpiler'
 
 /**
  * When we have a property below, We can use CompiledPredicate  class to make a property from predicate and concrete inputs.
@@ -46,7 +48,8 @@ export class CompiledPredicate {
 
   instantiate(
     compiledProperty: Property,
-    predicateTable: Map<LogicalConnective | AtomicPredicate, Address>
+    predicateTable: Map<LogicalConnective | AtomicPredicate, Address>,
+    constantTable: { [key: string]: Bytes } = {}
   ): Property {
     const name: string = compiledProperty.inputs[0].intoString()
     const originalAddress: Address = compiledProperty.deciderAddress
@@ -105,9 +108,25 @@ export class CompiledPredicate {
             this.createChildProperty(
               atomicPredicateAddress,
               i,
-              compiledProperty.inputs
+              compiledProperty.inputs,
+              originalAddress,
+              constantTable
             ).toStruct()
           )
+        } else if (i.predicate.type == 'InputPredicate') {
+          const property = decodeStructable(
+            Property,
+            Coder,
+            compiledProperty.inputs[i.predicate.source.inputIndex]
+          )
+          const extraInputBytes = i.inputs.map(
+            i => compiledProperty.inputs[(i as NormalInput).inputIndex]
+          )
+          property.inputs = property.inputs.concat(extraInputBytes)
+          return Coder.encode(property.toStruct())
+        } else if (i.predicate.type == 'VariablePredicate') {
+          // When predicateDef has VariablePredicate, inputs[1] must be variable name
+          return FreeVariable.from(c.definition.inputs[1] as string)
         } else {
           throw new Error('predicate must be atomic or string')
         }
@@ -124,22 +143,47 @@ export class CompiledPredicate {
   private createChildProperty(
     atomicPredicateAddress: Address,
     proposition: transpiler.AtomicProposition,
-    inputs: Bytes[]
+    inputs: Bytes[],
+    selfAddress: Address,
+    constantsTable: { [key: string]: Bytes }
   ): Property {
     return new Property(
       atomicPredicateAddress,
       proposition.inputs.map(i => {
         if (i.type == 'NormalInput') {
-          return inputs[i.inputIndex]
+          return this.constructInput(inputs[i.inputIndex], i.children)
         } else if (i.type == 'VariableInput') {
           return FreeVariable.from(i.placeholder)
         } else if (i.type == 'LabelInput') {
           return Bytes.fromString(i.label)
+        } else if (i.type == 'ConstantInput') {
+          const constVar = constantsTable[i.name]
+          if (constVar === undefined) {
+            throw new Error(`constant value ${i.name} not found.`)
+          }
+          return constantsTable[i.name]
+        } else if (i.type == 'SelfInput') {
+          return Bytes.fromHexString(selfAddress.data)
         } else {
           throw new Error(`${i} has unknow type`)
         }
       })
     )
+  }
+
+  private constructInput(anInput: Bytes, children: number[]): Bytes {
+    if (children.length == 0) {
+      return anInput
+    }
+    const property = decodeStructable(Property, Coder, anInput)
+    if (children[0] == -1) {
+      return Bytes.fromHexString(property.deciderAddress.data)
+    } else {
+      return this.constructInput(
+        property.inputs[children[0]],
+        children.slice(1)
+      )
+    }
   }
 
   private createSubstitutions(
