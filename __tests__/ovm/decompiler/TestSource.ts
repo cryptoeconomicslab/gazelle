@@ -57,5 +57,6 @@ export const testSource: transpiler.CompiledPredicate = {
         propertyInputs: []
       }
     }
-  ]
+  ],
+  entryPoint: 'TestF'
 }

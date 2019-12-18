@@ -73,8 +73,8 @@ describe('CompiledPredicate', () => {
     // Create an instance of compiled predicate "Ownership(owner, tx)".
     const ownershipProperty = new Property(TestPredicateAddress, [
       Bytes.fromString('OwnershipT'),
-      Bytes.fromHexString('0x0012'),
-      Bytes.fromHexString(ethers.constants.AddressZero)
+      Bytes.fromHexString(ethers.constants.AddressZero),
+      Bytes.fromHexString('0x0012')
     ])
     // Decompile "Ownership(owner, tx)" to "SignedBy(tx, owner)".
     const property = compiledPredicate.instantiate(
@@ -85,7 +85,7 @@ describe('CompiledPredicate', () => {
     expect(property).toEqual({
       deciderAddress: ThereExistsSuchThatDeciderAddress,
       inputs: [
-        Bytes.fromString('key:signatures:0x0012'),
+        Bytes.fromString('key,signatures,0x0012'),
         Bytes.fromString('sig'),
         Coder.encode(
           new Property(IsValidSignatureDeciderAddress, [

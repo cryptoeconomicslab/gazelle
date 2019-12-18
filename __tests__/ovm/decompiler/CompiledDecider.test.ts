@@ -100,12 +100,6 @@ describe('CompiledDecider', () => {
       ]).toStruct()
     )
 
-    const resultOwnershipProperty = new Property(OwnershipPredicateAddress, [
-      Bytes.fromString('OwnershipT'),
-      transaction,
-      Bytes.fromHexString(ethers.constants.AddressZero)
-    ])
-
     const stateUpdateProperty = new Property(StateUpdatePredicateAddress, [
       Bytes.fromString('StateUpdateT'),
       Bytes.fromHexString(ethers.constants.AddressZero),
@@ -137,7 +131,7 @@ describe('CompiledDecider', () => {
       deciderAddress: ThereExistsSuchThatDeciderAddress,
       inputs: [
         Bytes.fromString(
-          'range:tx_block0x2235373222_range0x5b22313030222c2230225d:0x0000000000000000000000000000000000000000'
+          'range,tx.block0x2235373222.range0x0000000000000000000000000000000000000000,0x5b22313030222c2230225d'
         ),
         Bytes.fromString('tx'),
         Coder.encode(
@@ -186,13 +180,14 @@ describe('CompiledDecider', () => {
       ]
     })
 
-    /*
     const decision = await stateUpdateDecider.decide(
       deciderManager,
       stateUpdateProperty.inputs,
       {}
     )
-    console.log(decision)
-    */
+    expect(decision).toEqual({
+      outcome: false,
+      challenges: []
+    })
   })
 })
