@@ -53,22 +53,33 @@ export class CompiledPredicate {
   ): Property {
     const name: string = compiledProperty.inputs[0].intoString()
     const originalAddress: Address = compiledProperty.deciderAddress
-
-    const c = this.compiled.contracts.find(c => c.definition.name == name)
-    if (!c) {
-      throw new Error(`cannot find ${name} in contracts`)
+    const findContract = (name: string) => {
+      return this.compiled.contracts.find(c => c.definition.name == name)
     }
 
-    const logicalConnective = toLogicalConnective(c.definition.predicate)
+    let c = findContract(name)
+    if (!c) {
+      // If contract is not found, use entry point.
+      c = findContract(this.compiled.entryPoint)
+      compiledProperty.inputs.unshift(
+        Bytes.fromString(this.compiled.entryPoint)
+      )
+    }
+    if (c === undefined) {
+      throw new Error(`cannot find ${name} in contracts`)
+    }
+    const def = c.definition
+
+    const logicalConnective = toLogicalConnective(def.predicate)
     const predicateAddress = predicateTable.get(logicalConnective)
 
     if (predicateAddress === undefined) {
-      throw new Error(`predicateAddress ${c.definition.predicate} not found`)
+      throw new Error(`predicateAddress ${def.predicate} not found`)
     }
 
     return new Property(
       predicateAddress,
-      c.definition.inputs.map((i, index) => {
+      def.inputs.map((i, index) => {
         if (typeof i == 'string') {
           if (
             (logicalConnective == LogicalConnective.ForAllSuchThat ||
@@ -77,10 +88,7 @@ export class CompiledPredicate {
           ) {
             i = replaceHint(
               i,
-              this.createSubstitutions(
-                c.definition.inputDefs,
-                compiledProperty.inputs
-              )
+              this.createSubstitutions(def.inputDefs, compiledProperty.inputs)
             )
           }
           return Bytes.fromString(i)
@@ -92,9 +100,7 @@ export class CompiledPredicate {
           if (atomicPredicate) {
             atomicPredicateAddress = predicateTable.get(atomicPredicate)
             if (predicateAddress === undefined) {
-              throw new Error(
-                `predicateAddress ${c.definition.predicate} not found`
-              )
+              throw new Error(`predicateAddress ${def.predicate} not found`)
             }
           } else {
             atomicPredicateAddress = originalAddress
@@ -126,7 +132,7 @@ export class CompiledPredicate {
           return Coder.encode(property.toStruct())
         } else if (i.predicate.type == 'VariablePredicate') {
           // When predicateDef has VariablePredicate, inputs[1] must be variable name
-          return FreeVariable.from(c.definition.inputs[1] as string)
+          return FreeVariable.from(def.inputs[1] as string)
         } else {
           throw new Error('predicate must be atomic or string')
         }

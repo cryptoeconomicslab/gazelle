@@ -1,17 +1,22 @@
-import { Property, FreeVariable } from '../../../src/ovm/types'
+import { Property } from '../../../src/ovm/types'
 import { Address, Bytes, Integer, BigNumber } from '../../../src/types/Codables'
-import {
-  initializeDeciderManager,
-  ThereExistsSuchThatDeciderAddress,
-  AndDeciderAddress,
-  EqualDeciderAddress,
-  IsContainedDeciderAddress
-} from '../helpers/initiateDeciderManager'
+import { initializeDeciderManager } from '../helpers/initiateDeciderManager'
 import { CompiledDecider, CompiledPredicate } from '../../../src/ovm/decompiler'
 import Coder from '../../../src/coder'
 import { testSource } from './TestSource'
 import * as ethers from 'ethers'
 import { Range } from '../../../src/types'
+import { RangeDb } from '../../../src/db'
+import { SigningKey, arrayify, joinSignature, keccak256 } from 'ethers/utils'
+
+function sign(message: Bytes, privateKey: string): Bytes {
+  const signingKey = new SigningKey(arrayify(privateKey))
+  return Bytes.fromHexString(
+    joinSignature(
+      signingKey.signDigest(arrayify(keccak256(arrayify(message.data))))
+    )
+  )
+}
 
 describe('CompiledDecider', () => {
   const TestPredicateAddress = Address.from(
@@ -30,7 +35,8 @@ describe('CompiledDecider', () => {
     // Sets instance of CompiledDecider TestF
     const compiledDecider = new CompiledDecider(
       TestPredicateAddress,
-      new CompiledPredicate(testSource)
+      new CompiledPredicate(testSource),
+      {}
     )
     deciderManager.setDecider(TestPredicateAddress, compiledDecider)
 
@@ -48,6 +54,9 @@ describe('CompiledDecider', () => {
   })
 
   test('su', async () => {
+    const ownerAddress = '0x5640A00fAE03fa40d527C27dc28E67dF140Fd995'
+    const privateKey =
+      '0x27c1fd11b5802634df90c30a2ae8eb6c22c3b5523115a2d8aa6de81fc01024f7'
     const OwnershipPredicateAddress = Address.from(
       '0x0250035000301010002000900380007500060002'
     )
@@ -58,6 +67,7 @@ describe('CompiledDecider', () => {
       '0x0250035000301010036208200380007500060005'
     )
     const constantVariableTable = {
+      secp256k1: Bytes.fromString('secp256k1'),
       TransactionAddress: Bytes.fromHexString(TransactionPredicateAddress.data)
     }
     const token = Bytes.fromHexString(ethers.constants.AddressZero)
@@ -77,18 +87,20 @@ describe('CompiledDecider', () => {
     )
     const ownershipDecider = new CompiledDecider(
       OwnershipPredicateAddress,
-      ownershipPredicate
+      ownershipPredicate,
+      constantVariableTable
     )
     const stateUpdateDecider = new CompiledDecider(
       StateUpdatePredicateAddress,
-      stateUpdatePredicate
+      stateUpdatePredicate,
+      constantVariableTable
     )
     deciderManager.setDecider(OwnershipPredicateAddress, ownershipDecider)
     deciderManager.setDecider(StateUpdatePredicateAddress, stateUpdateDecider)
 
     // Create an instance of compiled predicate "Ownership(owner, tx)".
     const ownershipProperty = new Property(OwnershipPredicateAddress, [
-      Bytes.fromHexString(ethers.constants.AddressZero)
+      Bytes.fromHexString(ownerAddress)
     ])
 
     const transaction = Coder.encode(
@@ -107,78 +119,20 @@ describe('CompiledDecider', () => {
       Coder.encode(BigNumber.from(572)),
       Coder.encode(ownershipProperty.toStruct())
     ])
-    const stateUpdateTAProperty = new Property(StateUpdatePredicateAddress, [
-      Bytes.fromString('StateUpdateTA'),
-      transaction,
-      Bytes.fromHexString(ethers.constants.AddressZero),
-      range,
-      Coder.encode(BigNumber.from(572)),
-      Coder.encode(ownershipProperty.toStruct())
-    ])
 
-    // Decompile StateUpdate
-    const property = stateUpdatePredicate.instantiate(
-      stateUpdateProperty,
-      deciderManager.predicateAddressTable
+    const rangeDb = new RangeDb(deciderManager.witnessDb)
+    const txBucket = await rangeDb.bucket(Bytes.fromString('tx'))
+    const blockBucket = await txBucket.bucket(
+      Bytes.fromString('block0x2235373222')
     )
-    const propertyTA = stateUpdatePredicate.instantiate(
-      stateUpdateTAProperty,
-      deciderManager.predicateAddressTable,
-      constantVariableTable
+    const rangeBucket = await blockBucket.bucket(
+      Bytes.fromString('range0x0000000000000000000000000000000000000000')
     )
-
-    expect(property).toEqual({
-      deciderAddress: ThereExistsSuchThatDeciderAddress,
-      inputs: [
-        Bytes.fromString(
-          'range,tx.block0x2235373222.range0x0000000000000000000000000000000000000000,0x5b22313030222c2230225d'
-        ),
-        Bytes.fromString('tx'),
-        Coder.encode(
-          new Property(StateUpdatePredicateAddress, [
-            Bytes.fromString('StateUpdateTA'),
-            FreeVariable.from('tx'),
-            Bytes.fromHexString(ethers.constants.AddressZero),
-            range,
-            Coder.encode(BigNumber.from(572)),
-            Coder.encode(ownershipProperty.toStruct())
-          ]).toStruct()
-        )
-      ]
-    })
-
-    expect(propertyTA).toEqual({
-      deciderAddress: AndDeciderAddress,
-      inputs: [
-        Coder.encode(
-          new Property(EqualDeciderAddress, [
-            Bytes.fromHexString(TransactionPredicateAddress.data),
-            Bytes.fromHexString(TransactionPredicateAddress.data)
-          ]).toStruct()
-        ),
-        Coder.encode(
-          new Property(EqualDeciderAddress, [
-            Bytes.fromHexString(ethers.constants.AddressZero),
-            Bytes.fromHexString(ethers.constants.AddressZero)
-          ]).toStruct()
-        ),
-        Coder.encode(
-          new Property(IsContainedDeciderAddress, [range, range]).toStruct()
-        ),
-        Coder.encode(
-          new Property(EqualDeciderAddress, [
-            Coder.encode(BigNumber.from(572)),
-            Coder.encode(BigNumber.from(572))
-          ]).toStruct()
-        ),
-        Coder.encode(
-          new Property(OwnershipPredicateAddress, [
-            Bytes.fromHexString(ethers.constants.AddressZero),
-            transaction
-          ]).toStruct()
-        )
-      ]
-    })
+    await rangeBucket.put(0n, 100n, transaction)
+    const signature = sign(transaction, privateKey)
+    await (await deciderManager.witnessDb.bucket(
+      Bytes.fromString('signatures')
+    )).put(transaction, signature)
 
     const decision = await stateUpdateDecider.decide(
       deciderManager,
@@ -186,7 +140,7 @@ describe('CompiledDecider', () => {
       {}
     )
     expect(decision).toEqual({
-      outcome: false,
+      outcome: true,
       challenges: []
     })
   })

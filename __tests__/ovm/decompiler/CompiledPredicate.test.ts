@@ -19,6 +19,10 @@ describe('CompiledPredicate', () => {
 
   const deciderManager = initializeDeciderManager()
 
+  const constantValTable = {
+    secp256k1: Bytes.fromString('secp256k1')
+  }
+
   it('return Property', async () => {
     // Create predicate from "def Test(a) = for b in LessThan(a) {Bool(b) and Bool(b)}".
     const compiledPredicate = new CompiledPredicate(testSource)
@@ -30,7 +34,8 @@ describe('CompiledPredicate', () => {
     // decompile property "TestF(TestF, 10)" to "for b in LessThan(a) {Bool(b) and Bool(b)}".
     const property = compiledPredicate.instantiate(
       compiledProperty,
-      deciderManager.predicateAddressTable
+      deciderManager.predicateAddressTable,
+      constantValTable
     )
 
     expect(property).toEqual({
@@ -52,6 +57,7 @@ describe('CompiledPredicate', () => {
     })
   })
 
+  /*
   it('throw exception because the name is not found', async () => {
     const compiledPredicate = new CompiledPredicate(testSource)
     expect(() => {
@@ -64,6 +70,7 @@ describe('CompiledPredicate', () => {
       )
     }).toThrowError('cannot find NotFound in contracts')
   })
+  */
 
   it('fromSource', async () => {
     // Create predicate from "def ownership(owner, tx) := SignedBy(tx, owner)".
@@ -79,19 +86,21 @@ describe('CompiledPredicate', () => {
     // Decompile "Ownership(owner, tx)" to "SignedBy(tx, owner)".
     const property = compiledPredicate.instantiate(
       ownershipProperty,
-      deciderManager.predicateAddressTable
+      deciderManager.predicateAddressTable,
+      constantValTable
     )
 
     expect(property).toEqual({
       deciderAddress: ThereExistsSuchThatDeciderAddress,
       inputs: [
-        Bytes.fromString('key,signatures,0x0012'),
+        Bytes.fromString('signatures,KEY,0x0012'),
         Bytes.fromString('sig'),
         Coder.encode(
           new Property(IsValidSignatureDeciderAddress, [
             Bytes.fromHexString('0x0012'),
+            FreeVariable.from('sig'),
             Bytes.fromHexString(ethers.constants.AddressZero),
-            FreeVariable.from('sig')
+            Bytes.fromString('secp256k1')
           ]).toStruct()
         )
       ]
