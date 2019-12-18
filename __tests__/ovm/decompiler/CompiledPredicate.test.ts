@@ -11,7 +11,6 @@ import { CompiledPredicate } from '../../../src/ovm/decompiler/CompiledPredicate
 import Coder from '../../../src/coder'
 import { testSource } from './TestSource'
 import { ethers } from 'ethers'
-import { decodeStructable } from '../../../src/utils/DecoderUtil'
 
 describe('CompiledPredicate', () => {
   const TestPredicateAddress = Address.from(
@@ -21,12 +20,16 @@ describe('CompiledPredicate', () => {
   const deciderManager = initializeDeciderManager()
 
   it('return Property', async () => {
+    // Create predicate from "def Test(a) = for b in LessThan(a) {Bool(b) and Bool(b)}".
     const compiledPredicate = new CompiledPredicate(testSource)
-    // Create an instance of compiled predicate "TestF(TestF, 10)".
+    // Create an property of compiled predicate "TestF(TestF, 10)".
+    const compiledProperty = new Property(TestPredicateAddress, [
+      Bytes.fromString('TestF'),
+      Coder.encode(Integer.from(10))
+    ])
+    // decompile property "TestF(TestF, 10)" to "for b in LessThan(a) {Bool(b) and Bool(b)}".
     const property = compiledPredicate.instantiate(
-      'TestF',
-      TestPredicateAddress,
-      [Bytes.fromString('TestF'), Coder.encode(Integer.from(10))],
+      compiledProperty,
       deciderManager.predicateAddressTable
     )
 
@@ -53,27 +56,29 @@ describe('CompiledPredicate', () => {
     const compiledPredicate = new CompiledPredicate(testSource)
     expect(() => {
       compiledPredicate.instantiate(
-        'NotFound',
-        TestPredicateAddress,
-        [Bytes.fromString('TestF'), Coder.encode(Integer.from(10))],
+        new Property(TestPredicateAddress, [
+          Bytes.fromString('NotFound'),
+          Coder.encode(Integer.from(10))
+        ]),
         deciderManager.predicateAddressTable
       )
     }).toThrowError('cannot find NotFound in contracts')
   })
 
   it('fromSource', async () => {
+    // Create predicate from "def ownership(owner, tx) := SignedBy(tx, owner)".
     const compiledPredicate = CompiledPredicate.fromSource(
       'def ownership(owner, tx) := SignedBy(tx, owner)'
     )
     // Create an instance of compiled predicate "Ownership(owner, tx)".
+    const ownershipProperty = new Property(TestPredicateAddress, [
+      Bytes.fromString('OwnershipT'),
+      Bytes.fromHexString('0x0012'),
+      Bytes.fromHexString(ethers.constants.AddressZero)
+    ])
+    // Decompile "Ownership(owner, tx)" to "SignedBy(tx, owner)".
     const property = compiledPredicate.instantiate(
-      'OwnershipT',
-      TestPredicateAddress,
-      [
-        Bytes.fromString('OwnershipT'),
-        Bytes.fromHexString('0x0012'),
-        Bytes.fromHexString(ethers.constants.AddressZero)
-      ],
+      ownershipProperty,
       deciderManager.predicateAddressTable
     )
 

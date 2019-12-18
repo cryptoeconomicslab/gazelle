@@ -1,12 +1,11 @@
 import { Bytes, Address } from '../../types'
 import {
   Property,
-  convertStringToLogicalConnective,
+  convertStringToLogicalConnective as toLogicalConnective,
   convertStringToAtomicPredicate,
   FreeVariable
 } from '../types'
 import { parser, transpiler } from 'ovm-compiler'
-import { DeciderManager } from '../DeciderManager'
 import Coder from '../../coder'
 import { replaceHint } from '../deciders/getWitnesses'
 import { LogicalConnective, AtomicPredicate } from '../types'
@@ -22,9 +21,11 @@ import { LogicalConnective, AtomicPredicate } from '../types'
  * And it can instantiate property using Test.
  * ```
  * // For all b such that Q(b): Bool(10) and Bool(b)
- * compiledPredicate.instantiate('TestF', [10])
+ * const propertyTestF = new Property(TestPredicateAddress, ['TestF', 10])
+ * compiledPredicate.instantiate(propertyTestF)
  * // Bool(10) and Bool(5)
- * compiledPredicate.instantiate('TestFA', [10, 5])
+ * const propertyTestFA = new Property(TestPredicateAddress, ['TestFA', 10, 5])
+ * compiledPredicate.instantiate(propertyTestFA)
  * ```
  */
 export class CompiledPredicate {
@@ -44,19 +45,19 @@ export class CompiledPredicate {
   }
 
   instantiate(
-    name: string,
-    originalAddress: Address,
-    inputs: Bytes[],
+    compiledProperty: Property,
     predicateTable: Map<LogicalConnective | AtomicPredicate, Address>
   ): Property {
+    const name: string = compiledProperty.inputs[0].intoString()
+    const originalAddress: Address = compiledProperty.deciderAddress
+
     const c = this.compiled.contracts.find(c => c.definition.name == name)
     if (!c) {
       throw new Error(`cannot find ${name} in contracts`)
     }
 
-    const predicateAddress = predicateTable.get(
-      convertStringToLogicalConnective(c.definition.predicate)
-    )
+    const logicalConnective = toLogicalConnective(c.definition.predicate)
+    const predicateAddress = predicateTable.get(logicalConnective)
 
     if (predicateAddress === undefined) {
       throw new Error(`predicateAddress ${c.definition.predicate} not found`)
@@ -67,13 +68,16 @@ export class CompiledPredicate {
       c.definition.inputs.map((i, index) => {
         if (typeof i == 'string') {
           if (
-            (c.definition.predicate == 'ForAllSuchThat' ||
-              c.definition.predicate == 'ThereExistsSuchThat') &&
+            (logicalConnective == LogicalConnective.ForAllSuchThat ||
+              logicalConnective == LogicalConnective.ThereExistsSuchThat) &&
             index == 0
           ) {
             i = replaceHint(
               i,
-              this.createSubstitutions(c.definition.inputDefs, inputs)
+              this.createSubstitutions(
+                c.definition.inputDefs,
+                compiledProperty.inputs
+              )
             )
           }
           return Bytes.fromString(i)
@@ -101,7 +105,7 @@ export class CompiledPredicate {
             this.createChildProperty(
               atomicPredicateAddress,
               i,
-              inputs
+              compiledProperty.inputs
             ).toStruct()
           )
         } else {
