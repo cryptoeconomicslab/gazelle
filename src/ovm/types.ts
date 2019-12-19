@@ -73,16 +73,16 @@ export enum LogicalConnective {
 }
 
 export enum AtomicPredicate {
-  IsValidPreimage,
-  IsValidSignature,
-  VerifyInclusion,
-  IsLessThan,
-  Equal,
-  Within,
-  Bool,
-  LessThanQuantifier,
-  IsSameAmount,
-  IsContained
+  IsValidPreimage = 'IsValidPreimage',
+  IsValidSignature = 'IsValidSignature',
+  VerifyInclusion = 'VerifyInclusion',
+  IsLessThan = 'IsLessThan',
+  Equal = 'Equal',
+  Within = 'Within',
+  Bool = 'Bool',
+  LessThanQuantifier = 'LessThanQuantifier',
+  IsSameAmount = 'IsSameAmount',
+  IsContained = 'IsContained'
 }
 
 export function convertStringToLogicalConnective(

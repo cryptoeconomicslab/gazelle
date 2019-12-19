@@ -31,22 +31,48 @@ import { NormalInput } from 'ovm-compiler/dist/transpiler'
  * ```
  */
 export class CompiledPredicate {
+  // compiled property
   compiled: transpiler.CompiledPredicate
+  // original source code of property
+  source: string | null = null
 
-  constructor(compiled: transpiler.CompiledPredicate) {
+  constructor(
+    readonly deployedAddress: Address,
+    compiled: transpiler.CompiledPredicate,
+    source?: string
+  ) {
     this.compiled = compiled
+    this.deployedAddress = deployedAddress
+    if (source) {
+      this.source = source
+    }
   }
 
-  static fromSource(source: string): CompiledPredicate {
+  static fromSource(
+    deployedAddress: Address,
+    source: string
+  ): CompiledPredicate {
     const propertyParser = new parser.Parser()
     return new CompiledPredicate(
+      deployedAddress,
       transpiler.transpilePropertyDefsToCompiledPredicate(
         propertyParser.parse(source)
-      )[0]
+      )[0],
+      source
     )
   }
 
-  instantiate(
+  makeProperty(inputs: Bytes[]): Property {
+    return new Property(this.deployedAddress, inputs)
+  }
+
+  /**
+   * makeProperty instantiates decompiled property from compiled property
+   * @param compiledProperty
+   * @param predicateTable
+   * @param constantTable
+   */
+  decompileProperty(
     compiledProperty: Property,
     predicateTable: Map<LogicalConnective | AtomicPredicate, Address>,
     constantTable: { [key: string]: Bytes } = {}

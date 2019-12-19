@@ -1,11 +1,7 @@
 import { Property } from '../../../src/ovm/types'
 import { Address, Bytes, Integer, BigNumber } from '../../../src/types/Codables'
 import { initializeDeciderManager } from '../helpers/initiateDeciderManager'
-import {
-  CompiledDecider,
-  CompiledPredicate,
-  PredicateRegistry
-} from '../../../src/ovm/decompiler'
+import { CompiledDecider, CompiledPredicate } from '../../../src/ovm/decompiler'
 import Coder from '../../../src/coder'
 import { testSource } from './TestSource'
 import * as ethers from 'ethers'
@@ -38,8 +34,7 @@ describe('CompiledDecider', () => {
 
     // Sets instance of CompiledDecider TestF
     const compiledDecider = new CompiledDecider(
-      TestPredicateAddress,
-      new CompiledPredicate(testSource),
+      new CompiledPredicate(TestPredicateAddress, testSource),
       {}
     )
     deciderManager.setDecider(TestPredicateAddress, compiledDecider)
@@ -82,25 +77,32 @@ describe('CompiledDecider', () => {
     const blockNumber = Coder.encode(BigNumber.from(572))
 
     // Registering Ownership Predicate
-    PredicateRegistry.registerDecider(
-      deciderManager,
+    const ownershipPredicate = CompiledPredicate.fromSource(
       OwnershipPredicateAddress,
-      'def ownership(owner, tx) := SignedBy(tx, owner)',
+      'def ownership(owner, tx) := SignedBy(tx, owner)'
+    )
+    const ownershipDecider = new CompiledDecider(
+      ownershipPredicate,
       constantVariableTable
     )
+    deciderManager.setDecider(OwnershipPredicateAddress, ownershipDecider)
+
     // Registering StateUpdate Predicate
-    const stateUpdateDecider = PredicateRegistry.registerDecider(
-      deciderManager,
+    const stateUpdatePredicate = CompiledPredicate.fromSource(
       StateUpdatePredicateAddress,
       `def stateUpdate(token, range, block_number, so) :=
       with Tx(token, range, block_number) as tx {
         so(tx)
-      }`,
+      }`
+    )
+    const stateUpdateDecider = new CompiledDecider(
+      stateUpdatePredicate,
       constantVariableTable
     )
+    deciderManager.setDecider(StateUpdatePredicateAddress, stateUpdateDecider)
 
     // Create an instance of compiled predicate "Ownership(owner, tx)".
-    const ownershipProperty = new Property(OwnershipPredicateAddress, [
+    const ownershipProperty = ownershipPredicate.makeProperty([
       Bytes.fromHexString(ownerAddress)
     ])
 
@@ -113,7 +115,7 @@ describe('CompiledDecider', () => {
       ]).toStruct()
     )
 
-    const stateUpdateProperty = new Property(StateUpdatePredicateAddress, [
+    const stateUpdateProperty = stateUpdatePredicate.makeProperty([
       Bytes.fromString('StateUpdateT'),
       Bytes.fromHexString(ethers.constants.AddressZero),
       range,

@@ -25,14 +25,17 @@ describe('CompiledPredicate', () => {
 
   it('return Property', async () => {
     // Create predicate from "def Test(a) = for b in LessThan(a) {Bool(b) and Bool(b)}".
-    const compiledPredicate = new CompiledPredicate(testSource)
+    const compiledPredicate = new CompiledPredicate(
+      TestPredicateAddress,
+      testSource
+    )
     // Create an property of compiled predicate "TestF(TestF, 10)".
     const compiledProperty = new Property(TestPredicateAddress, [
       Bytes.fromString('TestF'),
       Coder.encode(Integer.from(10))
     ])
     // decompile property "TestF(TestF, 10)" to "for b in LessThan(a) {Bool(b) and Bool(b)}".
-    const property = compiledPredicate.instantiate(
+    const property = compiledPredicate.decompileProperty(
       compiledProperty,
       deciderManager.predicateAddressTable,
       constantValTable
@@ -75,6 +78,7 @@ describe('CompiledPredicate', () => {
   it('fromSource', async () => {
     // Create predicate from "def ownership(owner, tx) := SignedBy(tx, owner)".
     const compiledPredicate = CompiledPredicate.fromSource(
+      TestPredicateAddress,
       'def ownership(owner, tx) := SignedBy(tx, owner)'
     )
     // Create an instance of compiled predicate "Ownership(owner, tx)".
@@ -84,7 +88,7 @@ describe('CompiledPredicate', () => {
       Bytes.fromHexString('0x0012')
     ])
     // Decompile "Ownership(owner, tx)" to "SignedBy(tx, owner)".
-    const property = compiledPredicate.instantiate(
+    const property = compiledPredicate.decompileProperty(
       ownershipProperty,
       deciderManager.predicateAddressTable,
       constantValTable

@@ -6,7 +6,6 @@ import { CompiledPredicate } from './CompiledPredicate'
 
 export class CompiledDecider implements Decider {
   constructor(
-    private originalAddress: Address,
     private predicateSource: CompiledPredicate,
     readonly constantTable: { [key: string]: Bytes } = {}
   ) {}
@@ -15,8 +14,8 @@ export class CompiledDecider implements Decider {
     inputs: Bytes[],
     substitutions: { [key: string]: Bytes } = {}
   ): Promise<Decision> {
-    const property = this.predicateSource.instantiate(
-      new Property(this.originalAddress, inputs),
+    const property = this.predicateSource.decompileProperty(
+      new Property(this.predicateSource.deployedAddress, inputs),
       manager.predicateAddressTable,
       this.constantTable
     )
