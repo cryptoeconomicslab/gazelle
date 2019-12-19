@@ -13,48 +13,93 @@ import {
   IsSameAmountDecider,
   IsContainedDecider
 } from './deciders'
-import { LogicalConnective, AtomicPredicate } from './types'
+import {
+  LogicalConnective,
+  LogicalConnectiveStrings,
+  AtomicPredicate,
+  AtomicPredicateStrings,
+  convertStringToLogicalConnective,
+  convertStringToAtomicPredicate
+} from './types'
 import { Address, Bytes } from '../types/Codables'
 import { Decider } from './interfaces/Decider'
 import { CompiledPredicate, CompiledDecider } from './decompiler'
 
-export function initializeDeciders(
+const deciders: { [key: string]: Decider } = {
+  And: new AndDecider(),
+  Or: new OrDecider(),
+  Not: new NotDecider(),
+  ForAllSuchThat: new ForAllSuchThatDecider(),
+  ThereExistsSuchThat: new ThereExistsSuchThatDecider(),
+  Bool: new SampleDecider(),
+  IsContained: new IsContainedDecider(),
+  Equal: new EqualDecider(),
+  IsLessThan: new IsLessThanDecider(),
+  IsValidSignature: new IsValidSignatureDecider(),
+  IsSameAmount: new IsSameAmountDecider(),
+  IsValidPreimage: new IsLessThanDecider()
+}
+
+export interface InitilizationConfig {
+  logicalConnectiveAddressTable: {
+    [key: string]: Address
+  }
+  atomicPredicateAddressTable: {
+    [key: string]: Address
+  }
+  deployedPredicateTable: { deployedAddress: Address; source: string }[]
+  constantVariableTable: { [key: string]: Bytes }
+}
+
+export function initialize(
   deciderManager: DeciderManager,
-  predicateAddressTable: {
+  config: InitilizationConfig
+) {
+  initializeDeciders(
+    deciderManager,
+    config.logicalConnectiveAddressTable,
+    config.atomicPredicateAddressTable
+  )
+  initializeCompiledPredicates(
+    deciderManager,
+    config.deployedPredicateTable,
+    config.constantVariableTable
+  )
+}
+
+function initializeDeciders(
+  deciderManager: DeciderManager,
+  logicalConnectiveAddressTable: {
+    [key: string]: Address
+  },
+  atomicPredicateAddressTable: {
     [key: string]: Address
   }
 ) {
   const registerDecider = (
     predicateName: AtomicPredicate | LogicalConnective,
+    deployedAddress: Address,
     decider: Decider
   ) => {
-    deciderManager.setDecider(
-      predicateAddressTable[predicateName],
-      decider,
-      predicateName
+    deciderManager.setDecider(deployedAddress, decider, predicateName)
+  }
+  for (let name in logicalConnectiveAddressTable) {
+    registerDecider(
+      convertStringToLogicalConnective(name as LogicalConnectiveStrings),
+      logicalConnectiveAddressTable[name],
+      deciders[name]
     )
   }
-  registerDecider(LogicalConnective.And, new AndDecider())
-  registerDecider(LogicalConnective.Or, new OrDecider())
-  registerDecider(LogicalConnective.Not, new NotDecider())
-  registerDecider(LogicalConnective.ForAllSuchThat, new ForAllSuchThatDecider())
-  registerDecider(
-    LogicalConnective.ThereExistsSuchThat,
-    new ThereExistsSuchThatDecider()
-  )
-  registerDecider(AtomicPredicate.Bool, new SampleDecider())
-  registerDecider(AtomicPredicate.IsContained, new IsContainedDecider())
-  registerDecider(AtomicPredicate.Equal, new EqualDecider())
-  registerDecider(AtomicPredicate.IsLessThan, new IsLessThanDecider())
-  registerDecider(
-    AtomicPredicate.IsValidSignature,
-    new IsValidSignatureDecider()
-  )
-  registerDecider(AtomicPredicate.IsSameAmount, new IsSameAmountDecider())
-  registerDecider(AtomicPredicate.IsValidPreimage, new IsHashPreimageDecider())
+  for (let name in atomicPredicateAddressTable) {
+    registerDecider(
+      convertStringToAtomicPredicate(name as AtomicPredicateStrings),
+      atomicPredicateAddressTable[name],
+      deciders[name]
+    )
+  }
 }
 
-export function initializeCompiledPredicates(
+function initializeCompiledPredicates(
   deciderManager: DeciderManager,
   deployedPredicateTable: { deployedAddress: Address; source: string }[],
   constantVariableTable: { [key: string]: Bytes }
