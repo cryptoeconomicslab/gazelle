@@ -3,7 +3,9 @@ import {
   Property,
   convertStringToLogicalConnective as toLogicalConnective,
   convertStringToAtomicPredicate,
-  FreeVariable
+  FreeVariable,
+  LogicalConnectiveStrings,
+  AtomicPredicateStrings
 } from '../types'
 import { parser, transpiler } from 'ovm-compiler'
 import Coder from '../../coder'
@@ -96,7 +98,9 @@ export class CompiledPredicate {
     }
     const def = c.definition
 
-    const logicalConnective = toLogicalConnective(def.predicate)
+    const logicalConnective = toLogicalConnective(
+      def.predicate as LogicalConnectiveStrings
+    )
     const predicateAddress = predicateTable.get(logicalConnective)
 
     if (predicateAddress === undefined) {
@@ -120,9 +124,8 @@ export class CompiledPredicate {
           return Bytes.fromString(i)
         } else if (i.predicate.type == 'AtomicPredicate') {
           let atomicPredicateAddress: Address | undefined
-          const atomicPredicate = convertStringToAtomicPredicate(
-            i.predicate.source
-          )
+          const atomicPredicate = convertStringToAtomicPredicate(i.predicate
+            .source as AtomicPredicateStrings)
           if (atomicPredicate) {
             atomicPredicateAddress = predicateTable.get(atomicPredicate)
             if (predicateAddress === undefined) {
