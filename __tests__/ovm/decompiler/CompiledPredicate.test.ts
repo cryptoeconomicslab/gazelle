@@ -60,21 +60,6 @@ describe('CompiledPredicate', () => {
     })
   })
 
-  /*
-  it('throw exception because the name is not found', async () => {
-    const compiledPredicate = new CompiledPredicate(testSource)
-    expect(() => {
-      compiledPredicate.instantiate(
-        new Property(TestPredicateAddress, [
-          Bytes.fromString('NotFound'),
-          Coder.encode(Integer.from(10))
-        ]),
-        deciderManager.predicateAddressTable
-      )
-    }).toThrowError('cannot find NotFound in contracts')
-  })
-  */
-
   it('fromSource', async () => {
     // Create predicate from "def ownership(owner, tx) := SignedBy(tx, owner)".
     const compiledPredicate = CompiledPredicate.fromSource(
