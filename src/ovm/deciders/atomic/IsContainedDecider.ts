@@ -27,7 +27,8 @@ export class IsContainedDecider implements Decider {
 
     return {
       outcome:
-        first.start.raw >= second.start.raw && first.end.raw <= second.end.raw,
+        first.start.data >= second.start.data &&
+        first.end.data <= second.end.data,
       challenges: []
     }
   }

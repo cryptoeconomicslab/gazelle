@@ -22,9 +22,9 @@ export class IsSameAmountDecider implements Decider {
     }
 
     const first = DecoderUtil.decodeStructable(Range, Coder, inputs[0])
-    const firstAmount = first.end.raw - first.start.raw
+    const firstAmount = first.end.data - first.start.data
     const second = DecoderUtil.decodeStructable(Range, Coder, inputs[1])
-    const secondAmount = second.end.raw - second.start.raw
+    const secondAmount = second.end.data - second.start.data
 
     return {
       outcome: firstAmount === secondAmount,
