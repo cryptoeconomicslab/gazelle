@@ -1,7 +1,11 @@
 import { Property } from '../../../src/ovm/types'
 import { Address, Bytes, Integer, BigNumber } from '../../../src/types/Codables'
 import { initializeDeciderManager } from '../helpers/initiateDeciderManager'
-import { CompiledDecider, CompiledPredicate } from '../../../src/ovm/decompiler'
+import {
+  CompiledDecider,
+  CompiledPredicate,
+  PredicateRegistry
+} from '../../../src/ovm/decompiler'
 import Coder from '../../../src/coder'
 import { testSource } from './TestSource'
 import * as ethers from 'ethers'
@@ -54,6 +58,7 @@ describe('CompiledDecider', () => {
   })
 
   test('su', async () => {
+    // Test Data
     const ownerAddress = '0x5640A00fAE03fa40d527C27dc28E67dF140Fd995'
     const privateKey =
       '0x27c1fd11b5802634df90c30a2ae8eb6c22c3b5523115a2d8aa6de81fc01024f7'
@@ -76,27 +81,23 @@ describe('CompiledDecider', () => {
     )
     const blockNumber = Coder.encode(BigNumber.from(572))
 
-    const ownershipPredicate = CompiledPredicate.fromSource(
-      'def ownership(owner, tx) := SignedBy(tx, owner)'
+    // Registering Ownership Predicate
+    PredicateRegistry.registerDecider(
+      deciderManager,
+      OwnershipPredicateAddress,
+      'def ownership(owner, tx) := SignedBy(tx, owner)',
+      constantVariableTable
     )
-    const stateUpdatePredicate = CompiledPredicate.fromSource(
+    // Registering StateUpdate Predicate
+    const stateUpdateDecider = PredicateRegistry.registerDecider(
+      deciderManager,
+      StateUpdatePredicateAddress,
       `def stateUpdate(token, range, block_number, so) :=
       with Tx(token, range, block_number) as tx {
         so(tx)
-      }`
-    )
-    const ownershipDecider = new CompiledDecider(
-      OwnershipPredicateAddress,
-      ownershipPredicate,
+      }`,
       constantVariableTable
     )
-    const stateUpdateDecider = new CompiledDecider(
-      StateUpdatePredicateAddress,
-      stateUpdatePredicate,
-      constantVariableTable
-    )
-    deciderManager.setDecider(OwnershipPredicateAddress, ownershipDecider)
-    deciderManager.setDecider(StateUpdatePredicateAddress, stateUpdateDecider)
 
     // Create an instance of compiled predicate "Ownership(owner, tx)".
     const ownershipProperty = new Property(OwnershipPredicateAddress, [
@@ -120,6 +121,18 @@ describe('CompiledDecider', () => {
       Coder.encode(ownershipProperty.toStruct())
     ])
 
+    // Confirm that decide is failed without storing witness
+    const failingDecision = await stateUpdateDecider.decide(
+      deciderManager,
+      stateUpdateProperty.inputs,
+      {}
+    )
+    expect(failingDecision).toEqual({
+      outcome: false,
+      challenges: [] // now there exists predicate doesn't return challenges
+    })
+
+    // Store witness
     const rangeDb = new RangeDb(deciderManager.witnessDb)
     const txBucket = await rangeDb.bucket(Bytes.fromString('tx'))
     const blockBucket = await txBucket.bucket(
@@ -134,6 +147,7 @@ describe('CompiledDecider', () => {
       Bytes.fromString('signatures')
     )).put(transaction, signature)
 
+    // Decide StateUpdate property
     const decision = await stateUpdateDecider.decide(
       deciderManager,
       stateUpdateProperty.inputs,
