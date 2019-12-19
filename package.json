@@ -32,7 +32,7 @@
     "libsodium-wrappers-sumo": "^0.7.6",
     "memdown": "^5.1.0",
     "node-fetch": "^2.3.0",
-    "ovm-compiler": "git+https://github.com/cryptoeconomicslab/ovm-compiler.git",
+    "ovm-compiler": "git+https://github.com/cryptoeconomicslab/ovm-compiler.git#v0.1.7",
     "react-native-sqlite-storage": "^4.1.0",
     "socket.io": "^2.3.0",
     "socket.io-client": "^2.3.0",

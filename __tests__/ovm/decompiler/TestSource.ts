@@ -25,7 +25,8 @@ export const testSource: transpiler.CompiledPredicate = {
             predicate: { type: 'AtomicPredicate', source: 'Bool' },
             inputs: [{ type: 'NormalInput', inputIndex: 1, children: [] }]
           }
-        ]
+        ],
+        propertyInputs: []
       }
     },
     {
@@ -52,7 +53,8 @@ export const testSource: transpiler.CompiledPredicate = {
               { type: 'VariableInput', placeholder: 'b', children: [] }
             ]
           }
-        ]
+        ],
+        propertyInputs: []
       }
     }
   ]

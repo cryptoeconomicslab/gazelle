@@ -3,12 +3,14 @@ import { IsValidSignatureDecider } from '../../../src/ovm/deciders'
 import { Property } from '../../../src/ovm/types'
 import { Address, Bytes } from '../../../src/types/Codables'
 import * as ethers from 'ethers'
-import { SigningKey, arrayify, joinSignature } from 'ethers/utils'
+import { SigningKey, arrayify, joinSignature, keccak256 } from 'ethers/utils'
 import { InMemoryKeyValueStore } from '../../../src/db'
 
 function sign(message: Bytes, key: SigningKey): Bytes {
   return Bytes.fromHexString(
-    joinSignature(key.signDigest(arrayify(message.toHexString())))
+    joinSignature(
+      key.signDigest(arrayify(keccak256(arrayify(message.toHexString()))))
+    )
   )
 }
 
@@ -34,7 +36,7 @@ describe('IsValidSignatureDecider', () => {
     const property = new Property(addr, [
       message,
       signature,
-      Bytes.fromString(Address.from(publicKey).raw),
+      Bytes.fromHexString(Address.from(publicKey).raw),
       Bytes.fromString('secp256k1')
     ])
 
@@ -46,7 +48,7 @@ describe('IsValidSignatureDecider', () => {
     const property = new Property(addr, [
       message,
       Bytes.fromString('hellohello'),
-      Bytes.fromString(Address.from(publicKey).raw),
+      Bytes.fromHexString(Address.from(publicKey).raw),
       Bytes.fromString('secp256k1')
     ])
 
@@ -59,7 +61,7 @@ describe('IsValidSignatureDecider', () => {
     const property = new Property(addr, [
       message,
       invalidSig,
-      Bytes.fromString(Address.from(publicKey).raw),
+      Bytes.fromHexString(Address.from(publicKey).raw),
       Bytes.fromString('secp256k1')
     ])
 
@@ -71,7 +73,7 @@ describe('IsValidSignatureDecider', () => {
     const property = new Property(addr, [
       message,
       signature,
-      Bytes.fromString(Address.from(publicKey).raw),
+      Bytes.fromHexString(Address.from(publicKey).raw),
       Bytes.fromString('ed25519')
     ])
 

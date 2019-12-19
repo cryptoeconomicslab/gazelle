@@ -3,7 +3,7 @@ import { Bytes } from '../../../types/Codables'
 import { Decider } from '../../interfaces/Decider'
 import { Decision, Property, Challenge, LogicalConnective } from '../../types'
 import { DeciderManager } from '../../DeciderManager'
-import getWitnesses, { isHint } from '../getWitnesses'
+import getWitnesses, { isHint, replaceHint } from '../getWitnesses'
 
 /**
  * ForDecider check quantifier and property.
@@ -16,7 +16,10 @@ export class ForAllSuchThatDecider implements Decider {
   ): Promise<Decision> {
     let witnesses
     if (isHint(inputs[0])) {
-      witnesses = await getWitnesses(manager.witnessDb, inputs[0].intoString())
+      witnesses = await getWitnesses(
+        manager.witnessDb,
+        replaceHint(inputs[0].intoString(), substitutions)
+      )
     } else {
       const quantifierProperty = Property.fromStruct(
         Coder.decode(Property.getParamType(), inputs[0])

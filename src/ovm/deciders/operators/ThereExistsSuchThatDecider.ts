@@ -3,7 +3,7 @@ import { Decider } from '../../interfaces/Decider'
 import { DeciderManager } from '../../DeciderManager'
 import { Bytes } from '../../../types/Codables'
 import { Property } from '../../types'
-import getWitnesses, { isHint } from '../getWitnesses'
+import getWitnesses, { isHint, replaceHint } from '../getWitnesses'
 
 /**
  * ThereExists decides property to true if any quantified value fulfill proposition.
@@ -16,7 +16,10 @@ export class ThereExistsSuchThatDecider implements Decider {
   ) {
     let witnesses
     if (isHint(inputs[0])) {
-      witnesses = await getWitnesses(manager.witnessDb, inputs[0].intoString())
+      witnesses = await getWitnesses(
+        manager.witnessDb,
+        replaceHint(inputs[0].intoString(), substitutions)
+      )
     } else {
       const quantifierProperty = Property.fromStruct(
         Coder.decode(Property.getParamType(), inputs[0])

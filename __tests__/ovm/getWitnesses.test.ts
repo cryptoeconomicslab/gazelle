@@ -1,6 +1,9 @@
 import { Bytes } from '../../src/types/Codables'
 import { InMemoryKeyValueStore, RangeDb } from '../../src/db'
-import getWitnesses, { isHint } from '../../src/ovm/deciders/getWitnesses'
+import getWitnesses, {
+  isHint,
+  replaceHint
+} from '../../src/ovm/deciders/getWitnesses'
 
 describe('get witnesses', () => {
   let db: InMemoryKeyValueStore
@@ -23,7 +26,8 @@ describe('get witnesses', () => {
     const v = Bytes.fromString('v')
     await bucket.put(k, v)
 
-    const hint = 'bucket1,KEY,k'
+    // 0x6b is k
+    const hint = 'bucket1,KEY,0x6b'
     const result = await getWitnesses(db, hint)
     expect(result.length).toBe(1)
     expect(result[0]).toStrictEqual(v)
@@ -36,7 +40,7 @@ describe('get witnesses', () => {
     const v = Bytes.fromString('v')
     await bucket2.put(k, v)
 
-    const hint = 'bucket1.bucket2,KEY,k'
+    const hint = 'bucket1.bucket2,KEY,0x6b'
     const result = await getWitnesses(db, hint)
     expect(result.length).toBe(1)
     expect(result[0]).toStrictEqual(v)
@@ -47,7 +51,8 @@ describe('get witnesses', () => {
     const bukcet = await rangeDb.bucket(Bytes.fromString('bucket5'))
     await bukcet.put(BigInt(15), BigInt(20), Bytes.fromString('v'))
 
-    const hint = 'bucket5,RANGE,(15 20)'
+    // 0x5b223235222c223135225d is Range(15, 20)
+    const hint = 'bucket5,RANGE,0x5b223235222c223135225d'
     const result = await getWitnesses(db, hint)
     expect(result.length).toBe(1)
     expect(result[0]).toStrictEqual(Bytes.fromString('v'))
@@ -58,7 +63,7 @@ describe('get witnesses', () => {
     const bukcet = await rangeDb.bucket(Bytes.fromString('bucket'))
     await bukcet.put(BigInt(15), BigInt(20), Bytes.fromString('v'))
 
-    const hint = 'bucket,RANGE,(15 20)'
+    const hint = 'bucket,RANGE,0x5b223235222c223135225d'
     const result = await getWitnesses(db, hint)
     expect(result.length).toBe(1)
     expect(result[0]).toStrictEqual(Bytes.fromString('v'))
@@ -72,9 +77,43 @@ describe('get witnesses', () => {
       await bucket.put(k, v)
     }
 
-    const hint = 'bucket,ITER,k'
+    const hint = 'bucket,ITER,0x6b'
     const result = await getWitnesses(db, hint)
     expect(result.length).toBe(3)
     expect(result[0]).toStrictEqual(Bytes.fromString('v0'))
+  })
+
+  test('getWitness number range', async () => {
+    const hint = 'range,NUMBER,0x1000000-0x1000010'
+    const result = await getWitnesses(db, hint)
+    expect(result.length).toBe(16)
+    expect(result[0]).toStrictEqual(
+      Bytes.fromString(JSON.stringify('16777216'))
+    )
+    expect(result[15]).toStrictEqual(
+      Bytes.fromString(JSON.stringify('16777231'))
+    )
+  })
+
+  test('throw exception unknown type', async () => {
+    const hint = 'range,UNKNOWN,0x10'
+    expect(getWitnesses(db, hint)).rejects.toThrowError(
+      'UNKNOWN is unknown type of hint.'
+    )
+  })
+
+  describe('replaceHint', () => {
+    test('replace no vars', async () => {
+      expect(replaceHint('a,b,c', {})).toEqual('a,b,c')
+    })
+
+    test('replace vars', async () => {
+      expect(
+        replaceHint('a,b.${g}.c,${d}', {
+          d: Bytes.fromString('ddd'),
+          g: Bytes.fromString('ggg')
+        })
+      ).toEqual('a,b.0x676767.c,0x646464')
+    })
   })
 })

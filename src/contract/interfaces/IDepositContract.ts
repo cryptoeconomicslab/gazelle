@@ -1,4 +1,4 @@
-import { Integer, Bytes, Address } from '../../../src/types/Codables'
+import { Integer, Bytes, Address, Range } from '../../../src/types'
 import { Property } from '../../ovm/types'
 
 export interface IDepositContract {
@@ -25,10 +25,7 @@ export interface IDepositContract {
    * subscribe to checkpoint finalized event
    */
   subscribeCheckpointFinalized(
-    handler: (
-      checkpointId: Bytes,
-      checkpoint: [[bigint, bigint], Property]
-    ) => void
+    handler: (checkpointId: Bytes, checkpoint: [Range, Property]) => void
   ): void
 
   /**

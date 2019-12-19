@@ -8,6 +8,7 @@ import {
 import { transpiler } from 'ovm-compiler'
 import { DeciderManager } from '../DeciderManager'
 import Coder from '../../coder'
+import { replaceHint } from '../deciders/getWitnesses'
 
 /**
  * When we have a property below, We can use CompiledPredicate  class to make a property from predicate and concrete inputs.
@@ -48,8 +49,18 @@ export class CompiledPredicate {
 
     return new Property(
       predicateAddress,
-      c.definition.inputs.map(i => {
+      c.definition.inputs.map((i, index) => {
         if (typeof i == 'string') {
+          if (
+            (c.definition.predicate == 'ForAllSuchThat' ||
+              c.definition.predicate == 'ThereExistsSuchThat') &&
+            index == 0
+          ) {
+            i = replaceHint(
+              i,
+              this.createSubstitutions(c.definition.inputDefs, inputs)
+            )
+          }
           return Bytes.fromString(i)
         } else if (i.predicate.type == 'AtomicPredicate') {
           let atomicPredicateAddress: Address
@@ -102,5 +113,19 @@ export class CompiledPredicate {
         }
       })
     )
+  }
+
+  private createSubstitutions(
+    inputDefs: string[],
+    inputs: Bytes[]
+  ): { [key: string]: Bytes } {
+    const result: { [key: string]: Bytes } = {}
+    if (inputDefs.length != inputs.length) {
+      throw new Error('The length of inputDefs and inputs must be same.')
+    }
+    inputDefs.forEach((def, index) => {
+      result[def] = inputs[index]
+    })
+    return result
   }
 }
