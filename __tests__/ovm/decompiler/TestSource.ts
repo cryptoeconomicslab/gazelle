@@ -1,5 +1,5 @@
 import { transpiler } from 'ovm-compiler'
-import { LogicalConnective } from 'ovm-compiler/dist/transpiler'
+import LogicalConnective = transpiler.LogicalConnective
 
 export const testSource: transpiler.CompiledPredicate = {
   type: 'CompiledPredicate',

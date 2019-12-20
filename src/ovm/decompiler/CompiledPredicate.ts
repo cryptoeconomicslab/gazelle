@@ -1,15 +1,12 @@
 import { Bytes, Address } from '../../types'
 import { Property, FreeVariable } from '../types'
-import * as parser from 'ovm-compiler/dist/parser'
-import * as transpiler from 'ovm-compiler/dist/transpiler'
+import { parser, transpiler } from 'ovm-compiler'
 import Coder from '../../coder'
 import { replaceHint } from '../deciders/getWitnesses'
 import { decodeStructable } from '../../utils/DecoderUtil'
-import {
-  NormalInput,
-  AtomicProposition,
-  LogicalConnective
-} from 'ovm-compiler/dist/transpiler'
+import NormalInput = transpiler.NormalInput
+import AtomicProposition = transpiler.AtomicProposition
+import LogicalConnective = transpiler.LogicalConnective
 
 /**
  * When we have a property below, We can use CompiledPredicate  class to make a property from predicate and concrete inputs.
