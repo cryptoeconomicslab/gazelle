@@ -1,12 +1,6 @@
 import { Address, Bytes } from '../../src/types/Codables'
 import { Decider } from './interfaces/Decider'
-import {
-  Property,
-  Decision,
-  FreeVariable,
-  LogicalConnective,
-  AtomicPredicate
-} from './types'
+import { Property, Decision, FreeVariable, AtomicPredicate } from './types'
 import { Quantifier } from './interfaces/Quantifier'
 import { KeyValueStore } from '../db'
 
@@ -15,7 +9,7 @@ export interface DeciderManagerInterface {
     property: Property,
     substitutions?: { [key: string]: Bytes }
   ): Promise<Decision>
-  getDeciderAddress(operator: LogicalConnective | AtomicPredicate): Address
+  getDeciderAddress(shortname: string): Address
 }
 
 /**
@@ -23,13 +17,13 @@ export interface DeciderManagerInterface {
  */
 export class DeciderManager implements DeciderManagerInterface {
   private deciders: Map<string, Decider>
-  private operators: Map<LogicalConnective | AtomicPredicate, Address>
+  private shortnames: Map<string, Address>
   private quantifiers: Map<string, Quantifier>
   public witnessDb: KeyValueStore
   constructor(witnessDb: KeyValueStore) {
     this.witnessDb = witnessDb
     this.deciders = new Map<string, Decider>()
-    this.operators = new Map<LogicalConnective | AtomicPredicate, Address>()
+    this.shortnames = new Map<string, Address>()
     this.quantifiers = new Map<string, Quantifier>()
   }
   /**
@@ -37,14 +31,10 @@ export class DeciderManager implements DeciderManagerInterface {
    * @param address
    * @param decier
    */
-  public setDecider(
-    address: Address,
-    decier: Decider,
-    operator?: LogicalConnective | AtomicPredicate
-  ) {
+  public setDecider(address: Address, decier: Decider, shortname?: string) {
     this.deciders.set(address.raw, decier)
-    if (operator !== undefined) {
-      this.operators.set(operator, address)
+    if (shortname) {
+      this.shortnames.set(shortname, address)
     }
   }
   /**
@@ -63,21 +53,17 @@ export class DeciderManager implements DeciderManagerInterface {
    * Gets address of a decider with operator name
    * @param operator
    */
-  public getDeciderAddress(
-    operator: LogicalConnective | AtomicPredicate
-  ): Address {
-    const address = this.operators.get(operator)
+  public getDeciderAddress(shortname: string): Address {
+    const address = this.shortnames.get(shortname)
     if (address) {
       return address
     } else {
       throw new Error("initialization isn't done")
     }
   }
-  public get predicateAddressTable(): Map<
-    LogicalConnective | AtomicPredicate,
-    Address
-  > {
-    return this.operators
+
+  public get predicateAddressTable(): Map<string, Address> {
+    return this.shortnames
   }
 
   /**
@@ -92,7 +78,7 @@ export class DeciderManager implements DeciderManagerInterface {
   ) {
     this.quantifiers.set(address.data, quantifier)
     if (operator !== undefined) {
-      this.operators.set(operator, address)
+      this.shortnames.set(operator, address)
     }
   }
   /**

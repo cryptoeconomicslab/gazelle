@@ -44,11 +44,7 @@ describe('CompiledPredicate', () => {
     expect(property).toEqual({
       deciderAddress: ForAllSuchThatDeciderAddress,
       inputs: [
-        Coder.encode(
-          new Property(LessThanQuantifierAddress, [
-            Bytes.fromHexString('0x3130')
-          ]).toStruct()
-        ),
+        Bytes.fromString('range,NUMBER,0x00-0x3130'),
         Bytes.fromString('b'),
         Coder.encode(
           new Property(TestPredicateAddress, [

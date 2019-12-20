@@ -113,7 +113,11 @@ function initializeCompiledPredicates(
       deployedPredicateInfo.source
     )
     const decider = new CompiledDecider(predicate, constantVariableTable)
-    deciderManager.setDecider(deployedPredicateInfo.deployedAddress, decider)
+    deciderManager.setDecider(
+      deployedPredicateInfo.deployedAddress,
+      decider,
+      predicate.getPredicateName()
+    )
   }
   deployedPredicateTable.forEach(registerPredicate)
 }

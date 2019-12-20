@@ -2,17 +2,15 @@ import { Bytes, Address } from '../../types'
 import {
   Property,
   convertStringToLogicalConnective as toLogicalConnective,
-  convertStringToAtomicPredicate,
   FreeVariable,
-  LogicalConnectiveStrings,
-  AtomicPredicateStrings
+  LogicalConnectiveStrings
 } from '../types'
 import { parser, transpiler } from 'ovm-compiler'
 import Coder from '../../coder'
 import { replaceHint } from '../deciders/getWitnesses'
-import { LogicalConnective, AtomicPredicate } from '../types'
+import { LogicalConnective } from '../types'
 import { decodeStructable } from '../../utils/DecoderUtil'
-import { NormalInput } from 'ovm-compiler/dist/transpiler'
+import { NormalInput, AtomicProposition } from 'ovm-compiler/dist/transpiler'
 
 /**
  * When we have a property below, We can use CompiledPredicate  class to make a property from predicate and concrete inputs.
@@ -64,6 +62,10 @@ export class CompiledPredicate {
     )
   }
 
+  getPredicateName(): string {
+    return this.compiled.name
+  }
+
   makeProperty(inputs: Bytes[]): Property {
     return new Property(this.deployedAddress, inputs)
   }
@@ -76,7 +78,7 @@ export class CompiledPredicate {
    */
   decompileProperty(
     compiledProperty: Property,
-    predicateTable: Map<LogicalConnective | AtomicPredicate, Address>,
+    predicateTable: Map<string, Address>,
     constantTable: { [key: string]: Bytes } = {}
   ): Property {
     const name: string = compiledProperty.inputs[0].intoString()
@@ -97,6 +99,7 @@ export class CompiledPredicate {
       throw new Error(`cannot find ${name} in contracts`)
     }
     const def = c.definition
+    const originalPredicateName = c.originalPredicateName
 
     const logicalConnective = toLogicalConnective(
       def.predicate as LogicalConnectiveStrings
@@ -107,66 +110,68 @@ export class CompiledPredicate {
       throw new Error(`predicateAddress ${def.predicate} not found`)
     }
 
-    return new Property(
-      predicateAddress,
-      def.inputs.map((i, index) => {
-        if (typeof i == 'string') {
-          if (
-            (logicalConnective == LogicalConnective.ForAllSuchThat ||
-              logicalConnective == LogicalConnective.ThereExistsSuchThat) &&
-            index == 0
-          ) {
-            i = replaceHint(
-              i,
-              this.createSubstitutions(def.inputDefs, compiledProperty.inputs)
-            )
-          }
-          return Bytes.fromString(i)
-        } else if (i.predicate.type == 'AtomicPredicate') {
-          let atomicPredicateAddress: Address | undefined
-          const atomicPredicate = convertStringToAtomicPredicate(i.predicate
-            .source as AtomicPredicateStrings)
-          if (atomicPredicate) {
-            atomicPredicateAddress = predicateTable.get(atomicPredicate)
-            if (predicateAddress === undefined) {
-              throw new Error(`predicateAddress ${def.predicate} not found`)
-            }
-          } else {
-            atomicPredicateAddress = originalAddress
-          }
-          if (atomicPredicateAddress === undefined) {
-            throw new Error(
-              `predicateAddress ${atomicPredicateAddress} not found`
-            )
-          }
-          return Coder.encode(
-            this.createChildProperty(
-              atomicPredicateAddress,
-              i,
-              compiledProperty.inputs,
-              originalAddress,
-              constantTable
-            ).toStruct()
-          )
-        } else if (i.predicate.type == 'InputPredicate') {
-          const property = decodeStructable(
-            Property,
-            Coder,
-            compiledProperty.inputs[i.predicate.source.inputIndex]
-          )
-          const extraInputBytes = i.inputs.map(
-            i => compiledProperty.inputs[(i as NormalInput).inputIndex]
-          )
-          property.inputs = property.inputs.concat(extraInputBytes)
-          return Coder.encode(property.toStruct())
-        } else if (i.predicate.type == 'VariablePredicate') {
-          // When predicateDef has VariablePredicate, inputs[1] must be variable name
-          return FreeVariable.from(def.inputs[1] as string)
+    const createInput = (input: AtomicProposition) => {
+      if (input.predicate.type == 'AtomicPredicate') {
+        // If the predicate name is not listed in AtomicPredicate enum, it's compiled predicate.
+        let atomicPredicateAddress: Address | undefined
+        if (input.predicate.source.indexOf(originalPredicateName) == 0) {
+          // If input.predicate.source is "${originalPredicateName}TA2O"
+          atomicPredicateAddress = originalAddress
         } else {
-          throw new Error('predicate must be atomic or string')
+          atomicPredicateAddress = predicateTable.get(input.predicate.source)
         }
-      })
-    )
+        if (atomicPredicateAddress === undefined) {
+          throw new Error(`The address of ${def.predicate} not found.`)
+        }
+        return Coder.encode(
+          this.createChildProperty(
+            atomicPredicateAddress,
+            input,
+            compiledProperty.inputs,
+            originalAddress,
+            constantTable
+          ).toStruct()
+        )
+      } else if (input.predicate.type == 'InputPredicate') {
+        const property = decodeStructable(
+          Property,
+          Coder,
+          compiledProperty.inputs[input.predicate.source.inputIndex]
+        )
+        const extraInputBytes = input.inputs.map(
+          i => compiledProperty.inputs[(i as NormalInput).inputIndex]
+        )
+        property.inputs = property.inputs.concat(extraInputBytes)
+        return Coder.encode(property.toStruct())
+      } else if (input.predicate.type == 'VariablePredicate') {
+        // When predicateDef has VariablePredicate, inputs[1] must be variable name
+        return FreeVariable.from(def.inputs[1] as string)
+      } else {
+        throw new Error('predicate must be atomic, input or variable.')
+      }
+    }
+
+    if (
+      logicalConnective == LogicalConnective.ForAllSuchThat ||
+      logicalConnective == LogicalConnective.ThereExistsSuchThat
+    ) {
+      return new Property(predicateAddress, [
+        Bytes.fromString(
+          replaceHint(
+            def.inputs[0] as string,
+            this.createSubstitutions(def.inputDefs, compiledProperty.inputs)
+          )
+        ),
+        Bytes.fromString(def.inputs[1] as string),
+        createInput(def.inputs[2] as AtomicProposition)
+      ])
+    } else {
+      // In case of And, Or, Not and other predicates
+      return new Property(
+        predicateAddress,
+        def.inputs.map(i => createInput(i as AtomicProposition))
+      )
+    }
   }
 
   /**

@@ -39,11 +39,7 @@ export const testSource: transpiler.CompiledPredicate = {
         predicate: 'ForAllSuchThat',
         inputDefs: ['TestF', 'a'],
         inputs: [
-          {
-            type: 'AtomicProposition',
-            predicate: { type: 'AtomicPredicate', source: 'LessThan' },
-            inputs: [{ type: 'NormalInput', inputIndex: 1, children: [] }]
-          },
+          'range,NUMBER,0x00-${a}',
           'b',
           {
             type: 'AtomicProposition',
