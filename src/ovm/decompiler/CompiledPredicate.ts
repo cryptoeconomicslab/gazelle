@@ -1,16 +1,15 @@
 import { Bytes, Address } from '../../types'
-import {
-  Property,
-  convertStringToLogicalConnective as toLogicalConnective,
-  FreeVariable,
-  LogicalConnectiveStrings
-} from '../types'
-import { parser, transpiler } from 'ovm-compiler'
+import { Property, FreeVariable } from '../types'
+import * as parser from 'ovm-compiler/dist/parser'
+import * as transpiler from 'ovm-compiler/dist/transpiler'
 import Coder from '../../coder'
 import { replaceHint } from '../deciders/getWitnesses'
-import { LogicalConnective } from '../types'
 import { decodeStructable } from '../../utils/DecoderUtil'
-import { NormalInput, AtomicProposition } from 'ovm-compiler/dist/transpiler'
+import {
+  NormalInput,
+  AtomicProposition,
+  LogicalConnective
+} from 'ovm-compiler/dist/transpiler'
 
 /**
  * When we have a property below, We can use CompiledPredicate  class to make a property from predicate and concrete inputs.
@@ -84,7 +83,7 @@ export class CompiledPredicate {
     const name: string = compiledProperty.inputs[0].intoString()
     const originalAddress: Address = compiledProperty.deciderAddress
     const findContract = (name: string) => {
-      return this.compiled.contracts.find(c => c.definition.name == name)
+      return this.compiled.contracts.find(c => c.name == name)
     }
 
     let c = findContract(name)
@@ -98,20 +97,16 @@ export class CompiledPredicate {
     if (c === undefined) {
       throw new Error(`cannot find ${name} in contracts`)
     }
-    const def = c.definition
+    const def = c
     const originalPredicateName = c.originalPredicateName
-
-    const logicalConnective = toLogicalConnective(
-      def.predicate as LogicalConnectiveStrings
-    )
-    const predicateAddress = predicateTable.get(logicalConnective)
+    const predicateAddress = predicateTable.get(c.connective)
 
     if (predicateAddress === undefined) {
-      throw new Error(`predicateAddress ${def.predicate} not found`)
+      throw new Error(`predicateAddress ${def.connective} not found`)
     }
 
     const createInput = (input: AtomicProposition) => {
-      if (input.predicate.type == 'AtomicPredicate') {
+      if (input.predicate.type == 'AtomicPredicateCall') {
         // If the predicate name is not listed in AtomicPredicate enum, it's compiled predicate.
         let atomicPredicateAddress: Address | undefined
         if (input.predicate.source.indexOf(originalPredicateName) == 0) {
@@ -121,7 +116,7 @@ export class CompiledPredicate {
           atomicPredicateAddress = predicateTable.get(input.predicate.source)
         }
         if (atomicPredicateAddress === undefined) {
-          throw new Error(`The address of ${def.predicate} not found.`)
+          throw new Error(`The address of ${input.predicate.source} not found.`)
         }
         return Coder.encode(
           this.createChildProperty(
@@ -132,7 +127,7 @@ export class CompiledPredicate {
             constantTable
           ).toStruct()
         )
-      } else if (input.predicate.type == 'InputPredicate') {
+      } else if (input.predicate.type == 'InputPredicateCall') {
         const property = decodeStructable(
           Property,
           Coder,
@@ -143,7 +138,7 @@ export class CompiledPredicate {
         )
         property.inputs = property.inputs.concat(extraInputBytes)
         return Coder.encode(property.toStruct())
-      } else if (input.predicate.type == 'VariablePredicate') {
+      } else if (input.predicate.type == 'VariablePredicateCall') {
         // When predicateDef has VariablePredicate, inputs[1] must be variable name
         return FreeVariable.from(def.inputs[1] as string)
       } else {
@@ -152,8 +147,8 @@ export class CompiledPredicate {
     }
 
     if (
-      logicalConnective == LogicalConnective.ForAllSuchThat ||
-      logicalConnective == LogicalConnective.ThereExistsSuchThat
+      def.connective == LogicalConnective.ForAllSuchThat ||
+      def.connective == LogicalConnective.ThereExistsSuchThat
     ) {
       return new Property(predicateAddress, [
         Bytes.fromString(
