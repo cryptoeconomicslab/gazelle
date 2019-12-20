@@ -83,14 +83,14 @@ function initializeDeciders(
   ) => {
     deciderManager.setDecider(deployedAddress, decider, predicateName)
   }
-  for (let name in logicalConnectiveAddressTable) {
+  for (const name in logicalConnectiveAddressTable) {
     registerDecider(
       convertStringToLogicalConnective(name as LogicalConnectiveStrings),
       logicalConnectiveAddressTable[name],
       deciders[name]
     )
   }
-  for (let name in atomicPredicateAddressTable) {
+  for (const name in atomicPredicateAddressTable) {
     registerDecider(
       convertStringToAtomicPredicate(name as AtomicPredicateStrings),
       atomicPredicateAddressTable[name],
