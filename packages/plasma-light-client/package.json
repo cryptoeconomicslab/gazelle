@@ -33,7 +33,6 @@
     "@cryptoeconomicslab/contract": "^0.3.4",
     "@cryptoeconomicslab/db": "^0.3.4",
     "@cryptoeconomicslab/hash": "^0.3.4",
-    "@cryptoeconomicslab/indexeddb-kvs": "^0.0.3",
     "@cryptoeconomicslab/merkle-tree": "^0.3.4",
     "@cryptoeconomicslab/ovm": "^0.3.4",
     "@cryptoeconomicslab/plasma": "^0.3.4",
