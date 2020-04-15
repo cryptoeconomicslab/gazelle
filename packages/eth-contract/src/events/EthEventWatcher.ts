@@ -73,6 +73,8 @@ export default class EventWatcher implements IEventWatcher {
         errorHandler(e)
       }
     }
+    // clear timeout handler to keep only one event handler runs at same time
+    this.cancel()
     this.timer = setTimeout(async () => {
       await this.start(handler, errorHandler)
     }, this.options.interval || DEFAULT_INTERVAL)
