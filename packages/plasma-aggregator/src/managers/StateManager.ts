@@ -137,7 +137,11 @@ export default class StateManager {
     )
 
     // store data in db
-    await this.storeTx(tx, nextStateUpdate, nextBlockNumber)
+    await this.storeTx(
+      tx,
+      nextStateUpdate,
+      prevStates.map(s => s.blockNumber)
+    )
     await this.putStateUpdate(nextStateUpdate)
     return nextStateUpdate
   }
@@ -242,18 +246,20 @@ export default class StateManager {
   private async storeTx(
     tx: Transaction,
     su: StateUpdate,
-    nextBlockNumber: BigNumber
+    blockNumberOfDeprecatedStates: BigNumber[]
   ) {
     const { coder } = ovmContext
     const txBucket = await this.db.bucket(Bytes.fromString('TX'))
-    const blockBucket = await txBucket.bucket(coder.encode(nextBlockNumber))
-    const addrBucket = await blockBucket.bucket(
-      Bytes.fromHexString(su.depositContractAddress.data)
-    )
-    await addrBucket.put(
-      su.range.start.data,
-      su.range.end.data,
-      coder.encode(tx.toStruct())
-    )
+    for (const b of blockNumberOfDeprecatedStates) {
+      const blockBucket = await txBucket.bucket(coder.encode(b))
+      const addrBucket = await blockBucket.bucket(
+        Bytes.fromHexString(su.depositContractAddress.data)
+      )
+      await addrBucket.put(
+        su.range.start.data,
+        su.range.end.data,
+        coder.encode(tx.toStruct())
+      )
+    }
   }
 }
