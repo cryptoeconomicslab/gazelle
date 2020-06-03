@@ -306,7 +306,7 @@ export default class Aggregator {
         return
       }
 
-      const sus = await this.stateManager.resolveStateUpdatesAtBlock(
+      const sus = await this.stateManager.getStateUpdatesAtBlock(
         address,
         BigNumber.from(b),
         range.start,
@@ -367,11 +367,82 @@ export default class Aggregator {
   }
 
   /**
-   * TODO: implement faucet API
-   * faucet dummy token for development when started in debug mode
+   * faucet dummy token from aggregator for development when started in debug mode
    */
   private async handleFaucet(req: Request, res: Response) {
-    throw new Error('not implemented')
+    let to: Address
+    let amount: BigNumber
+    try {
+      console.log('faucet:', req.query.to, req.query.amount)
+      to = Address.from(req.query.to)
+      amount = BigNumber.from(req.query.amount)
+    } catch (e) {
+      res
+        .status(400)
+        .send('Invalid request arguments')
+        .end()
+      return
+    }
+
+    const nextBlockNumber = await this.blockManager.getNextBlockNumber()
+    try {
+      const FAUCET_ADDRESS = Address.from(
+        process.env.FAUCET_DEPOSIT_CONTRACT_ADDRESS || ''
+      )
+      const stateUpdates = await this.stateManager.resolveStateUpdate(
+        FAUCET_ADDRESS,
+        amount,
+        this.ownershipPredicate.deployedAddress,
+        this.wallet.getAddress()
+      )
+      const nextStateObject = this.ownershipPredicate.makeProperty([
+        ovmContext.coder.encode(to)
+      ])
+      const receipts = await Promise.all(
+        stateUpdates.map(async su => {
+          try {
+            const tx = new Transaction(
+              FAUCET_ADDRESS,
+              su.range,
+              BigNumber.from(JSBI.add(nextBlockNumber.data, JSBI.BigInt(5))),
+              nextStateObject,
+              this.wallet.getAddress()
+            )
+            const sig = await this.wallet.signMessage(
+              ovmContext.coder.encode(
+                tx.toProperty(Address.default()).toStruct()
+              )
+            )
+            tx.signature = sig
+            const receipt = await this.ingestTransaction(tx)
+            return receipt
+          } catch (e) {
+            // return null transaction receipt with status is FALSE when error occur while decoding.
+            return new TransactionReceipt(
+              TRANSACTION_STATUS.FALSE,
+              nextBlockNumber,
+              [],
+              new Range(BigNumber.default(), BigNumber.default()),
+              Address.default(),
+              Address.default(),
+              Bytes.default()
+            )
+          }
+        })
+      )
+      res.send(
+        receipts.map(receipt =>
+          ovmContext.coder.encode(receipt.toStruct()).toHexString()
+        )
+      )
+      res.status(201)
+      res.end()
+    } catch (e) {
+      console.log(e)
+      res.send(e)
+      res.status(422)
+      res.end()
+    }
   }
 
   /**
@@ -408,7 +479,7 @@ export default class Aggregator {
   ): Promise<TransactionReceipt> {
     console.log('transaction received: ', tx.range, tx.depositContractAddress)
     const nextBlockNumber = await this.blockManager.getNextBlockNumber()
-    const stateUpdates = await this.stateManager.resolveStateUpdates(
+    const stateUpdates = await this.stateManager.getStateUpdates(
       tx.depositContractAddress,
       tx.range.start,
       tx.range.end

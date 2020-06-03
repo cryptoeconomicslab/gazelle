@@ -115,7 +115,7 @@ describe('StateManager', () => {
         BigNumber.from(0)
       )
       await stateManager.insertDepositRange(tx, BigNumber.from(0))
-      const stateUpdates = await stateManager.resolveStateUpdates(
+      const stateUpdates = await stateManager.getStateUpdates(
         tx.depositContractAddress,
         BigNumber.from(0),
         BigNumber.from(1)
@@ -137,7 +137,7 @@ describe('StateManager', () => {
       )
       await stateManager.insertDepositRange(tx, BigNumber.from(0))
       await stateManager.insertDepositRange(tx, BigNumber.from(1))
-      const stateUpdates = await stateManager.resolveStateUpdatesAtBlock(
+      const stateUpdates = await stateManager.getStateUpdatesAtBlock(
         tx.depositContractAddress,
         BigNumber.from(0),
         BigNumber.from(0),

@@ -154,7 +154,7 @@ describe('Aggregator integration', () => {
       BigNumber.from(0)
     )
 
-    const result = await aggregator['stateManager'].resolveStateUpdates(
+    const result = await aggregator['stateManager'].getStateUpdates(
       depositContractAddress,
       BigNumber.from(0),
       BigNumber.from(100)
@@ -207,7 +207,7 @@ describe('Aggregator integration', () => {
     const receipt = await aggregator['ingestTransaction'](tx)
     expect(receipt.status).toBe(TRANSACTION_STATUS.TRUE)
 
-    const stateUpdates = await aggregator['stateManager'].resolveStateUpdates(
+    const stateUpdates = await aggregator['stateManager'].getStateUpdates(
       depositContractAddress,
       BigNumber.from(0),
       BigNumber.from(100)

@@ -24,7 +24,7 @@ import JSBI from 'jsbi'
 export default class StateManager {
   constructor(private db: RangeStore) {}
 
-  public async resolveStateUpdatesAtBlock(
+  public async getStateUpdatesAtBlock(
     address: Address,
     blockNumber: BigNumber,
     start: BigNumber,
@@ -39,7 +39,7 @@ export default class StateManager {
     )
   }
 
-  public async resolveStateUpdates(
+  public async getStateUpdates(
     address: Address,
     start: BigNumber,
     end: BigNumber
@@ -91,7 +91,7 @@ export default class StateManager {
     console.log('execute state transition', tx.range)
     const { coder } = ovmContext
     const range = tx.range
-    const prevStates = await this.resolveStateUpdates(
+    const prevStates = await this.getStateUpdates(
       tx.depositContractAddress,
       range.start,
       range.end
@@ -199,7 +199,7 @@ export default class StateManager {
     blockNumber?: BigNumber
   ) {
     return (
-      await this.resolveStateUpdates(
+      await this.getStateUpdates(
         depositContractAddress,
         BigNumber.from(JSBI.BigInt(0)),
         BigNumber.MAX_NUMBER
@@ -218,6 +218,53 @@ export default class StateManager {
             ownershipPredicateAddress.data && owner.data === addr.data
         )
       })
+  }
+
+  /**
+   * @param depositContractAddress deposit contract address
+   * @param amount amount to resolve
+   * @param ownershipPredicateAddress ownership predicate contract address
+   * @param addr user address
+   */
+  public async resolveStateUpdate(
+    depositContractAddress: Address,
+    amount: BigNumber,
+    ownershipPredicateAddress: Address,
+    addr: Address
+  ): Promise<StateUpdate[]> {
+    const queriedStateUpdates = await this.queryOwnershipyStateUpdates(
+      depositContractAddress,
+      ownershipPredicateAddress,
+      addr
+    )
+    const stateUpdates: StateUpdate[] = []
+    let i = 0
+    let sum = JSBI.BigInt(0)
+    while (queriedStateUpdates[i] && JSBI.notEqual(sum, amount.data)) {
+      const su = queriedStateUpdates[i]
+      if (JSBI.greaterThan(JSBI.add(sum, su.amount), amount.data)) {
+        su.update({
+          range: new Range(
+            su.range.start,
+            BigNumber.from(
+              JSBI.subtract(
+                su.range.end.data,
+                JSBI.subtract(JSBI.add(sum, su.amount), amount.data)
+              )
+            )
+          )
+        })
+        stateUpdates.push(su)
+        return stateUpdates
+      }
+      stateUpdates.push(su)
+      sum = JSBI.add(su.amount, sum)
+      i++
+    }
+    if (JSBI.lessThan(sum, amount.data)) {
+      throw new Error('Not enough amount')
+    }
+    return stateUpdates
   }
 
   /**
