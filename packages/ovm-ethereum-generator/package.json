@@ -1,6 +1,6 @@
 {
   "name": "@cryptoeconomicslab/ovm-ethereum-generator",
-  "version": "0.4.1-alpha.1",
+  "version": "0.4.1-alpha.2",
   "description": "OVM evm bytecode generator",
   "author": {
     "name": "Cryptoeconomics Lab",
@@ -35,7 +35,7 @@
   "dependencies": {
     "@cryptoeconomicslab/ovm-generator": "^0.4.1-alpha.1",
     "@cryptoeconomicslab/ovm-parser": "^0.4.0",
-    "@cryptoeconomicslab/ovm-solidity-generator": "^0.4.1-alpha.1",
+    "@cryptoeconomicslab/ovm-solidity-generator": "^0.4.1-alpha.2",
     "@cryptoeconomicslab/ovm-transpiler": "^0.4.1-alpha.1",
     "solc": "^0.5.15",
     "tslib": "^1.11.1"

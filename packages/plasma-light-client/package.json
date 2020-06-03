@@ -1,6 +1,6 @@
 {
   "name": "@cryptoeconomicslab/plasma-light-client",
-  "version": "0.4.1-alpha.1",
+  "version": "0.4.1-alpha.2",
   "description": "light-client",
   "author": {
     "name": "Cryptoeconomics Lab",
@@ -30,13 +30,13 @@
   },
   "dependencies": {
     "@cryptoeconomicslab/coder": "^0.4.0",
-    "@cryptoeconomicslab/contract": "^0.4.1-alpha.1",
+    "@cryptoeconomicslab/contract": "^0.4.1-alpha.2",
     "@cryptoeconomicslab/db": "^0.4.1-alpha.1",
     "@cryptoeconomicslab/hash": "^0.4.1-alpha.1",
     "@cryptoeconomicslab/indexeddb-kvs": "^0.0.3",
     "@cryptoeconomicslab/merkle-tree": "^0.4.1-alpha.1",
-    "@cryptoeconomicslab/ovm": "^0.4.1-alpha.1",
-    "@cryptoeconomicslab/plasma": "^0.4.1-alpha.1",
+    "@cryptoeconomicslab/ovm": "^0.4.1-alpha.2",
+    "@cryptoeconomicslab/plasma": "^0.4.1-alpha.2",
     "@cryptoeconomicslab/wallet": "^0.4.0",
     "axios": "^0.19.2",
     "event-emitter": "^0.3.5",
