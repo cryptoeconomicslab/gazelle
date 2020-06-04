@@ -1,4 +1,7 @@
 name: IntegrationTest
+on:
+  repository_dispatch:
+    types: [test_trigger]
 
 jobs:
   integration-test:
