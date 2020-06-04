@@ -12,6 +12,8 @@ jobs:
         node-version: [10.x]
     steps:
       - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.client_payload.branch }}
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
