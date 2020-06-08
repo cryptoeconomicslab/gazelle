@@ -1,0 +1,24 @@
+name: SlackTest
+on:
+  repository_dispatch:
+    types: [slack_test]
+
+jobs:
+  slack-test:
+    name: slackTest
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [10.x]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.client_payload.branch }}
+      - name: Slack Notification
+        uses: rtCamp/action-slack-notify@v2.0.2
+        env:
+          SLACK_CHANNEL: git 
+          SLACK_COLOR: '#3278BD'
+          SLACK_TITLE: Integration test
+          SLACK_USERNAME: IntegrationTestRunner
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
