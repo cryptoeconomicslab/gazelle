@@ -18,15 +18,13 @@ export class ForAllSuchThatDecider implements Decider {
     inputs: Bytes[],
     substitutions: { [key: string]: Bytes } = {}
   ): Promise<Decision> {
-    let witnesses: Bytes[]
-    if (isHint(inputs[0])) {
-      witnesses = await getWitnesses(
-        manager.witnessDb,
-        replaceHint(inputs[0].intoString(), substitutions)
-      )
-    } else {
+    if (!isHint(inputs[0])) {
       throw new Error('inputs[0] must be valid hint data.')
     }
+    const witnesses = await getWitnesses(
+      manager.witnessDb,
+      replaceHint(inputs[0].intoString(), substitutions)
+    )
 
     const innerProperty = Property.fromStruct(
       ovmContext.coder.decode(Property.getParamType(), inputs[2])
@@ -65,7 +63,6 @@ export class ForAllSuchThatDecider implements Decider {
         }
         return {
           outcome: false,
-          witnesses: [],
           challenge,
           traceInfo: decision.traceInfo
             ? TraceInfoCreator.createFor(q, decision.traceInfo)
@@ -77,7 +74,6 @@ export class ForAllSuchThatDecider implements Decider {
     return (
       falseDecision || {
         outcome: true,
-        witnesses: [],
         challenge: null
       }
     )

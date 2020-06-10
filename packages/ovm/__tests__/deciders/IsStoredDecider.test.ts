@@ -1,8 +1,15 @@
 import { Address, Bytes } from '@cryptoeconomicslab/primitives'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
-import { DeciderManager, IsStoredDecider, Property } from '../../src'
+import {
+  DeciderManager,
+  IsStoredDecider,
+  Property,
+  ForAllSuchThatDecider,
+  LogicalConnective
+} from '../../src'
 import Coder from '@cryptoeconomicslab/coder'
 import { setupContext } from '@cryptoeconomicslab/context'
+import { ForAllSuchThatDeciderAddress } from '../helpers/initiateDeciderManager'
 setupContext({ coder: Coder })
 
 describe('IsStoredDecider', () => {
@@ -19,6 +26,11 @@ describe('IsStoredDecider', () => {
   beforeEach(() => {
     db = new InMemoryKeyValueStore(Bytes.fromString('test'))
     deciderManager = new DeciderManager(db)
+    deciderManager.setDecider(
+      ForAllSuchThatDeciderAddress,
+      new ForAllSuchThatDecider(),
+      LogicalConnective.ForAllSuchThat
+    )
     deciderManager.setDecider(addr, new IsStoredDecider())
   })
 

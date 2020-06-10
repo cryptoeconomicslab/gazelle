@@ -49,7 +49,6 @@ describe('ForAllsuchThatDecider', () => {
     const decision = await deciderManager.decide(property)
     expect(decision).toStrictEqual({
       outcome: true,
-      witnesses: [],
       challenge: null
     })
   })
@@ -88,7 +87,6 @@ describe('ForAllsuchThatDecider', () => {
     const decision = await deciderManager.decide(property)
     expect(decision).toStrictEqual({
       outcome: true,
-      witnesses: [],
       challenge: null
     })
   })

@@ -371,12 +371,7 @@ describe('Exit', () => {
     )
 
     const challengeProperty = new Property(ForAllSuchThatDeciderAddress, [
-      Bytes.fromString(
-        replaceHint('stored.${contract},KEY,${key}', {
-          contract: Coder.encode(commitmentContractAddress),
-          key: Coder.encode(getBlockNumber(bobSU))
-        })
-      ),
+      Bytes.fromString(''),
       Bytes.fromString('root'),
       Coder.encode(
         new Property(NotDeciderAddress, [

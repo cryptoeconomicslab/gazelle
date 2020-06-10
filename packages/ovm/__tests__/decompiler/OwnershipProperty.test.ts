@@ -95,7 +95,7 @@ describe('OwnershipProperty', () => {
     const challengeProperty = new Property(
       deciderManager.getDeciderAddress(LogicalConnective.ForAllSuchThat),
       [
-        Bytes.fromString(replaceHint('signatures,KEY,${tx}', { tx: MESSAGE })),
+        Bytes.fromString(''),
         Bytes.fromString('v0'),
         Coder.encode(
           new Property(

@@ -49,7 +49,7 @@ export class ThereExistsSuchThatDecider implements Decider {
       property: new Property(
         manager.getDeciderAddress(LogicalConnective.ForAllSuchThat),
         [
-          inputs[0],
+          Bytes.default(),
           inputs[1],
           coder.encode(
             new Property(manager.getDeciderAddress(LogicalConnective.Not), [

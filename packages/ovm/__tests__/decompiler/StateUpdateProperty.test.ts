@@ -137,7 +137,7 @@ describe('StateUpdate', () => {
     const challengeProperty = new Property(
       deciderManager.getDeciderAddress(LogicalConnective.ForAllSuchThat),
       [
-        Bytes.fromString(hint),
+        Bytes.fromString(''),
         Bytes.fromString('tx'),
         Coder.encode(
           new Property(
