@@ -20,6 +20,10 @@ import Aggregator, {
 import Sentry from '@sentry/node'
 
 import contractConfig from './config.local.json'
+import tokenConfig from './tokenConfig.local.json'
+const tConfig: {
+  [key: string]: { DepositContract: string; TokenContract: string }
+} = tokenConfig
 
 if (process.env.SENTRY_ENDPOINT) {
   Sentry.init({
@@ -94,6 +98,17 @@ async function main() {
   aggregator.registerToken(
     Address.from(contractConfig.payoutContracts.DepositContract)
   )
+  if (tConfig) {
+    Object.keys(
+      tConfig as {
+        [key: string]: { DepositContract: string; TokenContract: string }
+      }
+    ).forEach(k => {
+      aggregator.registerToken(
+        Address.from(tConfig[k].DepositContract as string)
+      )
+    })
+  }
   aggregator.run()
   console.log('aggregator is running on port ', process.env.PORT)
 }

@@ -14,6 +14,7 @@ WORKDIR /HOME/e2e-tests
 
 COPY ./integration-test/e2e-tests/package.json package.json
 COPY ./integration-test/e2e-tests/config.local.json config.local.json
+COPY ./integration-test/e2e-tests/tokenConfig.local.json tokenConfig.local.json
 COPY ./integration-test/e2e-tests/tsconfig.json tsconfig.json
 
 RUN npm i

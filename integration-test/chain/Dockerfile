@@ -4,8 +4,9 @@ RUN npm i -g ganache-cli
 
 # deploy contract
 WORKDIR /HOME
-RUN git clone -b alpha-1.0.0 https://github.com/cryptoeconomicslab/ovm-contracts.git
+RUN git clone https://github.com/cryptoeconomicslab/ovm-contracts.git
 WORKDIR /HOME/ovm-contracts
+RUN git checkout f29c6e812848bf26340bbfe81fdc57b4f9f78805
 COPY contracts.env .local.env
 COPY setup-chain.sh setup-chain.sh
 

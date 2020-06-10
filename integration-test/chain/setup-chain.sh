@@ -9,6 +9,7 @@ GANACHE_PID=$!
 npm i
 npm run build
 npm run deploy:dev
+npm run deployToken:dev
 
 # kill chain process
 kill $GANACHE_PID

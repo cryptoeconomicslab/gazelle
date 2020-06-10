@@ -12,7 +12,9 @@
     "test:integration": "npm run docker:test",
     "coverage": "jest --coverage",
     "docker:build": "docker-compose build ganache && npm run docker:cp && docker-compose build postgres aggregator test",
-    "docker:cp": "docker cp $(docker create gazelle_ganache):/HOME/ovm-contracts/build/out.config.json ./integration-test/aggregator/src/config.local.json && cp ./integration-test/aggregator/src/config.local.json ./integration-test/e2e-tests/config.local.json",
+    "docker:cp": "npm run docker:cp-env && npm run docker:cp-token",
+    "docker:cp-env": "docker cp $(docker create gazelle_ganache):/HOME/ovm-contracts/build/out.config.json ./integration-test/aggregator/src/config.local.json && cp ./integration-test/aggregator/src/config.local.json ./integration-test/e2e-tests/config.local.json",
+    "docker:cp-token": "docker cp $(docker create gazelle_ganache):/HOME/ovm-contracts/build/outToken.config.json ./integration-test/aggregator/src/tokenConfig.local.json && cp ./integration-test/aggregator/src/tokenConfig.local.json ./integration-test/e2e-tests/tokenConfig.local.json",
     "docker:start": "docker-compose up -V ganache postgres aggregator",
     "docker:test": "docker-compose up -V -d ganache postgres aggregator && docker-compose up --exit-code-from test test",
     "docker:down": "docker-compose down"
