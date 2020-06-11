@@ -35,10 +35,15 @@ export class PETHContract implements IERC20DetailedContract {
       amount.data.toString()
     )
     try {
-      await this.connection.wrap(bigNumberifiedAmount, {
+      const wrapTx = await this.connection.wrap(bigNumberifiedAmount, {
         value: bigNumberifiedAmount
       })
-      await this.connection.approve(spender.data, bigNumberifiedAmount)
+      await wrapTx.wait()
+      const approveTx = await this.connection.approve(
+        spender.data,
+        bigNumberifiedAmount
+      )
+      await approveTx.wait()
     } catch (e) {
       await this.connection.unwrap(bigNumberifiedAmount)
       throw new Error(`Invalid call: ${e}`)

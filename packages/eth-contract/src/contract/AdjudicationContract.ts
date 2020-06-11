@@ -82,9 +82,10 @@ export class AdjudicationContract implements IAdjudicationContract {
   }
 
   async decideClaimToTrue(gameId: Bytes): Promise<void> {
-    return await this.connection.decideClaimToTrue(gameId.toHexString(), {
+    const tx = await this.connection.decideClaimToTrue(gameId.toHexString(), {
       gasLimit: this.gasLimit
     })
+    await tx.wait()
   }
 
   async decideClaimToFalse(
