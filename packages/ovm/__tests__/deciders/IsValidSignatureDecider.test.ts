@@ -1,16 +1,28 @@
-import { DeciderManager, IsValidSignatureDecider, Property } from '../../src'
+import {
+  DeciderManager,
+  IsValidSignatureDecider,
+  Property,
+  ForAllSuchThatDecider,
+  LogicalConnective
+} from '../../src'
 import { Address, Bytes } from '@cryptoeconomicslab/primitives'
 import * as ethers from 'ethers'
 import { Secp256k1Signer } from '@cryptoeconomicslab/signature'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import Coder from '@cryptoeconomicslab/coder'
 import { setupContext } from '@cryptoeconomicslab/context'
+import { ForAllSuchThatDeciderAddress } from '../helpers/initiateDeciderManager'
 setupContext({ coder: Coder })
 
 describe('IsValidSignatureDecider', () => {
   const addr = Address.from('0x0000000000000000000000000000000000000001')
   const db = new InMemoryKeyValueStore(Bytes.fromString('test'))
   const deciderManager = new DeciderManager(db)
+  deciderManager.setDecider(
+    ForAllSuchThatDeciderAddress,
+    new ForAllSuchThatDecider(),
+    LogicalConnective.ForAllSuchThat
+  )
   deciderManager.setDecider(addr, new IsValidSignatureDecider())
   const wallet = ethers.Wallet.createRandom()
   let publicKey: string, privateKey: Bytes, message: Bytes, signature: Bytes

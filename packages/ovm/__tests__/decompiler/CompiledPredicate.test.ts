@@ -38,6 +38,29 @@ describe('CompiledPredicate', () => {
   const encodeBoolDecider = (input: Bytes) =>
     encodeProperty(new Property(BoolDeciderAddress, [input]))
 
+  describe('restoreHint', () => {
+    it('restote hint from compiled predicate', async () => {
+      const compiledPredicate = CompiledPredicate.fromSource(
+        TestPredicateAddress,
+        `@library
+@quantifier("bucket,RANGE,\${b}")
+def SampleQuantifier(a, b) :=
+  Bool(a, b) and Bool(a, b)
+
+def test(a) := SampleQuantifier(a).any(b -> b())
+`
+      )
+      const hint = compiledPredicate.restoreHint(
+        new Property(TestPredicateAddress, [
+          PredicateLabel.from('TestTA'),
+          Coder.encode(BigNumber.from(1)),
+          Coder.encode(BigNumber.from(2))
+        ])
+      )
+      expect(hint.intoString()).toEqual('bucket,RANGE,0x223222')
+    })
+  })
+
   describe('decompileProperty', () => {
     const testOriginalProperty = {
       deciderAddress: ForAllSuchThatDeciderAddress,

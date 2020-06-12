@@ -31,6 +31,8 @@
     "@cryptoeconomicslab/eth-contract": "file:../gazelle/packages/eth-contract",
     "@cryptoeconomicslab/eth-plasma-light-client": "file:../gazelle/packages/eth-plasma-light-client",
     "@cryptoeconomicslab/eth-wallet": "file:../gazelle/packages/eth-wallet",
+    "@cryptoeconomicslab/plasma": "file:../gazelle/packages/plasma",
+    "@cryptoeconomicslab/ovm": "file:../gazelle/packages/ovm",
     "@cryptoeconomicslab/level-kvs": "0.0.6",
     "@cryptoeconomicslab/plasma-light-client": "file:../gazelle/packages/plasma-light-client",
     "@cryptoeconomicslab/primitives": "file:../gazelle/packages/primitives",

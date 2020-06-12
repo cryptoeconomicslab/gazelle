@@ -16,7 +16,11 @@ export async function executeChallenge(
   property: Property,
   challenge: Challenge
 ) {
-  await adjudicationContract.claimProperty(challenge.property)
+  try {
+    await adjudicationContract.claimProperty(challenge.property)
+  } catch (e) {
+    console.error(e)
+  }
   await adjudicationContract.challenge(
     property,
     List.from(

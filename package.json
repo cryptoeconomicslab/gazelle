@@ -14,7 +14,8 @@
     "docker:build": "docker-compose build ganache && npm run docker:cp && docker-compose build postgres aggregator test",
     "docker:cp": "docker cp $(docker create gazelle_ganache):/HOME/ovm-contracts/build/out.config.json ./integration-test/aggregator/src/config.local.json && cp ./integration-test/aggregator/src/config.local.json ./integration-test/e2e-tests/config.local.json",
     "docker:start": "docker-compose up -V ganache postgres aggregator",
-    "docker:test": "docker-compose up -V -d && docker-compose logs -f test && docker-compose down"
+    "docker:test": "docker-compose up -V -d ganache postgres aggregator && docker-compose up --exit-code-from test test",
+    "docker:down": "docker-compose down"
   },
   "devDependencies": {
     "@types/jest": "^24.9.0",

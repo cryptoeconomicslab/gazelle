@@ -48,7 +48,7 @@ describe('CompiledDecider', () => {
     )
 
     expect(decision).toEqual({
-      witnesses: [],
+      witnesses: undefined,
       challenge: null,
       outcome: true
     })
@@ -176,7 +176,7 @@ describe('CompiledDecider', () => {
     const notAddress = deciderManager.getDeciderAddress(LogicalConnective.Not)
 
     const challengeProperty = new Property(ForAllSuchThatDeciderAddress, [
-      Bytes.fromString('range,NUMBER,0x223022-0x223522'),
+      Bytes.fromString(''),
       Bytes.fromString('b'),
       Coder.encode(
         new Property(notAddress, [

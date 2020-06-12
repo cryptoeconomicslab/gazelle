@@ -39,4 +39,10 @@ export class CompiledDecider implements Decider {
       this.constantTable
     )
   }
+
+  public restoreHint(inputs: Bytes[]): Bytes {
+    return this.predicateSource.restoreHint(
+      new Property(this.predicateSource.deployedAddress, inputs)
+    )
+  }
 }

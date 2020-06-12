@@ -35,6 +35,36 @@ export class DeciderManager implements DeciderManagerInterface {
   }
 
   /**
+   * restore hint for `∀t: ¬p(t)`
+   * @param property a property which has empty hint string
+   * @returns restored property
+   */
+  private restoreHint(property: Property): Property {
+    if (
+      property.deciderAddress !== this.getDeciderAddress('ForAllSuchThat') ||
+      !property.inputs[0].equals(Bytes.default())
+    ) {
+      return property
+    }
+    const notProperty = Property.fromStruct(
+      ovmContext.coder.decode(Property.getParamType(), property.inputs[2])
+    )
+    const innerProperty = Property.fromStruct(
+      ovmContext.coder.decode(Property.getParamType(), notProperty.inputs[0])
+    )
+    const decider = this.getDecider(innerProperty.deciderAddress)
+    if (decider && decider instanceof CompiledDecider) {
+      const hint = decider.restoreHint(innerProperty.inputs)
+      return new Property(
+        property.deciderAddress,
+        [hint].concat(property.inputs.slice(1))
+      )
+    } else {
+      throw new Error('decider not found')
+    }
+  }
+
+  /**
    * load JSON file to initialize DeciderManager
    * @param config
    */
@@ -109,7 +139,10 @@ export class DeciderManager implements DeciderManagerInterface {
   ): Promise<Decision> {
     const decider = this.getDecider(property.deciderAddress)
     if (decider) {
-      const inputs = bindVariables(property.inputs, substitutions)
+      const inputs = bindVariables(
+        this.restoreHint(property).inputs,
+        substitutions
+      )
       const decision = await decider.decide(this, inputs, substitutions)
       if (decision.outcome === false && decision.traceInfo === undefined) {
         // Set debug info for atomic predicates

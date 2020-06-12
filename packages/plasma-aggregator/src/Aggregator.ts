@@ -287,7 +287,7 @@ export default class Aggregator {
     // get inclusionProofs
     let witnesses: Array<{
       stateUpdate: string
-      transaction: { tx: string; witness: string }
+      transaction: { tx: string; witness: string } | null
       inclusionProof: string | null
     }> = []
     for (
@@ -320,11 +320,21 @@ export default class Aggregator {
               const inclusionProof = block.getInclusionProof(su)
               const tx = await this.stateManager.getTx(
                 address,
-                blockNumber,
+                BigNumber.from(b),
                 su.range
               )
-              if (!tx) throw new Error('Transaction not found')
-              const b = coder.encode(tx.toStruct())
+              if (!tx) {
+                return {
+                  stateUpdate: coder
+                    .encode(su.property.toStruct())
+                    .toHexString(),
+                  inclusionProof: inclusionProof
+                    ? coder.encode(inclusionProof.toStruct()).toHexString()
+                    : null,
+                  transaction: null
+                }
+              }
+              const txBytes = coder.encode(tx.toStruct())
               const witness = await getWitnesses(
                 this.decider.witnessDb,
                 createSignatureHint(
@@ -334,7 +344,7 @@ export default class Aggregator {
               if (!witness[0]) throw new Error('Signature not found')
 
               const transaction = {
-                tx: b.toHexString(),
+                tx: txBytes.toHexString(),
                 witness: witness[0].toHexString()
               }
 

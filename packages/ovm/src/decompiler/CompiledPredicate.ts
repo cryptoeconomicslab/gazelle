@@ -47,6 +47,26 @@ export class CompiledPredicate {
     }
   }
 
+  private getIntermediateCompiledPredicate(
+    compiledProperty: Property
+  ): IntermediateCompiledPredicate {
+    const label = PredicateLabel.getVariableName(compiledProperty.inputs[0])
+    if (label === null) {
+      compiledProperty.inputs.unshift(
+        Bytes.fromString(this.compiled.entryPoint)
+      )
+    }
+    const findContract = (name: string) => {
+      return this.compiled.contracts.find(c => c.name == name)
+    }
+    const name = label || this.compiled.entryPoint
+    const c = findContract(name)
+    if (c === undefined) {
+      throw new Error(`cannot find ${name} in contracts`)
+    }
+    return c
+  }
+
   static fromSource(
     deployedAddress: Address,
     source: string,
@@ -73,6 +93,43 @@ export class CompiledPredicate {
   }
 
   /**
+   * get hint of `∃t: p(t)` from `p`
+   * @param property p of `∃t: p(t)`
+   */
+  restoreHint(property: Property): Bytes {
+    const findParent = (name: string) => {
+      return this.compiled.contracts.find(
+        c =>
+          c.connective == 'ThereExistsSuchThat' &&
+          typeof c.inputs[2] !== 'string' &&
+          c.inputs[2].type == 'AtomicProposition' &&
+          c.inputs[2].predicate.type == 'AtomicPredicateCall' &&
+          c.inputs[2].predicate.source === name
+      )
+    }
+    const intermediateCompiledPredicate = this.getIntermediateCompiledPredicate(
+      property
+    )
+    const therePredicate = findParent(intermediateCompiledPredicate.name)
+    if (therePredicate === undefined) {
+      throw new Error(
+        `cannot find ${intermediateCompiledPredicate.name} in contracts`
+      )
+    }
+    const hint = therePredicate.inputs[0] as string
+    return Bytes.fromString(
+      replaceHint(
+        hint,
+        createSubstitutions(
+          intermediateCompiledPredicate.inputDefs,
+          property.inputs,
+          parseHintToGetVariables(hint).map(parseVariable)
+        )
+      )
+    )
+  }
+
+  /**
    * decompileProperty expands a compiled property to original property
    * @param compiledProperty source compiled property
    * @param predicateTable The mapping between shortname of predicates and its address
@@ -83,20 +140,7 @@ export class CompiledPredicate {
     predicateTable: ReadonlyMap<string, Address>,
     constantTable: { [key: string]: Bytes } = {}
   ): Property {
-    const label = PredicateLabel.getVariableName(compiledProperty.inputs[0])
-    if (label === null) {
-      compiledProperty.inputs.unshift(
-        Bytes.fromString(this.compiled.entryPoint)
-      )
-    }
-    const findContract = (name: string) => {
-      return this.compiled.contracts.find(c => c.name == name)
-    }
-    const name = label || this.compiled.entryPoint
-    const c = findContract(name)
-    if (c === undefined) {
-      throw new Error(`cannot find ${name} in contracts`)
-    }
+    const c = this.getIntermediateCompiledPredicate(compiledProperty)
     const def = c
     const context = {
       compiledProperty,
