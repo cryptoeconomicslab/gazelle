@@ -34,6 +34,7 @@ import { BlockManager, StateManager } from './managers'
 import { sleep } from './utils'
 import cors from 'cors'
 import { createSignatureHint } from '@cryptoeconomicslab/ovm/lib/hintString'
+import logger from './Logger'
 
 export default class Aggregator {
   readonly decider: DeciderManager
@@ -121,7 +122,7 @@ export default class Aggregator {
       this.httpServer.get('/faucet', this.handleFaucet.bind(this))
     }
     this.httpServer.listen(this.option.port, () =>
-      console.log(`server is listening on port ${this.option.port}!`)
+      logger.info('server is listening on port %d!', this.option.port)
     )
   }
 
@@ -196,7 +197,6 @@ export default class Aggregator {
             })
         )
       ).reduce((acc, val) => [...acc, ...val], [])
-      console.log(stateUpdates)
       res
         .send(
           stateUpdates.map(s =>
@@ -206,7 +206,7 @@ export default class Aggregator {
         .status(200)
         .end()
     } catch (e) {
-      console.log(e)
+      logger.error(e)
       res.status(500).end()
     }
   }
@@ -226,7 +226,7 @@ export default class Aggregator {
         res.status(200).end()
       })
     } catch (e) {
-      console.log(e)
+      logger.error(e)
       res.status(400).end()
     }
   }
@@ -256,7 +256,7 @@ export default class Aggregator {
         res.status(200).end()
       })
     } catch (e) {
-      console.log(e)
+      logger.error(e)
       res.status(404).end()
     }
   }
@@ -349,7 +349,7 @@ export default class Aggregator {
           )
         )
       } catch (e) {
-        console.log(e)
+        logger.error(e)
         res
           .send('witness not found: ' + String(e))
           .status(404)
@@ -394,7 +394,7 @@ export default class Aggregator {
   private async submitBlock(block: Block) {
     const root = block.getTree().getRoot()
     await this.commitmentContract.submit(block.blockNumber, root)
-    console.log('submit block: ', block)
+    logger.info('submt block: %s', block)
   }
 
   /**
@@ -406,7 +406,11 @@ export default class Aggregator {
   private async ingestTransaction(
     tx: Transaction
   ): Promise<TransactionReceipt> {
-    console.log('transaction received: ', tx.range, tx.depositContractAddress)
+    logger.info(
+      'transaction received: %s %s',
+      tx.range,
+      tx.depositContractAddress
+    )
     const nextBlockNumber = await this.blockManager.getNextBlockNumber()
     const stateUpdates = await this.stateManager.resolveStateUpdates(
       tx.depositContractAddress,
@@ -454,6 +458,7 @@ export default class Aggregator {
       const blockNumber = await this.blockManager.getCurrentBlockNumber()
       const stateUpdate = checkpoint[0]
       const tx = new DepositTransaction(depositContractAddress, stateUpdate)
+      logger.info('insertDepositRange: %s', tx)
       this.stateManager.insertDepositRange(tx, blockNumber)
     }
   }
@@ -463,7 +468,7 @@ export default class Aggregator {
    * @param tokenAddress deposit contract address to register
    */
   public registerToken(tokenAddress: Address) {
-    console.log('register token: ', tokenAddress.data)
+    logger.info('register token: %s', tokenAddress.data)
     this.blockManager.registerToken(tokenAddress)
     const depositContract = this.depositContractFactory(tokenAddress)
     this.depositContracts.push(depositContract)
