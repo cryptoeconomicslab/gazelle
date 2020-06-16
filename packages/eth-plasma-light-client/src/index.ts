@@ -4,11 +4,10 @@ import { Address, Bytes } from '@cryptoeconomicslab/primitives'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import {
   DepositContract,
-  ERC20Contract,
   CommitmentContract,
   AdjudicationContract,
   OwnershipPayoutContract,
-  PETHContract,
+  ERC20Contract,
   EthContractConfig
 } from '@cryptoeconomicslab/eth-contract'
 import LightClient from '@cryptoeconomicslab/plasma-light-client'
@@ -61,11 +60,9 @@ export default async function initialize(options: EthLightClientOptions) {
     deciderConfig: options.config,
     aggregatorEndpoint: options.aggregatorEndpoint
   })
-  await client.registerCustomToken(
-    new PETHContract(Address.from(options.config.PlasmaETH), options.wallet),
-    depositContractFactory(
-      Address.from(options.config.payoutContracts['DepositContract'])
-    )
+  await client.registerToken(
+    options.config.PlasmaETH,
+    options.config.payoutContracts['DepositContract']
   )
   return client
 }

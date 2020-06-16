@@ -15,7 +15,6 @@ setupContext({ coder: JsonCoder })
 // mock
 jest.mock('@cryptoeconomicslab/eth-contract', () => {
   const {
-    ERC20Contract,
     CommitmentContract,
     AdjudicationContract,
     OwnershipPayoutContract
@@ -36,11 +35,10 @@ jest.mock('@cryptoeconomicslab/eth-contract', () => {
         startWatchingEvents: jest.fn()
       }
     }),
-    ERC20Contract,
     CommitmentContract,
     AdjudicationContract,
     OwnershipPayoutContract,
-    PETHContract: jest.fn().mockImplementation(() => {
+    ERC20Contract: jest.fn().mockImplementation(() => {
       return {
         address: '',
         approve: jest.fn().mockImplementation(async () => {
