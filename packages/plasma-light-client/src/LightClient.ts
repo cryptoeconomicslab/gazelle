@@ -201,6 +201,10 @@ export default class LightClient {
     )
   }
 
+  public getWallet(): Wallet {
+    return this.wallet
+  }
+
   public get address(): string {
     return this.wallet.getAddress().data
   }
