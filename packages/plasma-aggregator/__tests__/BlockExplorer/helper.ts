@@ -69,7 +69,8 @@ const MockWallet = jest.fn().mockImplementation(() => {
 })
 
 export async function initializeAggregatorWithBlocks(
-  blocks: Block[]
+  blocks: Block[],
+  currentBlockNumber: BigNumber
 ): Promise<Aggregator> {
   const kvs = new InMemoryKeyValueStore(Bytes.fromString('test-db'))
   const stateBucket = await kvs.bucket(Bytes.fromString('state_update'))
@@ -84,6 +85,7 @@ export async function initializeAggregatorWithBlocks(
   for (const block of blocks) {
     await blockManager.putBlock(block)
   }
+  await blockManager['setBlockNumber'](currentBlockNumber)
 
   function depositContractFactory(address: Address) {
     return new MockDepositContract(address, eventDb)
