@@ -34,6 +34,7 @@ import { BlockManager, StateManager } from './managers'
 import { sleep } from './utils'
 import cors from 'cors'
 import { createSignatureHint } from '@cryptoeconomicslab/ovm/lib/hintString'
+import BlockExplorerController from './BlockExplorer/Controller'
 
 export default class Aggregator {
   readonly decider: DeciderManager
@@ -116,12 +117,114 @@ export default class Aggregator {
       '/checkpoint_witness',
       this.handleGetCheckpointWitness.bind(this)
     )
+    this.setupBlockExplorer()
     // NOTE: for debug API
     if (process.env.NODE_ENV === 'DEBUG') {
       this.httpServer.get('/faucet', this.handleFaucet.bind(this))
     }
     this.httpServer.listen(this.option.port, () =>
       console.log(`server is listening on port ${this.option.port}!`)
+    )
+  }
+
+  private setupBlockExplorer() {
+    const controller = new BlockExplorerController(this)
+
+    this.httpServer.get(
+      '/explorer/block',
+      async (req: Request, res: Response) => {
+        const blockNumber = BigNumber.from(Number(req.query.blockNumber))
+        try {
+          const json = controller.handleBlock(blockNumber)
+          res
+            .send(json)
+            .status(200)
+            .end()
+        } catch (e) {
+          res
+            .status(404)
+            .send('Not found')
+            .end(0)
+        }
+      }
+    )
+
+    this.httpServer.get(
+      '/explorer/blocks',
+      async (req: Request, res: Response) => {
+        const from = req.query.from
+          ? BigNumber.from(Number(req.query.from))
+          : undefined
+        const to = req.query.to
+          ? BigNumber.from(Number(req.query.to))
+          : undefined
+
+        try {
+          const json = controller.handleBlockList({
+            from,
+            to
+          })
+          res
+            .send(json)
+            .status(200)
+            .end()
+        } catch (e) {
+          res
+            .status(404)
+            .send('Not found')
+            .end(0)
+        }
+      }
+    )
+
+    this.httpServer.get(
+      '/explorer/transaction',
+      async (req: Request, res: Response) => {
+        const blockNumber = BigNumber.from(Number(req.query.blockNumber))
+        const depositContractAddress = Address.from(
+          req.query.depositContractAddress
+        )
+        const start = BigNumber.from(Number(req.query.start))
+        const end = BigNumber.from(Number(req.query.end))
+
+        try {
+          const json = controller.handleTransaction(
+            blockNumber,
+            depositContractAddress,
+            start,
+            end
+          )
+          res
+            .send(json)
+            .status(200)
+            .end()
+        } catch (e) {
+          res
+            .status(404)
+            .send('Not found')
+            .end(0)
+        }
+      }
+    )
+
+    this.httpServer.get(
+      '/explorer/transactions',
+      async (req: Request, res: Response) => {
+        const blockNumber = BigNumber.from(Number(req.query.blockNumber))
+
+        try {
+          const json = controller.handleTransactionList(blockNumber)
+          res
+            .send(json)
+            .status(200)
+            .end()
+        } catch (e) {
+          res
+            .status(404)
+            .send('Not found')
+            .end(0)
+        }
+      }
     )
   }
 
