@@ -9,6 +9,7 @@ import {
 import { Property } from '@cryptoeconomicslab/ovm'
 import Coder from '@cryptoeconomicslab/coder'
 import { setupContext } from '@cryptoeconomicslab/context'
+import { DateUtils } from '@cryptoeconomicslab/utils'
 setupContext({ coder: Coder })
 import Aggregator from '../../src/Aggregator'
 import { initializeAggregatorWithBlocks } from './helper'
@@ -27,7 +28,8 @@ const su = (bn: number, start: number, end: number, msg: string) =>
 const block = (bn: number, addr: string, sus: StateUpdate[]) => {
   const map = new Map()
   map.set(addr, sus)
-  return new Block(BigNumber.from(bn), map)
+  const timestamp = DateUtils.getCurrentDate()
+  return new Block(BigNumber.from(bn), map, timestamp)
 }
 
 describe('BlockExplorerController', () => {

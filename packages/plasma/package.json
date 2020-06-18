@@ -46,7 +46,8 @@
   "devDependencies": {
     "@cryptoeconomicslab/coder": "^0.4.0",
     "@cryptoeconomicslab/context": "^0.4.0",
-    "@cryptoeconomicslab/primitives": "^0.4.0"
+    "@cryptoeconomicslab/primitives": "^0.4.0",
+    "@cryptoeconomicslab/utils": "^0.4.0"
   },
   "peerDependencies": {
     "@cryptoeconomicslab/primitives": "^0.0.36"

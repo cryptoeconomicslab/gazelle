@@ -135,9 +135,11 @@ export default class BlockManager {
       return
     }
 
+    const timestamp = Math.round(new Date().getTime() / 1000)
     const block = new Block(
       BigNumber.from(JSBI.add(blockNumber.data, JSBI.BigInt(1))),
-      stateUpdatesMap
+      stateUpdatesMap,
+      timestamp
     )
     await this.putBlock(block)
     await this.setBlockNumber(nextBlockNumber)

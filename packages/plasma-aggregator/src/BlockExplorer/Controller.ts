@@ -64,7 +64,9 @@ export default class BlockExplorerController {
     return b ? transformBlockItemFrom(b) : null
   }
 
-  public async handleTransactionList(): Promise<TransactionListItem[]> {
+  public async handleTransactionList(
+    blockNumber: BigNumber
+  ): Promise<TransactionListItem[]> {
     return []
   }
 
