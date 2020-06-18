@@ -25,11 +25,12 @@ const su = (bn: number, start: number, end: number, msg: string) =>
     new Property(Address.default(), [Bytes.fromString(msg)])
   )
 
+const TIME_STAMP = DateUtils.getCurrentDate()
+
 const block = (bn: number, addr: string, sus: StateUpdate[]) => {
   const map = new Map()
   map.set(addr, sus)
-  const timestamp = DateUtils.getCurrentDate()
-  return new Block(BigNumber.from(bn), map, timestamp)
+  return new Block(BigNumber.from(bn), map, TIME_STAMP)
 }
 
 describe('BlockExplorerController', () => {
@@ -61,7 +62,8 @@ describe('BlockExplorerController', () => {
       const b = await controller.handleBlock(BigNumber.from(1))
       expect(b).toEqual({
         blockNumber: '1',
-        transactions: 3
+        transactions: 3,
+        timestamp: TIME_STAMP
       })
     })
 
@@ -84,16 +86,16 @@ describe('BlockExplorerController', () => {
       const controller = new BlockExplorerController(aggregator)
       const blocks = await controller.handleBlockList()
       expect(blocks).toEqual([
-        { blockNumber: '3', transactions: 1 },
-        { blockNumber: '4', transactions: 1 },
-        { blockNumber: '5', transactions: 1 },
-        { blockNumber: '6', transactions: 1 },
-        { blockNumber: '7', transactions: 1 },
-        { blockNumber: '8', transactions: 1 },
-        { blockNumber: '9', transactions: 1 },
-        { blockNumber: '10', transactions: 1 },
-        { blockNumber: '11', transactions: 1 },
-        { blockNumber: '12', transactions: 1 }
+        { blockNumber: '3', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '4', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '5', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '6', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '7', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '8', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '9', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '10', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '11', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '12', transactions: 1, timestamp: TIME_STAMP }
       ])
     })
 
@@ -104,9 +106,9 @@ describe('BlockExplorerController', () => {
         to: BigNumber.from(9)
       })
       expect(blocks).toEqual([
-        { blockNumber: '7', transactions: 1 },
-        { blockNumber: '8', transactions: 1 },
-        { blockNumber: '9', transactions: 1 }
+        { blockNumber: '7', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '8', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '9', transactions: 1, timestamp: TIME_STAMP }
       ])
     })
 
@@ -116,12 +118,12 @@ describe('BlockExplorerController', () => {
         from: BigNumber.from(7)
       })
       expect(blocks).toEqual([
-        { blockNumber: '7', transactions: 1 },
-        { blockNumber: '8', transactions: 1 },
-        { blockNumber: '9', transactions: 1 },
-        { blockNumber: '10', transactions: 1 },
-        { blockNumber: '11', transactions: 1 },
-        { blockNumber: '12', transactions: 1 }
+        { blockNumber: '7', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '8', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '9', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '10', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '11', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '12', transactions: 1, timestamp: TIME_STAMP }
       ])
     })
 
@@ -131,16 +133,16 @@ describe('BlockExplorerController', () => {
         to: BigNumber.from(11)
       })
       expect(blocks).toEqual([
-        { blockNumber: '2', transactions: 1 },
-        { blockNumber: '3', transactions: 1 },
-        { blockNumber: '4', transactions: 1 },
-        { blockNumber: '5', transactions: 1 },
-        { blockNumber: '6', transactions: 1 },
-        { blockNumber: '7', transactions: 1 },
-        { blockNumber: '8', transactions: 1 },
-        { blockNumber: '9', transactions: 1 },
-        { blockNumber: '10', transactions: 1 },
-        { blockNumber: '11', transactions: 1 }
+        { blockNumber: '2', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '3', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '4', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '5', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '6', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '7', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '8', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '9', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '10', transactions: 1, timestamp: TIME_STAMP },
+        { blockNumber: '11', transactions: 1, timestamp: TIME_STAMP }
       ])
     })
 

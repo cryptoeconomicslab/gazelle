@@ -2,7 +2,7 @@ import { Block } from '@cryptoeconomicslab/plasma'
 
 export interface BlockItem {
   blockNumber: string
-  // TODO: timestamp: Date
+  timestamp: number
   transactions: number
 }
 
@@ -13,6 +13,7 @@ export function transformBlockItemFrom(block: Block): BlockItem {
   )
   return {
     blockNumber: block.blockNumber.raw,
+    timestamp: block.timestamp,
     transactions
   }
 }
