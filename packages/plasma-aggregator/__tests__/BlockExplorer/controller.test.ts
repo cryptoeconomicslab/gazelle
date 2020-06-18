@@ -16,15 +16,16 @@ import { initializeAggregatorWithBlocks } from './helper'
 
 const testAddr = '0x0000000000000000000000000000000000000001'
 
-const su = (bn: number, start: number, end: number, msg: string) =>
-  new StateUpdate(
+// for test data generation
+const su = (bn: number, start: number, end: number) => {
+  return new StateUpdate(
     Address.default(),
     Address.default(),
     new Range(BigNumber.from(start), BigNumber.from(end)),
     BigNumber.from(bn),
-    new Property(Address.default(), [Bytes.fromString(msg)])
+    new Property(Address.default(), [Bytes.fromHexString(testAddr)])
   )
-
+}
 const TIME_STAMP = DateUtils.getCurrentDate()
 
 const block = (bn: number, addr: string, sus: StateUpdate[]) => {
@@ -38,17 +39,11 @@ describe('BlockExplorerController', () => {
   beforeEach(async () => {
     new Array(12)
     const blocks = [
-      block(1, testAddr, [
-        su(1, 0, 10, 'hi'),
-        su(1, 10, 20, 'hello'),
-        su(1, 30, 35, 'hey')
-      ])
+      block(1, testAddr, [su(1, 0, 10), su(1, 10, 20), su(1, 30, 35)])
     ].concat(
       Array(12)
         .fill(0)
-        .map((v, i) =>
-          block(i + 2, testAddr, [su(i + 2, 0, 10, (i + 2).toString())])
-        )
+        .map((v, i) => block(i + 2, testAddr, [su(i + 2, 0, 10)]))
     )
     aggregator = await initializeAggregatorWithBlocks(
       blocks,
@@ -161,6 +156,46 @@ describe('BlockExplorerController', () => {
         controller.handleBlockList({
           from: BigNumber.from(-15)
         })
+      ).rejects.toEqual(new Error('Invalid Parameter'))
+    })
+  })
+
+  describe('handleTransactionList', () => {
+    test('returns transactions at block', async () => {
+      const stateUpdates = [su(1, 0, 10), su(1, 10, 20), su(1, 30, 35)]
+      const controller = new BlockExplorerController(aggregator)
+      const transactions = await controller.handleTransactionList(
+        BigNumber.from(1)
+      )
+      expect(transactions).toEqual(
+        stateUpdates.map(su => ({
+          hash: su.hash.toHexString(),
+          timestamp: TIME_STAMP,
+          blockNumber: '1',
+          depositContractAddress: su.depositContractAddress.data,
+          stateObject: {
+            address: su.stateObject.deciderAddress.data,
+            parameter: [testAddr]
+          },
+          range: {
+            start: su.range.start.raw,
+            end: su.range.end.raw
+          }
+        }))
+      )
+    })
+
+    test('throws when too large block number', async () => {
+      const controller = new BlockExplorerController(aggregator)
+      await expect(
+        controller.handleTransactionList(BigNumber.from(20))
+      ).rejects.toEqual(new Error('Invalid Parameter'))
+    })
+
+    test('throws when negative block number', async () => {
+      const controller = new BlockExplorerController(aggregator)
+      await expect(
+        controller.handleTransactionList(BigNumber.from(-1))
       ).rejects.toEqual(new Error('Invalid Parameter'))
     })
   })

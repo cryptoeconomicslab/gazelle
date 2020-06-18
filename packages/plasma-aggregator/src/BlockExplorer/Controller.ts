@@ -1,16 +1,13 @@
 import { BigNumber } from '@cryptoeconomicslab/primitives'
 import { Block } from '@cryptoeconomicslab/plasma'
 import Aggregator from '../Aggregator'
-import {
-  BlockItem,
-  TransactionListItem,
-  TransactionDetailedItem
-} from './Types'
+import { BlockItem, TransactionItem } from './Types'
 import {
   transformBlockItemFrom,
   transformBlockListFrom
 } from './Types/BlockItem'
 import JSBI from 'jsbi'
+import { transformTransactionItemFrom } from './Types/TransactionItem'
 
 function isValidParam(bn: BigNumber): boolean {
   return JSBI.greaterThanOrEqual(bn.data, JSBI.BigInt(0))
@@ -66,11 +63,22 @@ export default class BlockExplorerController {
 
   public async handleTransactionList(
     blockNumber: BigNumber
-  ): Promise<TransactionListItem[]> {
-    return []
+  ): Promise<TransactionItem[]> {
+    // Parameter validation
+    if (!isValidParam(blockNumber)) throw new Error('Invalid Parameter')
+    const blockManager = this.aggregator['blockManager']
+    const latestBlockNumber = await blockManager.getCurrentBlockNumber()
+    if (JSBI.greaterThan(blockNumber.data, latestBlockNumber.data))
+      throw new Error('Invalid Parameter')
+
+    const block = await blockManager.getBlock(blockNumber)
+    if (!block) throw new Error('Unexpected error: Block not found')
+    return Array.from(block.stateUpdatesMap.values())
+      .reduce((prev, current) => prev.concat(current), [])
+      .map(su => transformTransactionItemFrom(su, block))
   }
 
-  public async handleTransaction(): Promise<TransactionDetailedItem | null> {
+  public async handleTransaction(): Promise<TransactionItem | null> {
     return null
   }
 }

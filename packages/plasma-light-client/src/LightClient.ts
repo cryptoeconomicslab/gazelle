@@ -50,8 +50,7 @@ import UserAction, {
   createDepositUserAction,
   createExitUserAction,
   createReceiveUserAction,
-  createSendUserAction,
-  ActionType
+  createSendUserAction
 } from './UserAction'
 
 import EventEmitter from 'event-emitter'
@@ -380,7 +379,7 @@ export default class LightClient {
         const action = createReceiveUserAction(
           Address.from(tokenContractAddress),
           range,
-          owner,
+          owner, // FIXME: this is same as client's owner
           su.blockNumber
         )
         const db = await this.getUserActionDb(su.blockNumber)

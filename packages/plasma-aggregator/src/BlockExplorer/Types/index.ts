@@ -1,5 +1,4 @@
 import { BlockItem } from './BlockItem'
-import { TransactionListItem } from './TransactionListItem'
-import { TransactionDetailedItem } from './TransactionDetailedItem'
+import { TransactionItem } from './TransactionItem'
 
-export { BlockItem, TransactionListItem, TransactionDetailedItem }
+export { BlockItem, TransactionItem }
