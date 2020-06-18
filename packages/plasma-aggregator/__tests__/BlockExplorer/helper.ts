@@ -84,6 +84,15 @@ export async function initializeAggregatorWithBlocks(
 
   for (const block of blocks) {
     await blockManager.putBlock(block)
+    for await (const stateUpdates of Array.from(
+      block.stateUpdatesMap.values()
+    )) {
+      await Promise.all(
+        stateUpdates.map(async su => {
+          await stateManager['putStateUpdateAtBlock'](su, block.blockNumber)
+        })
+      )
+    }
   }
   await blockManager['setBlockNumber'](currentBlockNumber)
 

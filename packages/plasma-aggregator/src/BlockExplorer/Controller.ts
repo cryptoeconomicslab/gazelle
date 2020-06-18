@@ -1,4 +1,4 @@
-import { BigNumber } from '@cryptoeconomicslab/primitives'
+import { BigNumber, Address } from '@cryptoeconomicslab/primitives'
 import { Block } from '@cryptoeconomicslab/plasma'
 import Aggregator from '../Aggregator'
 import { BlockItem, TransactionItem } from './Types'
@@ -78,7 +78,33 @@ export default class BlockExplorerController {
       .map(su => transformTransactionItemFrom(su, block))
   }
 
-  public async handleTransaction(): Promise<TransactionItem | null> {
-    return null
+  public async handleTransaction(
+    blockNumber: BigNumber,
+    depositContractAddress: Address,
+    start: BigNumber,
+    end: BigNumber
+  ): Promise<TransactionItem | null> {
+    const blockManager = this.aggregator['blockManager']
+    const latestBlockNumber = await blockManager.getCurrentBlockNumber()
+    if (
+      !isValidParam(blockNumber) ||
+      JSBI.greaterThan(blockNumber.data, latestBlockNumber.data)
+    ) {
+      return null
+    }
+    const block = await blockManager.getBlock(blockNumber)
+    if (!block) return null
+
+    const stateUpdates = await this.aggregator[
+      'stateManager'
+    ].resolveStateUpdatesAtBlock(
+      depositContractAddress,
+      blockNumber,
+      start,
+      end
+    )
+    if (stateUpdates.length === 0) return null
+
+    return transformTransactionItemFrom(stateUpdates[0], block)
   }
 }

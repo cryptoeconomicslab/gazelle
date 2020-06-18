@@ -36,7 +36,7 @@ const block = (bn: number, addr: string, sus: StateUpdate[]) => {
 
 describe('BlockExplorerController', () => {
   let aggregator: Aggregator
-  beforeEach(async () => {
+  beforeAll(async () => {
     new Array(12)
     const blocks = [
       block(1, testAddr, [su(1, 0, 10), su(1, 10, 20), su(1, 30, 35)])
@@ -197,6 +197,55 @@ describe('BlockExplorerController', () => {
       await expect(
         controller.handleTransactionList(BigNumber.from(-1))
       ).rejects.toEqual(new Error('Invalid Parameter'))
+    })
+  })
+
+  describe('handleTransaction', () => {
+    test('returns transaction', async () => {
+      const controller = new BlockExplorerController(aggregator)
+      const s = su(1, 0, 10)
+      const tx = await controller.handleTransaction(
+        BigNumber.from(1),
+        Address.default(),
+        BigNumber.from(0),
+        BigNumber.from(10)
+      )
+      expect(tx).toEqual({
+        hash: s.hash.toHexString(),
+        timestamp: TIME_STAMP,
+        blockNumber: '1',
+        depositContractAddress: s.depositContractAddress.data,
+        stateObject: {
+          address: s.stateObject.deciderAddress.data,
+          parameter: [testAddr]
+        },
+        range: {
+          start: s.range.start.raw,
+          end: s.range.end.raw
+        }
+      })
+    })
+
+    test('returns null for not existing blockNumber', async () => {
+      const controller = new BlockExplorerController(aggregator)
+      const tx = await controller.handleTransaction(
+        BigNumber.from(20),
+        Address.default(),
+        BigNumber.from(0),
+        BigNumber.from(10)
+      )
+      expect(tx).toBeNull()
+    })
+
+    test('returns null for not existing range', async () => {
+      const controller = new BlockExplorerController(aggregator)
+      const tx = await controller.handleTransaction(
+        BigNumber.from(1),
+        Address.default(),
+        BigNumber.from(100),
+        BigNumber.from(120)
+      )
+      expect(tx).toBeNull()
     })
   })
 })
