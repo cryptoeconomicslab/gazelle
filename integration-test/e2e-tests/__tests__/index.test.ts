@@ -14,7 +14,6 @@ import parseUnits = ethers.utils.parseUnits
 import formatUnits = ethers.utils.formatUnits
 import { ActionType } from '@cryptoeconomicslab/plasma-light-client/lib/UserAction'
 import { EthCoder } from '@cryptoeconomicslab/eth-coder'
-import { EthWallet } from '@cryptoeconomicslab/eth-wallet'
 import { Block, StateUpdate } from '@cryptoeconomicslab/plasma'
 import { Property } from '@cryptoeconomicslab/ovm'
 import config from '../config.local.json'
@@ -92,11 +91,12 @@ describe('light client', () => {
     }
   }
 
-  async function deposit(lightClient: LightClient, amount: string) {
-    await wrapPETH(
-      (lightClient.getWallet() as EthWallet).getEthersWallet(),
-      parseUnitsToJsbi(amount).toString()
-    )
+  async function depositPETH(
+    lightClient: LightClient,
+    wallet: ethers.Wallet,
+    amount: string
+  ) {
+    await wrapPETH(wallet, parseUnitsToJsbi(amount).toString())
     await lightClient.deposit(parseUnitsToJsbi(amount), config.PlasmaETH)
   }
 
@@ -227,7 +227,7 @@ describe('light client', () => {
    * Bob attemts exit 0.1 ETH
    */
   test('user deposits, transfers and attempts exit asset', async () => {
-    await deposit(aliceLightClient, '0.1')
+    await depositPETH(aliceLightClient, senderWallet, '0.1')
     await sleep(10000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.1')
@@ -284,7 +284,7 @@ describe('light client', () => {
       const wallet = new ethers.Wallet(privateKey, provider)
       return await createClient(wallet)
     }
-    await deposit(aliceLightClient, '0.1')
+    await depositPETH(aliceLightClient, senderWallet, '0.1')
     await sleep(10000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.1')
@@ -323,8 +323,8 @@ describe('light client', () => {
    */
   test('multiple transfers in same block', async () => {
     console.log('multiple transfers in same block')
-    await deposit(aliceLightClient, '0.5')
-    await deposit(bobLightClient, '0.5')
+    await depositPETH(aliceLightClient, senderWallet, '0.5')
+    await depositPETH(bobLightClient, recieverWallet, '0.5')
 
     await sleep(10000)
 
@@ -386,7 +386,7 @@ describe('light client', () => {
    */
   test('deposit after withdraw', async () => {
     console.log('deposit after withdraw')
-    await deposit(aliceLightClient, '0.5')
+    await depositPETH(aliceLightClient, senderWallet, '0.5')
     await sleep(10000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.5')
@@ -415,8 +415,8 @@ describe('light client', () => {
     await finalizeExit(bobLightClient)
     expect(await getL1PETHBalance(bobLightClient)).toEqual('0.2')
 
-    await deposit(aliceLightClient, '0.1')
-    await deposit(bobLightClient, '0.8')
+    await depositPETH(aliceLightClient, senderWallet, '0.1')
+    await depositPETH(bobLightClient, recieverWallet, '0.8')
     await sleep(10000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.1')
@@ -431,7 +431,7 @@ describe('light client', () => {
    * Alice sends 0.1 ETH to Bob
    */
   test('transfer after error', async () => {
-    await deposit(aliceLightClient, '0.2')
+    await depositPETH(aliceLightClient, senderWallet, '0.2')
     await sleep(10000)
 
     await checkBalance(aliceLightClient, '0.2')
@@ -493,7 +493,7 @@ describe('light client', () => {
       }
     }
 
-    await deposit(aliceLightClient, '0.5')
+    await depositPETH(aliceLightClient, senderWallet, '0.5')
     await sleep(10000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.5')
@@ -536,7 +536,7 @@ describe('light client', () => {
   test('invalid inclusion proof', async () => {
     console.log('invalid inclusion proof')
 
-    await deposit(aliceLightClient, '0.5')
+    await depositPETH(aliceLightClient, senderWallet, '0.5')
     await sleep(10000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.5')
@@ -588,7 +588,7 @@ describe('light client', () => {
       )
     }
 
-    await deposit(aliceLightClient, '0.5')
+    await depositPETH(aliceLightClient, senderWallet, '0.5')
     await sleep(10000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.5')
