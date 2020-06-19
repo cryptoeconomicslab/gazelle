@@ -9,6 +9,7 @@ import {
 import { Property } from '@cryptoeconomicslab/ovm'
 import Coder from '@cryptoeconomicslab/coder'
 import { setupContext } from '@cryptoeconomicslab/context'
+import { DateUtils } from '@cryptoeconomicslab/utils'
 setupContext({ coder: Coder })
 
 const stateUpdateProperty = new Property(
@@ -29,12 +30,14 @@ describe('BlockItem', () => {
   const su = StateUpdate.fromProperty(stateUpdateProperty)
   map.set(testAddr, [su, su])
   map.set(testAddr2, [su, su, su])
-  const block = new Block(BigNumber.from(5), map)
+  const timestamp = DateUtils.getCurrentDate()
+  const block = new Block(BigNumber.from(5), map, timestamp)
 
   test('transformBlockItemFrom', () => {
     expect(transformBlockItemFrom(block)).toEqual({
       blockNumber: '5',
-      transactions: 5
+      transactions: 5,
+      timestamp
     })
   })
 })
