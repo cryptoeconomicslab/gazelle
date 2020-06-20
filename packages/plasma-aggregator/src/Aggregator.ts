@@ -126,6 +126,7 @@ export default class Aggregator {
   }
 
   // TODO: what if part of the transactions are invalid?
+  // respond 201 if more than one transactions are valid, otherwise respond 422.
   private async handleSendTransaction(req: Request, res: Response) {
     const { data } = req.body
     const transactions: string[] = Array.isArray(data) ? data : [data]
@@ -161,7 +162,15 @@ export default class Aggregator {
             ovmContext.coder.encode(receipt.toStruct()).toHexString()
           )
         )
-        res.status(201)
+        if (
+          receipts.some(receipt =>
+            receipt.status.equals(TRANSACTION_STATUS.TRUE)
+          )
+        ) {
+          res.status(201)
+        } else {
+          res.status(422)
+        }
         res.end()
       })
       .catch(() => {
