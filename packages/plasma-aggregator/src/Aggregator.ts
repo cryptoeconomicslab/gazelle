@@ -128,7 +128,10 @@ export default class Aggregator {
   }
 
   private setupBlockExplorer() {
-    const controller = new BlockExplorerController(this)
+    const controller = new BlockExplorerController(
+      this.blockManager,
+      this.stateManager
+    )
 
     this.httpServer.get(
       '/explorer/block',

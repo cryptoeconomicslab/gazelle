@@ -11,8 +11,8 @@ import Coder from '@cryptoeconomicslab/coder'
 import { setupContext } from '@cryptoeconomicslab/context'
 import { DateUtils } from '@cryptoeconomicslab/utils'
 setupContext({ coder: Coder })
-import Aggregator from '../../src/Aggregator'
 import { initializeAggregatorWithBlocks } from './helper'
+import { BlockManager, StateManager } from '../../src/managers'
 
 const testAddr = '0x0000000000000000000000000000000000000001'
 
@@ -35,7 +35,7 @@ const block = (bn: number, addr: string, sus: StateUpdate[]) => {
 }
 
 describe('BlockExplorerController', () => {
-  let aggregator: Aggregator
+  let blockManager: BlockManager, stateManager: StateManager
   beforeAll(async () => {
     new Array(12)
     const blocks = [
@@ -45,15 +45,17 @@ describe('BlockExplorerController', () => {
         .fill(0)
         .map((v, i) => block(i + 2, testAddr, [su(i + 2, 0, 10)]))
     )
-    aggregator = await initializeAggregatorWithBlocks(
+    const aggregator = await initializeAggregatorWithBlocks(
       blocks,
       BigNumber.from(12)
     )
+    blockManager = aggregator['blockManager']
+    stateManager = aggregator['stateManager']
   })
 
   describe('handleBlock', () => {
     test('returns block correctly', async () => {
-      const controller = new BlockExplorerController(aggregator)
+      const controller = new BlockExplorerController(blockManager, stateManager)
       const b = await controller.handleBlock(BigNumber.from(1))
       expect(b).toEqual({
         blockNumber: '1',
@@ -63,13 +65,13 @@ describe('BlockExplorerController', () => {
     })
 
     test('returns null for too large block number', async () => {
-      const controller = new BlockExplorerController(aggregator)
+      const controller = new BlockExplorerController(blockManager, stateManager)
       const b = await controller.handleBlock(BigNumber.from(15))
       expect(b).toBeNull()
     })
 
     test('throws invalid parameter', async () => {
-      const controller = new BlockExplorerController(aggregator)
+      const controller = new BlockExplorerController(blockManager, stateManager)
       await expect(controller.handleBlock(BigNumber.from(-15))).rejects.toEqual(
         new Error('Invalid Parameter')
       )
@@ -78,7 +80,7 @@ describe('BlockExplorerController', () => {
 
   describe('handleBlockList', () => {
     test('returns 10 blocks without params', async () => {
-      const controller = new BlockExplorerController(aggregator)
+      const controller = new BlockExplorerController(blockManager, stateManager)
       const blocks = await controller.handleBlockList()
       expect(blocks).toEqual([
         { blockNumber: '3', transactions: 1, timestamp: TIME_STAMP },
@@ -95,7 +97,7 @@ describe('BlockExplorerController', () => {
     })
 
     test('returns blocks specified with from and to', async () => {
-      const controller = new BlockExplorerController(aggregator)
+      const controller = new BlockExplorerController(blockManager, stateManager)
       const blocks = await controller.handleBlockList({
         from: BigNumber.from(7),
         to: BigNumber.from(9)
@@ -108,7 +110,7 @@ describe('BlockExplorerController', () => {
     })
 
     test('returns blocks til end only `from` specified', async () => {
-      const controller = new BlockExplorerController(aggregator)
+      const controller = new BlockExplorerController(blockManager, stateManager)
       const blocks = await controller.handleBlockList({
         from: BigNumber.from(7)
       })
@@ -123,7 +125,7 @@ describe('BlockExplorerController', () => {
     })
 
     test('returns 10 blocks til specified only `to` specified', async () => {
-      const controller = new BlockExplorerController(aggregator)
+      const controller = new BlockExplorerController(blockManager, stateManager)
       const blocks = await controller.handleBlockList({
         to: BigNumber.from(11)
       })
@@ -142,7 +144,7 @@ describe('BlockExplorerController', () => {
     })
 
     test('returns empty array when specified range is out of the range', async () => {
-      const controller = new BlockExplorerController(aggregator)
+      const controller = new BlockExplorerController(blockManager, stateManager)
       const blocks = await controller.handleBlockList({
         from: BigNumber.from(15),
         to: BigNumber.from(20)
@@ -151,7 +153,7 @@ describe('BlockExplorerController', () => {
     })
 
     test('throws invalid params', async () => {
-      const controller = new BlockExplorerController(aggregator)
+      const controller = new BlockExplorerController(blockManager, stateManager)
       await expect(
         controller.handleBlockList({
           from: BigNumber.from(-15)
@@ -163,7 +165,7 @@ describe('BlockExplorerController', () => {
   describe('handleTransactionList', () => {
     test('returns transactions at block', async () => {
       const stateUpdates = [su(1, 0, 10), su(1, 10, 20), su(1, 30, 35)]
-      const controller = new BlockExplorerController(aggregator)
+      const controller = new BlockExplorerController(blockManager, stateManager)
       const transactions = await controller.handleTransactionList(
         BigNumber.from(1)
       )
@@ -186,14 +188,14 @@ describe('BlockExplorerController', () => {
     })
 
     test('throws when too large block number', async () => {
-      const controller = new BlockExplorerController(aggregator)
+      const controller = new BlockExplorerController(blockManager, stateManager)
       await expect(
         controller.handleTransactionList(BigNumber.from(20))
       ).rejects.toEqual(new Error('Invalid Parameter'))
     })
 
     test('throws when negative block number', async () => {
-      const controller = new BlockExplorerController(aggregator)
+      const controller = new BlockExplorerController(blockManager, stateManager)
       await expect(
         controller.handleTransactionList(BigNumber.from(-1))
       ).rejects.toEqual(new Error('Invalid Parameter'))
@@ -202,7 +204,7 @@ describe('BlockExplorerController', () => {
 
   describe('handleTransaction', () => {
     test('returns transaction', async () => {
-      const controller = new BlockExplorerController(aggregator)
+      const controller = new BlockExplorerController(blockManager, stateManager)
       const s = su(1, 0, 10)
       const tx = await controller.handleTransaction(
         BigNumber.from(1),
@@ -227,7 +229,7 @@ describe('BlockExplorerController', () => {
     })
 
     test('returns null for not existing blockNumber', async () => {
-      const controller = new BlockExplorerController(aggregator)
+      const controller = new BlockExplorerController(blockManager, stateManager)
       const tx = await controller.handleTransaction(
         BigNumber.from(20),
         Address.default(),
@@ -238,7 +240,7 @@ describe('BlockExplorerController', () => {
     })
 
     test('returns null for not existing range', async () => {
-      const controller = new BlockExplorerController(aggregator)
+      const controller = new BlockExplorerController(blockManager, stateManager)
       const tx = await controller.handleTransaction(
         BigNumber.from(1),
         Address.default(),

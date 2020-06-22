@@ -1,6 +1,5 @@
 import { BigNumber, Address } from '@cryptoeconomicslab/primitives'
 import { Block } from '@cryptoeconomicslab/plasma'
-import Aggregator from '../Aggregator'
 import { BlockItem, TransactionItem } from './Types'
 import {
   transformBlockItemFrom,
@@ -8,6 +7,7 @@ import {
 } from './Types/BlockItem'
 import JSBI from 'jsbi'
 import { transformTransactionItemFrom } from './Types/TransactionItem'
+import { BlockManager, StateManager } from '../managers'
 
 function isValidParam(bn: BigNumber): boolean {
   return JSBI.greaterThanOrEqual(bn.data, JSBI.BigInt(0))
@@ -22,7 +22,10 @@ function bnSub(x: BigNumber, y: BigNumber): BigNumber {
 }
 
 export default class BlockExplorerController {
-  constructor(private aggregator: Aggregator) {}
+  constructor(
+    private blockManager: BlockManager,
+    private stateManager: StateManager
+  ) {}
 
   public async handleBlockList({
     from,
@@ -31,7 +34,7 @@ export default class BlockExplorerController {
     // Parameter validation
     if (from && !isValidParam(from)) throw new Error('Invalid Parameter')
     if (to && !isValidParam(to)) throw new Error('Invalid Parameter')
-    const blockManager = this.aggregator['blockManager']
+    const blockManager = this.blockManager
 
     const latestBlockNumber = await blockManager.getCurrentBlockNumber()
 
@@ -57,7 +60,7 @@ export default class BlockExplorerController {
   public async handleBlock(blockNumber: BigNumber): Promise<BlockItem | null> {
     if (!isValidParam(blockNumber)) throw new Error('Invalid Parameter')
 
-    const b = await this.aggregator['blockManager'].getBlock(blockNumber)
+    const b = await this.blockManager.getBlock(blockNumber)
     return b ? transformBlockItemFrom(b) : null
   }
 
@@ -66,7 +69,7 @@ export default class BlockExplorerController {
   ): Promise<TransactionItem[]> {
     // Parameter validation
     if (!isValidParam(blockNumber)) throw new Error('Invalid Parameter')
-    const blockManager = this.aggregator['blockManager']
+    const blockManager = this.blockManager
     const latestBlockNumber = await blockManager.getCurrentBlockNumber()
     if (JSBI.greaterThan(blockNumber.data, latestBlockNumber.data))
       throw new Error('Invalid Parameter')
@@ -84,7 +87,7 @@ export default class BlockExplorerController {
     start: BigNumber,
     end: BigNumber
   ): Promise<TransactionItem | null> {
-    const blockManager = this.aggregator['blockManager']
+    const blockManager = this.blockManager
     const latestBlockNumber = await blockManager.getCurrentBlockNumber()
     if (
       !isValidParam(blockNumber) ||
@@ -95,9 +98,7 @@ export default class BlockExplorerController {
     const block = await blockManager.getBlock(blockNumber)
     if (!block) return null
 
-    const stateUpdates = await this.aggregator[
-      'stateManager'
-    ].resolveStateUpdatesAtBlock(
+    const stateUpdates = await this.stateManager.resolveStateUpdatesAtBlock(
       depositContractAddress,
       blockNumber,
       start,
