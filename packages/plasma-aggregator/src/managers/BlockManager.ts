@@ -16,6 +16,7 @@ import {
   RangeRecord
 } from '@cryptoeconomicslab/db'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
+import { DateUtils } from '@cryptoeconomicslab/utils'
 import JSBI from 'jsbi'
 
 const STATE_UPDATE_BUCKET = Bytes.fromString('queued_state_updates')
@@ -135,7 +136,7 @@ export default class BlockManager {
       return
     }
 
-    const timestamp = Math.round(new Date().getTime() / 1000)
+    const timestamp = DateUtils.getCurrentDate()
     const block = new Block(
       BigNumber.from(JSBI.add(blockNumber.data, JSBI.BigInt(1))),
       stateUpdatesMap,

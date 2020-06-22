@@ -34,7 +34,7 @@ import { BlockManager, StateManager } from './managers'
 import { sleep } from './utils'
 import cors from 'cors'
 import { createSignatureHint } from '@cryptoeconomicslab/ovm/lib/hintString'
-import BlockExplorerController from './BlockExplorer/Controller'
+import BlockExplorerController from './BlockExplorer/controller'
 
 export default class Aggregator {
   readonly decider: DeciderManager
