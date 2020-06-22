@@ -1,4 +1,4 @@
-import BlockExplorerController from '../../src/BlockExplorer/Controller'
+import BlockExplorerController from '../../src/BlockExplorer/controller'
 import { Block, StateUpdate } from '@cryptoeconomicslab/plasma'
 import {
   Address,
