@@ -17,6 +17,7 @@ import {
 } from '@cryptoeconomicslab/primitives'
 import { RangeStore, KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
 import JSBI from 'jsbi'
+import logger from '../Logger'
 
 /**
  * StateManager stores the latest states
@@ -88,7 +89,7 @@ export default class StateManager {
     nextBlockNumber: BigNumber,
     deciderManager: DeciderManager
   ): Promise<StateUpdate> {
-    console.log('execute state transition', tx.range)
+    logger.debug('execute state transition %s', tx.range)
     const { coder } = ovmContext
     const range = tx.range
     const prevStates = await this.resolveStateUpdates(
@@ -187,7 +188,6 @@ export default class StateManager {
     tx: DepositTransaction,
     blockNumber: BigNumber
   ) {
-    console.log('insertDepositRange: ', tx)
     const stateUpdate = StateUpdate.fromProperty(tx.stateUpdate)
     stateUpdate.update({ blockNumber })
     await this.putStateUpdate(stateUpdate)

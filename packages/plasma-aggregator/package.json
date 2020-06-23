@@ -41,7 +41,8 @@
     "express": "^4.17.1",
     "jsbi": "^3.1.2",
     "pg": "^7.18.2",
-    "tslib": "^1.11.1"
+    "tslib": "^1.11.1",
+    "winston": "^3.2.1"
   },
   "gitHead": "7fc394b1b6fa00c275cf580edc8395268726be85",
   "devDependencies": {

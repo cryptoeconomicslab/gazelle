@@ -17,6 +17,7 @@ import {
 } from '@cryptoeconomicslab/db'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import JSBI from 'jsbi'
+import logger from '../Logger'
 
 const STATE_UPDATE_BUCKET = Bytes.fromString('queued_state_updates')
 const BLOCK_BUCKET = Bytes.fromString('block')
@@ -80,7 +81,8 @@ export default class BlockManager {
    * @param su state update to be appended for next block submission
    */
   public async enqueuePendingStateUpdate(su: StateUpdate) {
-    console.log('enqueue state update', su)
+    logger.info('enqueue state update %s', su)
+
     const blockNumber = await this.getCurrentBlockNumber()
     const { start, end } = su.range
     const bucket = await this.tokenBucket(
