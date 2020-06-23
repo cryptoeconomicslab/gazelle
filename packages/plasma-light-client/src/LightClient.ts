@@ -233,7 +233,7 @@ export default class LightClient {
 
   /**
    * Get current balance of tokens in plasma.
-   * All ERC20 tokens including Peth registered by `registerCustomToken` method or `registerToken` method are included.
+   * All ERC20 tokens including Peth registered by `registerToken` method are included.
    * @returns Array of balance object which has the amount you have and token information.
    *     e.g. For ETH, the unit of amount is "wei" and decimal is 18.
    */
@@ -836,16 +836,21 @@ export default class LightClient {
   }
 
   /**
-   * register ERC20 custom token.
-   * ERC20 contract wrapper is passed directly. This method should be used
-   * when you want to use custom IERC20 contract. PETH contract use this method.
-   * @param erc20Contract IERC20Contract instance
-   * @param depositContract IDepositContract instance
+   * register ERC20 token.
+   * use default ERC20 contract wrapper
+   * @param erc20ContractAddress ERC20 token address to register
+   * @param depositContractAddress deposit contract address connecting to tokenAddress above
    */
-  public async registerCustomToken(
-    erc20Contract: IERC20DetailedContract,
-    depositContract: IDepositContract
+  public async registerToken(
+    erc20ContractAddress: string,
+    depositContractAddress: string
   ) {
+    const depositContract = this.depositContractFactory(
+      Address.from(depositContractAddress)
+    )
+    const erc20Contract = this.tokenContractFactory(
+      Address.from(erc20ContractAddress)
+    )
     await this.tokenManager.addContracts(erc20Contract, depositContract)
     depositContract.subscribeDepositedRangeExtended(async (range: Range) => {
       await this.depositedRangeManager.extendRange(
@@ -919,25 +924,6 @@ export default class LightClient {
       }
     )
     depositContract.startWatchingEvents()
-  }
-
-  /**
-   * register ERC20 token.
-   * use default ERC20 contract wrapper
-   * @param erc20ContractAddress ERC20 token address to register
-   * @param depositContractAddress deposit contract address connecting to tokenAddress above
-   */
-  public registerToken(
-    erc20ContractAddress: string,
-    depositContractAddress: string
-  ) {
-    const depositContract = this.depositContractFactory(
-      Address.from(depositContractAddress)
-    )
-    const erc20Contract = this.tokenContractFactory(
-      Address.from(erc20ContractAddress)
-    )
-    this.registerCustomToken(erc20Contract, depositContract)
   }
 
   /**
