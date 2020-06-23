@@ -13,6 +13,7 @@ type Provider = ethers.providers.Provider
 
 export interface EventWatcherOptions {
   interval?: number
+  approval?: number
 }
 
 export type EthEventWatcherArgType = {
@@ -74,7 +75,9 @@ export default class EventWatcher implements IEventWatcher {
       const loaded = await this.eventDb.getLastLoggedBlock(
         Bytes.fromString(this.contractAddress)
       )
-      await this.poll(loaded + 1, block.number, handler)
+      const approval =
+        typeof this.options.approval === 'undefined' ? 0 : this.options.approval
+      await this.poll(loaded + 1, block.number - approval, handler)
     } catch (e) {
       console.log(e)
       if (errorHandler) {
