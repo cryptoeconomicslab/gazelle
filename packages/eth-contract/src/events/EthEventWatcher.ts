@@ -75,9 +75,7 @@ export default class EventWatcher implements IEventWatcher {
       const loaded = await this.eventDb.getLastLoggedBlock(
         Bytes.fromString(this.contractAddress)
       )
-      const approval =
-        typeof this.options.approval === 'undefined' ? 0 : this.options.approval
-      await this.poll(loaded + 1, block.number - approval, handler)
+      await this.poll(loaded + 1, block.number, handler)
     } catch (e) {
       console.log(e)
       if (errorHandler) {
@@ -102,10 +100,12 @@ export default class EventWatcher implements IEventWatcher {
     blockNumber: number,
     completedHandler: CompletedHandler
   ) {
+    const approval =
+      typeof this.options.approval === 'undefined' ? 0 : this.options.approval
     const events = await this.httpProvider.getLogs({
       address: this.contractAddress,
       fromBlock: fromBlockNumber,
-      toBlock: blockNumber
+      toBlock: blockNumber - approval
     })
     for (const event of events) {
       if (event.transactionHash && event.logIndex !== undefined) {
@@ -135,7 +135,7 @@ export default class EventWatcher implements IEventWatcher {
     }
     await this.eventDb.setLastLoggedBlock(
       Bytes.fromString(this.contractAddress),
-      blockNumber
+      blockNumber - approval
     )
     completedHandler()
   }
