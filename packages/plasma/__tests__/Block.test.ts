@@ -7,6 +7,7 @@ import {
 import { Property } from '@cryptoeconomicslab/ovm'
 import { Block, StateUpdate } from '../src'
 import Coder from '@cryptoeconomicslab/coder'
+import { DateUtils } from '@cryptoeconomicslab/utils'
 import { setupContext } from '@cryptoeconomicslab/context'
 setupContext({ coder: Coder })
 
@@ -33,7 +34,8 @@ describe('Block', () => {
     map.set('0x0001100110011001100110011001101100110011', [
       StateUpdate.fromProperty(stateUpdateProperty)
     ])
-    const block = new Block(BigNumber.from(5), map)
+    const timestamp = DateUtils.getCurrentDate()
+    const block = new Block(BigNumber.from(5), map, timestamp)
     const encoded = Coder.encode(block.toStruct())
     const decoded = Block.fromStruct(
       Coder.decode(Block.getParamType(), encoded)
@@ -57,7 +59,8 @@ describe('Block', () => {
 
     const map = new Map()
     map.set(testAddr.data, [StateUpdate.fromProperty(stateUpdateProperty)])
-    const block = new Block(BigNumber.from(5), map)
+    const timestamp = DateUtils.getCurrentDate()
+    const block = new Block(BigNumber.from(5), map, timestamp)
     const inclusionProof = block.getInclusionProof(
       StateUpdate.fromProperty(stateUpdateProperty)
     )

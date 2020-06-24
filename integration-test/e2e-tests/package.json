@@ -36,6 +36,7 @@
     "@cryptoeconomicslab/level-kvs": "0.0.6",
     "@cryptoeconomicslab/plasma-light-client": "file:../gazelle/packages/plasma-light-client",
     "@cryptoeconomicslab/primitives": "file:../gazelle/packages/primitives",
+    "@cryptoeconomicslab/utils": "file:../gazelle/packages/utils",
     "dotenv": "^8.2.0",
     "ethers": "4.0.47",
     "jsbi": "^3.1.2",

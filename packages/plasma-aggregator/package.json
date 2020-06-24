@@ -35,6 +35,7 @@
     "@cryptoeconomicslab/merkle-tree": "^0.4.1-alpha.1",
     "@cryptoeconomicslab/ovm": "^0.4.1-alpha.3",
     "@cryptoeconomicslab/plasma": "^0.4.1-alpha.3",
+    "@cryptoeconomicslab/utils": "^0.4.0",
     "@cryptoeconomicslab/wallet": "^0.4.0",
     "cors": "^2.8.5",
     "dotenv": "^8.2.0",

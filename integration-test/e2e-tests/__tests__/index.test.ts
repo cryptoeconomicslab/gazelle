@@ -16,6 +16,7 @@ import { ActionType } from '@cryptoeconomicslab/plasma-light-client/lib/UserActi
 import { EthCoder } from '@cryptoeconomicslab/eth-coder'
 import { Block, StateUpdate } from '@cryptoeconomicslab/plasma'
 import { Property } from '@cryptoeconomicslab/ovm'
+import { DateUtils } from '@cryptoeconomicslab/utils'
 import config from '../config.local.json'
 
 declare type Numberish =
@@ -166,7 +167,8 @@ describe('light client', () => {
   function createBlock(blockNumber: BigNumber, stateUpdates: StateUpdate[]) {
     const stateUpdatesMap = new Map()
     stateUpdatesMap.set(config.PlasmaETH, stateUpdates)
-    return new Block(blockNumber, stateUpdatesMap)
+    const timestamp = DateUtils.getCurrentDate()
+    return new Block(blockNumber, stateUpdatesMap, timestamp)
   }
 
   async function exitInvalidStateUpdate(

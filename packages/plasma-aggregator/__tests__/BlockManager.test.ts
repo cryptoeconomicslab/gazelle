@@ -10,6 +10,7 @@ import {
 } from '@cryptoeconomicslab/primitives'
 import Coder from '@cryptoeconomicslab/coder'
 import { setupContext } from '@cryptoeconomicslab/context'
+import { DateUtils } from '@cryptoeconomicslab/utils'
 setupContext({
   coder: Coder
 })
@@ -46,7 +47,8 @@ describe('BlockManager', () => {
     map.set('0x0001100110011001100110011001101100110011', [
       StateUpdate.fromProperty(stateUpdateProperty)
     ])
-    const block1 = new Block(BigNumber.from(1), map)
+    const timestamp = DateUtils.getCurrentDate()
+    const block1 = new Block(BigNumber.from(1), map, timestamp)
     await blockManager.putBlock(block1)
     const res = await blockManager.getBlock(BigNumber.from(1))
     expect(res).toEqual(block1)
@@ -77,7 +79,8 @@ describe('BlockManager', () => {
     map.set(Address.default().data, [
       StateUpdate.fromProperty(stateUpdateProperty)
     ])
-    const expected = new Block(BigNumber.from(1), map)
+    const timestamp = DateUtils.getCurrentDate()
+    const expected = new Block(BigNumber.from(1), map, timestamp)
     expect(block).toEqual(expected)
   })
 })
