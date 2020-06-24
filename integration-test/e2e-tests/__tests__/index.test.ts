@@ -78,6 +78,29 @@ describe('light client', () => {
     }
   }
 
+  async function wrapPETH(wallet: ethers.Wallet, amount: string) {
+    const abi = ['function wrap(uint256 _amount) payable']
+    const contract = new ethers.Contract(config.PlasmaETH, abi, wallet)
+    const bigNumberifiedAmount = new ethers.utils.BigNumber(amount)
+    try {
+      const wrapTx = await contract.wrap(bigNumberifiedAmount, {
+        value: bigNumberifiedAmount
+      })
+      await wrapTx.wait()
+    } catch (e) {
+      throw new Error(`Invalid call: ${e}`)
+    }
+  }
+
+  async function depositPETH(
+    lightClient: LightClient,
+    wallet: ethers.Wallet,
+    amount: string
+  ) {
+    await wrapPETH(wallet, parseUnitsToJsbi(amount).toString())
+    await lightClient.deposit(parseUnitsToJsbi(amount), config.PlasmaETH)
+  }
+
   async function checkBalance(lightClient: LightClient, amount: string) {
     const balance = await lightClient.getBalance()
     // compare string rep because jsbi version varies
@@ -206,7 +229,7 @@ describe('light client', () => {
    * Bob attemts exit 0.1 ETH
    */
   test('user deposits, transfers and attempts exit asset', async () => {
-    await aliceLightClient.deposit(parseUnitsToJsbi('0.1'), config.PlasmaETH)
+    await depositPETH(aliceLightClient, senderWallet, '0.1')
     await sleep(10000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.1')
@@ -263,7 +286,7 @@ describe('light client', () => {
       const wallet = new ethers.Wallet(privateKey, provider)
       return await createClient(wallet)
     }
-    await aliceLightClient.deposit(parseUnitsToJsbi('0.1'), config.PlasmaETH)
+    await depositPETH(aliceLightClient, senderWallet, '0.1')
     await sleep(10000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.1')
@@ -302,8 +325,8 @@ describe('light client', () => {
    */
   test('multiple transfers in same block', async () => {
     console.log('multiple transfers in same block')
-    await aliceLightClient.deposit(parseUnitsToJsbi('0.5'), config.PlasmaETH)
-    await bobLightClient.deposit(parseUnitsToJsbi('0.5'), config.PlasmaETH)
+    await depositPETH(aliceLightClient, senderWallet, '0.5')
+    await depositPETH(bobLightClient, recieverWallet, '0.5')
 
     await sleep(10000)
 
@@ -365,7 +388,7 @@ describe('light client', () => {
    */
   test('deposit after withdraw', async () => {
     console.log('deposit after withdraw')
-    await aliceLightClient.deposit(parseUnitsToJsbi('0.5'), config.PlasmaETH)
+    await depositPETH(aliceLightClient, senderWallet, '0.5')
     await sleep(10000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.5')
@@ -394,8 +417,8 @@ describe('light client', () => {
     await finalizeExit(bobLightClient)
     expect(await getL1PETHBalance(bobLightClient)).toEqual('0.2')
 
-    await aliceLightClient.deposit(parseUnitsToJsbi('0.1'), config.PlasmaETH)
-    await bobLightClient.deposit(parseUnitsToJsbi('0.8'), config.PlasmaETH)
+    await depositPETH(aliceLightClient, senderWallet, '0.1')
+    await depositPETH(bobLightClient, recieverWallet, '0.8')
     await sleep(10000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.1')
@@ -410,7 +433,7 @@ describe('light client', () => {
    * Alice sends 0.1 ETH to Bob
    */
   test('transfer after error', async () => {
-    await aliceLightClient.deposit(parseUnitsToJsbi('0.2'), config.PlasmaETH)
+    await depositPETH(aliceLightClient, senderWallet, '0.2')
     await sleep(10000)
 
     await checkBalance(aliceLightClient, '0.2')
@@ -472,7 +495,7 @@ describe('light client', () => {
       }
     }
 
-    await aliceLightClient.deposit(parseUnitsToJsbi('0.5'), config.PlasmaETH)
+    await depositPETH(aliceLightClient, senderWallet, '0.5')
     await sleep(10000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.5')
@@ -515,7 +538,7 @@ describe('light client', () => {
   test('invalid inclusion proof', async () => {
     console.log('invalid inclusion proof')
 
-    await aliceLightClient.deposit(parseUnitsToJsbi('0.5'), config.PlasmaETH)
+    await depositPETH(aliceLightClient, senderWallet, '0.5')
     await sleep(10000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.5')
@@ -567,7 +590,7 @@ describe('light client', () => {
       )
     }
 
-    await aliceLightClient.deposit(parseUnitsToJsbi('0.5'), config.PlasmaETH)
+    await depositPETH(aliceLightClient, senderWallet, '0.5')
     await sleep(10000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.5')
