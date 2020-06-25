@@ -100,8 +100,7 @@ export default class EventWatcher implements IEventWatcher {
     blockNumber: number,
     completedHandler: CompletedHandler
   ) {
-    const approval =
-      typeof this.options.approval === 'undefined' ? 0 : this.options.approval
+    const approval = !this.options.approval ? 0 : this.options.approval
     const events = await this.httpProvider.getLogs({
       address: this.contractAddress,
       fromBlock: fromBlockNumber,
