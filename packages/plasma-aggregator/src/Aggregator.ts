@@ -99,13 +99,14 @@ export default class Aggregator {
     this.runHttpServer()
     this.commitmentContract.subscribeBlockSubmitted(
       async (blockNumber, root, mainchainBlockNumber, mainchainTimestamp) => {
-        this.blockManager.updateBlock(
+        await this.blockManager.updateBlock(
           blockNumber,
           mainchainBlockNumber,
           mainchainTimestamp
         )
       }
     )
+    this.commitmentContract.startWatchingEvents()
     if (this.option.isSubmitter) {
       this.poll()
     }

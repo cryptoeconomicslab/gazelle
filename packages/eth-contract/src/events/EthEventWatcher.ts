@@ -1,14 +1,14 @@
 import * as ethers from 'ethers'
-import { BigNumber, Bytes } from '@cryptoeconomicslab/primitives'
+import { Bytes } from '@cryptoeconomicslab/primitives'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import {
   EventDb,
   EventHandler,
   ErrorHandler,
+  EventLog,
   IEventWatcher,
   CompletedHandler
 } from '@cryptoeconomicslab/contract'
-import { Log } from 'ethers/providers'
 type Provider = ethers.providers.Provider
 
 export interface EventWatcherOptions {
@@ -125,8 +125,13 @@ export default class EventWatcher implements IEventWatcher {
 
       const handler = this.checkingEvents.get(logDesc.name)
       if (handler) {
-        logDesc.values.mainchainBlockNumber = BigNumber.from(event.blockNumber)
-        await handler(logDesc)
+        const eventLog: EventLog = {
+          name: logDesc.name,
+          values: Object.assign({}, logDesc.values, {
+            mainchainBlockNumber: event.blockNumber
+          })
+        }
+        await handler(eventLog)
         if (event.transactionHash && event.logIndex !== undefined) {
           await this.eventDb.addSeen(
             this.getEventId(event.transactionHash, event.logIndex)
