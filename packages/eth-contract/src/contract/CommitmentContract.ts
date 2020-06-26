@@ -1,5 +1,10 @@
 import * as ethers from 'ethers'
-import { Address, FixedBytes, BigNumber } from '@cryptoeconomicslab/primitives'
+import {
+  Address,
+  FixedBytes,
+  BigNumber,
+  Integer
+} from '@cryptoeconomicslab/primitives'
 import { EventLog, ICommitmentContract } from '@cryptoeconomicslab/contract'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import EthEventWatcher from '../events'
@@ -55,14 +60,25 @@ export class CommitmentContract implements ICommitmentContract {
   }
 
   subscribeBlockSubmitted(
-    handler: (blockNumber: BigNumber, root: FixedBytes) => Promise<void>
+    handler: (
+      blockNumber: BigNumber,
+      root: FixedBytes,
+      mainchainBlockNumber: BigNumber,
+      mainchainTimestamp: Integer
+    ) => Promise<void>
   ) {
     this.eventWatcher.subscribe('BlockSubmitted', async (log: EventLog) => {
-      const blockNumber = log.values[0]
-      const root = log.values[1]
+      const blockNumber = log.values.blockNumber
+      const root = log.values.root
+      const mainchainBlockNumber = log.values.mainchainBlockNumber
+      const timestamp = (
+        await this.connection.provider.getBlock(mainchainBlockNumber.toString())
+      ).timestamp
       await handler(
         BigNumber.fromString(blockNumber.toString()),
-        FixedBytes.fromHexString(32, root)
+        FixedBytes.fromHexString(32, root),
+        BigNumber.from(mainchainBlockNumber.toString()),
+        Integer.from(timestamp)
       )
     })
   }

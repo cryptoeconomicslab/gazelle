@@ -8,8 +8,9 @@ interface StateObject {
 export interface TransactionItem {
   hash: string
   //   from: string
-  timestamp: number
   blockNumber: string
+  mainchainBlockNumber: string
+  timestamp: number
   depositContractAddress: string
   stateObject: StateObject
   range: { start: string; end: string }
@@ -26,8 +27,9 @@ export function transformTransactionItemFrom(
   return {
     hash: su.hash.toHexString(),
     //    from: transaction.from.toString(),
-    timestamp: block.timestamp,
     blockNumber: block.blockNumber.raw,
+    mainchainBlockNumber: block.mainchainBlockNumber.raw,
+    timestamp: block.timestamp.data,
     depositContractAddress: su.depositContractAddress.data,
     range: {
       start: su.range.start.raw,

@@ -7,6 +7,7 @@ import {
   Address,
   Bytes,
   BigNumber,
+  Integer,
   Range
 } from '@cryptoeconomicslab/primitives'
 import {
@@ -16,7 +17,6 @@ import {
   RangeRecord
 } from '@cryptoeconomicslab/db'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
-import { DateUtils } from '@cryptoeconomicslab/utils'
 import JSBI from 'jsbi'
 
 const STATE_UPDATE_BUCKET = Bytes.fromString('queued_state_updates')
@@ -136,11 +136,11 @@ export default class BlockManager {
       return
     }
 
-    const timestamp = DateUtils.getCurrentDate()
     const block = new Block(
       BigNumber.from(JSBI.add(blockNumber.data, JSBI.BigInt(1))),
       stateUpdatesMap,
-      timestamp
+      BigNumber.from(0),
+      Integer.from(0)
     )
     await this.putBlock(block)
     await this.setBlockNumber(nextBlockNumber)
@@ -170,6 +170,26 @@ export default class BlockManager {
       ovmContext.coder.encode(BigNumber.from(block.blockNumber)),
       ovmContext.coder.encode(block.toStruct())
     )
+  }
+
+  /**
+   * update block with mainchain blockNumber and timestamp
+   * @param blockNumber block number of plasma
+   * @param mainchainBlockNumber block number of mainchain
+   * @param mainchainTimestamp timestamp of mainchain
+   */
+  public async updateBlock(
+    blockNumber: BigNumber,
+    mainchainBlockNumber: BigNumber,
+    mainchainTimestamp: Integer
+  ) {
+    const block = await this.getBlock(blockNumber)
+    if (!block) {
+      throw new Error(`Block ${blockNumber.toString()} not found`)
+    }
+    block.setMainchainBlockNumber(mainchainBlockNumber)
+    block.setTimestamp(mainchainTimestamp)
+    await this.putBlock(block)
   }
 
   /**

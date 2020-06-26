@@ -6,6 +6,7 @@ import {
   Address,
   Bytes,
   BigNumber,
+  Integer,
   Range
 } from '@cryptoeconomicslab/primitives'
 import Coder from '@cryptoeconomicslab/coder'
@@ -48,7 +49,12 @@ describe('BlockManager', () => {
       StateUpdate.fromProperty(stateUpdateProperty)
     ])
     const timestamp = DateUtils.getCurrentDate()
-    const block1 = new Block(BigNumber.from(1), map, timestamp)
+    const block1 = new Block(
+      BigNumber.from(1),
+      map,
+      BigNumber.from(0),
+      Integer.from(timestamp)
+    )
     await blockManager.putBlock(block1)
     const res = await blockManager.getBlock(BigNumber.from(1))
     expect(res).toEqual(block1)
@@ -79,8 +85,12 @@ describe('BlockManager', () => {
     map.set(Address.default().data, [
       StateUpdate.fromProperty(stateUpdateProperty)
     ])
-    const timestamp = DateUtils.getCurrentDate()
-    const expected = new Block(BigNumber.from(1), map, timestamp)
+    const expected = new Block(
+      BigNumber.from(1),
+      map,
+      BigNumber.from(0),
+      Integer.from(0)
+    )
     expect(block).toEqual(expected)
   })
 })

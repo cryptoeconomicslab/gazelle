@@ -97,6 +97,15 @@ export default class Aggregator {
    */
   public run() {
     this.runHttpServer()
+    this.commitmentContract.subscribeBlockSubmitted(
+      async (blockNumber, root, mainchainBlockNumber, mainchainTimestamp) => {
+        this.blockManager.updateBlock(
+          blockNumber,
+          mainchainBlockNumber,
+          mainchainTimestamp
+        )
+      }
+    )
     if (this.option.isSubmitter) {
       this.poll()
     }

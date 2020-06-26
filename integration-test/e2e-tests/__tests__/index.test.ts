@@ -3,6 +3,7 @@ import {
   Address,
   Bytes,
   BigNumber,
+  Integer,
   Range
 } from '@cryptoeconomicslab/primitives'
 import { LevelKeyValueStore } from '@cryptoeconomicslab/level-kvs'
@@ -168,7 +169,12 @@ describe('light client', () => {
     const stateUpdatesMap = new Map()
     stateUpdatesMap.set(config.PlasmaETH, stateUpdates)
     const timestamp = DateUtils.getCurrentDate()
-    return new Block(blockNumber, stateUpdatesMap, timestamp)
+    return new Block(
+      blockNumber,
+      stateUpdatesMap,
+      BigNumber.from(0),
+      Integer.from(timestamp)
+    )
   }
 
   async function exitInvalidStateUpdate(
