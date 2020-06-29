@@ -1,11 +1,11 @@
 import BlockManager from '../src/managers/BlockManager'
 import { Block, StateUpdate } from '@cryptoeconomicslab/plasma'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
-import { Property } from '@cryptoeconomicslab/ovm'
 import {
   Address,
   Bytes,
   BigNumber,
+  Property,
   Range
 } from '@cryptoeconomicslab/primitives'
 import Coder from '@cryptoeconomicslab/coder'

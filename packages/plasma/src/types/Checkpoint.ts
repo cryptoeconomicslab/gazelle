@@ -1,5 +1,9 @@
-import { Address, Bytes, Struct } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
+import {
+  Address,
+  Bytes,
+  Struct,
+  Property
+} from '@cryptoeconomicslab/primitives'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 
 export default class Checkpoint {

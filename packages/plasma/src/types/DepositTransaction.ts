@@ -1,5 +1,4 @@
-import { Address } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
+import { Address, Property } from '@cryptoeconomicslab/primitives'
 
 export default class DepositTransaction {
   constructor(

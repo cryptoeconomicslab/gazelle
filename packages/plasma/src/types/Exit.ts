@@ -1,7 +1,6 @@
 import StateUpdate from './StateUpdate'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
-import { Bytes, Address, Range } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
+import { Bytes, Address, Range, Property } from '@cryptoeconomicslab/primitives'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { Keccak256 } from '@cryptoeconomicslab/hash'
 import IExit from './IExit'

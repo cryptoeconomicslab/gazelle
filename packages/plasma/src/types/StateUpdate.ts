@@ -2,9 +2,9 @@ import {
   Address,
   Bytes,
   BigNumber,
-  Range
+  Range,
+  Property
 } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { RangeRecord } from '@cryptoeconomicslab/db'
 import StateUpdateRecord from './StateUpdateRecord'

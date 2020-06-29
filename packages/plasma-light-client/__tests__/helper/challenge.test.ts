@@ -1,8 +1,8 @@
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
-import { Address, Bytes } from '@cryptoeconomicslab/primitives'
+import { Address, Bytes, Property } from '@cryptoeconomicslab/primitives'
 import { executeChallenge } from '../../src/helper/challenge'
-import { Challenge, Property } from '@cryptoeconomicslab/ovm'
+import { Challenge } from '@cryptoeconomicslab/ovm'
 setupContext({ coder: JsonCoder })
 
 const mockClaimProperty = jest.fn()

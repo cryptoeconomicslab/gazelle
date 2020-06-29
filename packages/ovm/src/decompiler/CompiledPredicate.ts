@@ -1,4 +1,4 @@
-import { Bytes, Address } from '@cryptoeconomicslab/primitives'
+import { Bytes, Address, Property } from '@cryptoeconomicslab/primitives'
 import { replaceHint } from '@cryptoeconomicslab/db'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { Parser } from '@cryptoeconomicslab/ovm-parser'
@@ -9,7 +9,7 @@ import {
   IntermediateCompiledPredicate,
   transpile
 } from '@cryptoeconomicslab/ovm-transpiler'
-import { Property, FreeVariable, PredicateLabel } from '../types'
+import { FreeVariable, PredicateLabel } from '../types'
 
 /**
  * When we have a property below, We can use CompiledPredicate  class to make a property from predicate and concrete inputs.

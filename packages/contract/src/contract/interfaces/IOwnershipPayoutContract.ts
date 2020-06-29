@@ -1,5 +1,4 @@
-import { Address, BigNumber } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
+import { Address, BigNumber, Property } from '@cryptoeconomicslab/primitives'
 
 /**
  * OwnershipPayoutContract interface

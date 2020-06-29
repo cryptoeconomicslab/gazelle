@@ -1,6 +1,6 @@
-import { Bytes, Integer, List } from '@cryptoeconomicslab/primitives'
+import { Bytes, Integer, List, Property } from '@cryptoeconomicslab/primitives'
 import { Decider } from '../../interfaces/Decider'
-import { Decision, Property, Challenge, LogicalConnective } from '../../types'
+import { Decision, Challenge, LogicalConnective } from '../../types'
 import { DeciderManagerInterface } from '../../DeciderManager'
 import { decodeProperty } from '../../helpers'
 import { TraceInfoCreator } from '../../Tracer'

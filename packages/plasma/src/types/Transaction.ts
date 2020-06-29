@@ -3,9 +3,9 @@ import {
   Range,
   BigNumber,
   Bytes,
-  Struct
+  Struct,
+  Property
 } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
 import { Keccak256 } from '@cryptoeconomicslab/hash'
 
 export default class Transaction {
@@ -58,6 +58,31 @@ export default class Transaction {
       Property.fromStruct(stateObject as Struct),
       from as Address,
       signature as Bytes
+    )
+  }
+
+  public static fromProperty(property: Property): Transaction {
+    const depositContractAddress = ovmContext.coder.decode(
+      Address.default(),
+      property.inputs[0]
+    )
+    const range = Range.fromStruct(
+      ovmContext.coder.decode(Range.getParamType(), property.inputs[1])
+    )
+    const maxBlockNumber = ovmContext.coder.decode(
+      BigNumber.default(),
+      property.inputs[2]
+    )
+    const stateObject = Property.fromStruct(
+      ovmContext.coder.decode(Property.getParamType(), property.inputs[3])
+    )
+    return new Transaction(
+      depositContractAddress,
+      range,
+      maxBlockNumber,
+      stateObject,
+      Address.default(),
+      Bytes.default()
     )
   }
 

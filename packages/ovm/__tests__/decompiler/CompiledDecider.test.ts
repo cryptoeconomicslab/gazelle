@@ -1,4 +1,9 @@
-import { Address, Bytes, BigNumber } from '@cryptoeconomicslab/primitives'
+import {
+  Address,
+  Bytes,
+  BigNumber,
+  Property
+} from '@cryptoeconomicslab/primitives'
 import {
   initializeDeciderManager,
   ForAllSuchThatDeciderAddress,
@@ -7,7 +12,6 @@ import {
 import {
   CompiledDecider,
   CompiledPredicate,
-  Property,
   LogicalConnective,
   FreeVariable,
   PredicateLabel

@@ -1,5 +1,4 @@
 import {
-  Property,
   LogicalConnective,
   AtomicPredicate,
   AndDecider,
@@ -17,7 +16,8 @@ import {
   Integer,
   List,
   Address,
-  BigNumber
+  BigNumber,
+  Property
 } from '@cryptoeconomicslab/primitives'
 import DefaultCoder from '@cryptoeconomicslab/coder'
 import { MockDeciderManager } from '../mocks/MockDeciderManager'

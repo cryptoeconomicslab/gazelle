@@ -5,7 +5,6 @@ import {
 } from '@cryptoeconomicslab/plasma'
 import {
   DeciderManager,
-  Property,
   CompiledPredicate,
   hint
 } from '@cryptoeconomicslab/ovm'
@@ -13,6 +12,7 @@ import {
   Bytes,
   Address,
   BigNumber,
+  Property,
   Range
 } from '@cryptoeconomicslab/primitives'
 import { RangeStore, KeyValueStore, putWitness } from '@cryptoeconomicslab/db'

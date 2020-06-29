@@ -8,9 +8,9 @@ import {
   Range,
   Bytes,
   BigNumber,
-  Address
+  Address,
+  Property
 } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
 import 'fake-indexeddb/auto'

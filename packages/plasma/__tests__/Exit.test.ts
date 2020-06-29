@@ -2,9 +2,9 @@ import {
   Address,
   Bytes,
   BigNumber,
+  Property,
   Range
 } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
 import { Exit, StateUpdate } from '../src'
 import Coder, { decodeStructable } from '@cryptoeconomicslab/coder'
 import { setupContext } from '@cryptoeconomicslab/context'

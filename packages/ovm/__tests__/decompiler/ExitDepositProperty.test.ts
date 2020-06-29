@@ -2,7 +2,8 @@ import {
   Address,
   Range,
   BigNumber,
-  Bytes
+  Bytes,
+  Property
 } from '@cryptoeconomicslab/primitives'
 import { EthCoder as Coder } from '@cryptoeconomicslab/eth-coder'
 import { setupContext } from '@cryptoeconomicslab/context'
@@ -10,12 +11,7 @@ import {
   initializeDeciderManager,
   SampleDeciderAddress
 } from '../helpers/initiateDeciderManager'
-import {
-  Property,
-  CompiledDecider,
-  CompiledPredicate,
-  DeciderManager
-} from '../../src'
+import { CompiledDecider, CompiledPredicate, DeciderManager } from '../../src'
 import { putWitness, replaceHint } from '@cryptoeconomicslab/db'
 import { EXIT_DEPOSIT_SOURCE, STATEUPDATE_SOURCE } from './TestSource'
 setupContext({ coder: Coder })

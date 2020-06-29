@@ -1,6 +1,5 @@
 import { PropertyFilterBuilder } from '../src/propertyFilter'
-import { Property } from '../src/types'
-import { Address, Bytes } from '@cryptoeconomicslab/primitives'
+import { Address, Bytes, Property } from '@cryptoeconomicslab/primitives'
 import JsonCoder from '@cryptoeconomicslab/coder'
 import { setupContext } from '@cryptoeconomicslab/context'
 import { encodeProperty } from '../src/helpers'

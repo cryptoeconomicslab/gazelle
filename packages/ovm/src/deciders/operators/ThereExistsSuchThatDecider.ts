@@ -1,8 +1,8 @@
-import { Bytes } from '@cryptoeconomicslab/primitives'
+import { Bytes, Property } from '@cryptoeconomicslab/primitives'
 import { getWitnesses, isHint, replaceHint } from '@cryptoeconomicslab/db'
 import { Decider } from '../../interfaces/Decider'
 import { DeciderManager } from '../../DeciderManager'
-import { Property, LogicalConnective } from '../../types'
+import { LogicalConnective } from '../../types'
 import { TraceInfoCreator } from '../../Tracer'
 
 /**

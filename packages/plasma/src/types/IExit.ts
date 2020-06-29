@@ -1,6 +1,5 @@
-import { Bytes, Address, Range } from '@cryptoeconomicslab/primitives'
+import { Bytes, Range, Property } from '@cryptoeconomicslab/primitives'
 import { StateUpdate } from './'
-import { Property } from '@cryptoeconomicslab/ovm'
 
 /**
  * @name IExit

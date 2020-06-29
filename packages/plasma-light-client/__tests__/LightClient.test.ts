@@ -70,16 +70,13 @@ import {
   Bytes,
   BigNumber,
   Integer,
+  Property,
   Range
 } from '@cryptoeconomicslab/primitives'
 import { ethers } from 'ethers'
 import { CheckpointManager } from '../src/managers'
 import deciderConfig from './config.local'
-import {
-  DeciderConfig,
-  CompiledPredicate,
-  Property
-} from '@cryptoeconomicslab/ovm'
+import { DeciderConfig, CompiledPredicate } from '@cryptoeconomicslab/ovm'
 import {
   StateUpdate,
   Exit,

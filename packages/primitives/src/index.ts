@@ -8,6 +8,7 @@ import List from './List'
 import Tuple from './Tuple'
 import Struct from './Struct'
 import Range from './Range'
+import Property from './Property'
 import { ParamType } from './ParamType'
 
 export {
@@ -21,5 +22,6 @@ export {
   Tuple,
   Struct,
   Range,
+  Property,
   ParamType
 }

@@ -1,4 +1,9 @@
-import { Bytes, BigNumber, Address } from '@cryptoeconomicslab/primitives'
+import {
+  Bytes,
+  BigNumber,
+  Address,
+  Property
+} from '@cryptoeconomicslab/primitives'
 import Coder from '@cryptoeconomicslab/coder'
 import {
   initializeDeciderManager,
@@ -10,7 +15,6 @@ import {
   IsLessThanDeciderAddress
 } from '../helpers/initiateDeciderManager'
 import {
-  Property,
   FreeVariable,
   CompiledPredicate,
   CompiledDecider,

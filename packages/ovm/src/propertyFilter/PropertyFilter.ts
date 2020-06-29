@@ -1,5 +1,4 @@
-import { Address, Bytes } from '@cryptoeconomicslab/primitives'
-import { Property } from '../types'
+import { Address, Bytes, Property } from '@cryptoeconomicslab/primitives'
 import { decodeProperty } from '../helpers'
 
 export interface IPropertyFilter {
