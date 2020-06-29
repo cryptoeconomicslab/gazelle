@@ -61,10 +61,10 @@ describe('CompiledDecider', () => {
   test('false decision for ForAll', async () => {
     const source = `@library
     @quantifier("range,NUMBER,\${zero}-\${upper_bound}")
-    def LessThan(n, upper_bound) :=
+    def LessThan(n: BigNumber, upper_bound: BigNumber) :=
       IsLessThan(n, upper_bound)
         
-    def test(a, c) := LessThan(a).all(b -> IsLessThan(c, b) and Bool(b))
+    def test(a: BigNumber, c: BigNumber) := LessThan(a).all(b -> IsLessThan(c, b) and Bool(b))
     `
 
     // An instance of compiled predicate "TestF(TestF, 10, 5)".
@@ -149,10 +149,10 @@ describe('CompiledDecider', () => {
   test('false decision for ThereExists', async () => {
     const source = `@library
     @quantifier("range,NUMBER,\${zero}-\${upper_bound}")
-    def LessThan(n, upper_bound) :=
+    def LessThan(n: BigNumber, upper_bound: BigNumber) :=
       IsLessThan(n, upper_bound)
         
-    def test(a, c) := LessThan(a).any(b -> Equal(c, b))
+    def test(a: BigNumber, c: BigNumber) := LessThan(a).any(b -> Equal(c, b))
     `
     // An instance of compiled predicate "TestF(TestF, 10, 5)".
     const property = new Property(TestPredicateAddress, [

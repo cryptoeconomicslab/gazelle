@@ -1,10 +1,12 @@
+import { ArgDef } from '@cryptoeconomicslab/ovm-parser'
+
 /**
  * Compiled Property definition
  */
 export interface CompiledPredicate {
   type: 'CompiledPredicate'
   name: string
-  inputDefs: string[]
+  inputDefs: ArgDef[]
   contracts: IntermediateCompiledPredicate[]
   constants?: ConstantVariable[]
   entryPoint: string

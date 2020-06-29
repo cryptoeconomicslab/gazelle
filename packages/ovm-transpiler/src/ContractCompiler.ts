@@ -11,7 +11,11 @@ import {
   convertStringToLogicalConnective,
   LogicalConnectiveStrings
 } from './CompiledPredicate'
-import { PropertyDef, PropertyNode } from '@cryptoeconomicslab/ovm-parser'
+import {
+  ArgDef,
+  PropertyDef,
+  PropertyNode
+} from '@cryptoeconomicslab/ovm-parser'
 
 /**
  * @name createCompiledPredicates
@@ -33,7 +37,7 @@ function createCompiledPredicatesForProperty(
   }
   const newContracts: IntermediateCompiledPredicate[] = traverseLogicalConnnective(
     p.body,
-    p.inputDefs,
+    p.inputDefs.map(def => def.name),
     name
   )
   const constants = getConstants(newContracts)
@@ -270,7 +274,7 @@ function getInputIndex(
       if (inputIndex >= 0) {
         return {
           type: 'NormalInput',
-          inputIndex: inputDefs.indexOf(parentAndChildren.parent),
+          inputIndex,
           children: parentAndChildren.children
         }
       } else {
@@ -292,7 +296,7 @@ function getInputIndex(
       if (inputIndex >= 0) {
         return {
           type: 'NormalInput',
-          inputIndex: inputDefs.indexOf(name),
+          inputIndex,
           children: []
         }
       }

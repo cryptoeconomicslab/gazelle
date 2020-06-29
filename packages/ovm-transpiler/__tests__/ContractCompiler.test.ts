@@ -11,7 +11,10 @@ describe('ContractCompiler', () => {
           {
             annotations: [],
             name: 'andTest',
-            inputDefs: ['a', 'b'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'BigNumber' }
+            ],
             body: {
               type: 'PropertyNode',
               predicate: 'And',
@@ -31,7 +34,10 @@ describe('ContractCompiler', () => {
           {
             type: 'CompiledPredicate',
             name: 'AndTest',
-            inputDefs: ['a', 'b'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'BigNumber' }
+            ],
             contracts: [
               {
                 type: 'IntermediateCompiledPredicate',
@@ -72,7 +78,10 @@ describe('ContractCompiler', () => {
           {
             annotations: [],
             name: 'orTest',
-            inputDefs: ['a', 'b'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'BigNumber' }
+            ],
             body: {
               type: 'PropertyNode',
               predicate: 'Or',
@@ -92,7 +101,10 @@ describe('ContractCompiler', () => {
           {
             type: 'CompiledPredicate',
             name: 'OrTest',
-            inputDefs: ['a', 'b'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'BigNumber' }
+            ],
             contracts: [
               {
                 type: 'IntermediateCompiledPredicate',
@@ -133,7 +145,7 @@ describe('ContractCompiler', () => {
           {
             annotations: [],
             name: 'notTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'Not',
@@ -148,7 +160,7 @@ describe('ContractCompiler', () => {
           {
             type: 'CompiledPredicate',
             name: 'NotTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             contracts: [
               {
                 type: 'IntermediateCompiledPredicate',
@@ -179,7 +191,7 @@ describe('ContractCompiler', () => {
           {
             annotations: [],
             name: 'forallTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'ForAllSuchThat',
@@ -196,7 +208,7 @@ describe('ContractCompiler', () => {
           {
             type: 'CompiledPredicate',
             name: 'ForallTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             contracts: [
               {
                 type: 'IntermediateCompiledPredicate',
@@ -295,7 +307,7 @@ describe('ContractCompiler', () => {
           {
             annotations: [],
             name: 'bindAndTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'And',
@@ -315,7 +327,7 @@ describe('ContractCompiler', () => {
           {
             type: 'CompiledPredicate',
             name: 'BindAndTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             contracts: [
               {
                 type: 'IntermediateCompiledPredicate',
@@ -358,7 +370,7 @@ describe('ContractCompiler', () => {
           {
             annotations: [],
             name: 'bind2Test',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'And',
@@ -378,7 +390,7 @@ describe('ContractCompiler', () => {
           {
             type: 'CompiledPredicate',
             name: 'Bind2Test',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             contracts: [
               {
                 type: 'IntermediateCompiledPredicate',
@@ -421,7 +433,7 @@ describe('ContractCompiler', () => {
           {
             annotations: [],
             name: 'bindValTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'ThereExistsSuchThat',
@@ -442,7 +454,7 @@ describe('ContractCompiler', () => {
           {
             type: 'CompiledPredicate',
             name: 'BindValTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             contracts: [
               {
                 type: 'IntermediateCompiledPredicate',
@@ -485,7 +497,7 @@ describe('ContractCompiler', () => {
           {
             annotations: [],
             name: 'bindAddrTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'And',
@@ -509,7 +521,7 @@ describe('ContractCompiler', () => {
           {
             type: 'CompiledPredicate',
             name: 'BindAddrTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             contracts: [
               {
                 type: 'IntermediateCompiledPredicate',
@@ -562,7 +574,10 @@ describe('ContractCompiler', () => {
           {
             annotations: [],
             name: 'evalTest',
-            inputDefs: ['a', 'b'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'BigNumber' }
+            ],
             body: {
               type: 'PropertyNode',
               predicate: 'And',
@@ -578,7 +593,10 @@ describe('ContractCompiler', () => {
           {
             type: 'CompiledPredicate',
             name: 'EvalTest',
-            inputDefs: ['a', 'b'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'BigNumber' }
+            ],
             contracts: [
               {
                 type: 'IntermediateCompiledPredicate',
@@ -621,7 +639,7 @@ describe('ContractCompiler', () => {
           {
             annotations: [],
             name: 'forValTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'ForAllSuchThat',
@@ -638,7 +656,7 @@ describe('ContractCompiler', () => {
           {
             type: 'CompiledPredicate',
             name: 'ForValTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             contracts: [
               {
                 type: 'IntermediateCompiledPredicate',
@@ -727,7 +745,7 @@ describe('ContractCompiler', () => {
           {
             annotations: [],
             name: 'thereValTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'ThereExistsSuchThat',
@@ -744,7 +762,7 @@ describe('ContractCompiler', () => {
           {
             type: 'CompiledPredicate',
             name: 'ThereValTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             contracts: [
               {
                 type: 'IntermediateCompiledPredicate',
@@ -794,7 +812,10 @@ describe('ContractCompiler', () => {
           {
             annotations: [],
             name: 'libraryTest',
-            inputDefs: ['a', 'b'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'BigNumber' }
+            ],
             body: {
               type: 'PropertyNode',
               predicate: 'And',
@@ -814,7 +835,10 @@ describe('ContractCompiler', () => {
           {
             type: 'CompiledPredicate',
             name: 'LibraryTest',
-            inputDefs: ['a', 'b'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'BigNumber' }
+            ],
             contracts: [
               {
                 type: 'IntermediateCompiledPredicate',
@@ -865,7 +889,11 @@ describe('ContractCompiler', () => {
           {
             annotations: [],
             name: 'DeepNestTest',
-            inputDefs: ['a', 'b', 'c'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'BigNumber' },
+              { name: 'c', type: 'BigNumber' }
+            ],
             body: {
               type: 'PropertyNode',
               predicate: 'Or',
@@ -888,7 +916,11 @@ describe('ContractCompiler', () => {
           {
             type: 'CompiledPredicate',
             name: 'DeepNestTest',
-            inputDefs: ['a', 'b', 'c'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'BigNumber' },
+              { name: 'c', type: 'BigNumber' }
+            ],
             contracts: [
               {
                 type: 'IntermediateCompiledPredicate',
@@ -957,7 +989,10 @@ describe('ContractCompiler', () => {
         const input: PropertyDef[] = [
           {
             name: 'deepNestTest',
-            inputDefs: ['a', 'b'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'BigNumber' }
+            ],
             body: {
               type: 'PropertyNode',
               predicate: 'ThereExistsSuchThat',
@@ -983,7 +1018,10 @@ describe('ContractCompiler', () => {
           {
             type: 'CompiledPredicate',
             name: 'DeepNestTest',
-            inputDefs: ['a', 'b'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'BigNumber' }
+            ],
             contracts: [
               {
                 type: 'IntermediateCompiledPredicate',

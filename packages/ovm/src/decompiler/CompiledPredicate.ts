@@ -1,7 +1,7 @@
 import { Bytes, Address, Property } from '@cryptoeconomicslab/primitives'
 import { replaceHint } from '@cryptoeconomicslab/db'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
-import { Parser } from '@cryptoeconomicslab/ovm-parser'
+import { ArgDef, Parser } from '@cryptoeconomicslab/ovm-parser'
 import {
   CompiledPredicate as TranspilerCompiledPredicate,
   AtomicProposition,

@@ -1,4 +1,8 @@
-import { PropertyDef, PropertyNode } from '@cryptoeconomicslab/ovm-parser'
+import {
+  ArgDef,
+  PropertyDef,
+  PropertyNode
+} from '@cryptoeconomicslab/ovm-parser'
 import * as utils from './utils'
 
 interface PredicatePreset {
@@ -22,14 +26,14 @@ export function isHint(s: string): boolean {
 const getSubstitutions = (
   callingInputs: string[],
   constants: { [key: string]: string } = {},
-  inputDefs: string[]
+  inputDefs: ArgDef[]
 ): { [key: string]: string } => {
   const substitutions: { [key: string]: string } = constants
   // skip variable
   // When we parse predicate as quantifier, the first input is variable.
-  inputDefs.slice(1).forEach((inputName, index) => {
-    if (typeof substitutions[inputName] !== 'string')
-      substitutions[inputName] = '${' + callingInputs[index] + '}'
+  inputDefs.slice(1).forEach((inputDef, index) => {
+    if (typeof substitutions[inputDef.name] !== 'string')
+      substitutions[inputDef.name] = '${' + callingInputs[index] + '}'
   })
   return substitutions
 }
@@ -43,7 +47,7 @@ const getSubstitutions = (
 export const replaceInputs = (
   targetNode: PropertyNode,
   callingInputs: string[],
-  inputDefs: string[],
+  inputDefs: ArgDef[],
   constants: { [key: string]: string } = {}
 ): PropertyNode => {
   if (callingInputs.length < inputDefs.length) {
@@ -61,7 +65,7 @@ export const replaceInputs = (
         inputDefs
       )
       if (typeof i == 'string') {
-        const index = inputDefs.indexOf(i)
+        const index = inputDefs.map(def => def.name).indexOf(i)
         if (index >= 0) {
           return callingInputs[index]
         }
@@ -121,8 +125,8 @@ export function createQuantifierPreset(
     const substitutions: { [key: string]: string } = constants
     // skip variable
     // When we parse predicate as quantifier, the first input is variable.
-    propertyDefinition.inputDefs.slice(1).forEach((inputName, index) => {
-      substitutions[inputName] = '${' + callingInputs[index] + '}'
+    propertyDefinition.inputDefs.slice(1).forEach((inputDef, index) => {
+      substitutions[inputDef.name] = '${' + callingInputs[index] + '}'
     })
     return substitutions
   }

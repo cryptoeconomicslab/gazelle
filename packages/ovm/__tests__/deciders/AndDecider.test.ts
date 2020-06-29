@@ -96,7 +96,7 @@ describe('AndDecider', () => {
       deciderManager = initializeDeciderManager()
 
       const source = `
-      def test(a, b, c) := !IsLessThan(a, c) and IsLessThan(b, c)
+      def test(a: BigNumber, b: BigNumber, c: BigNumber) := !IsLessThan(a, c) and IsLessThan(b, c)
       `
 
       // Sets instance of CompiledDecider TestF

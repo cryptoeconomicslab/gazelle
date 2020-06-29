@@ -2,29 +2,31 @@ export default {
   logicalConnectiveAddressTable: {
     Not: '0x9FBDa871d559710256a2502A2517b794B482Db40',
     And: '0x2C2B9C9a4a25e24B174f26114e8926a9f2128FE4',
+    Or: '0x0000000000000000000000000000000000000001',
     ForAllSuchThat: '0x30753E4A8aad7F8597332E813735Def5dD395028',
-    Or: '0xFB88dE099e13c3ED21F80a7a1E49f8CAEcF10df6',
-    ThereExistsSuchThat: '0xAa588d3737B611baFD7bD713445b314BD453a5C8'
+    ThereExistsSuchThat: '0x0000000000000000000000000000000000000002'
   },
   atomicPredicateAddressTable: {
-    IsValidSignature: '0xf204a4Ef082f5c04bB89F7D5E6568B796096735a',
-    IsContained: '0x75c35C980C0d37ef46DF04d31A140b65503c0eEd',
-    IsLessThan: '0x75f10ae87abe13ca01d2f2ab6c871d0e8ea1e529',
-    Equal: '0x1f02359d438c819206794ce19b1ff4b9bbcc751d',
-    VerifyInclusion: '0x28510417c25ae968959f99ace2aed8bf84db0321',
-    IsSameAmount: '0xecbe4fd1b0a3aa71d55bb4eaadc8d1f699058e00',
-    IsConcatenatedWith: '0x316146264c6ec235f57e04c648b1aff8a8021d4d',
-    IsValidHash: '0x48e5ff73dfc0e9180337fe47ae49ec12681d0673',
-    IsStored: '0x8a1262e7f982bafbb3b717aaf2310a42be5b87cd'
+    IsValidSignature: '0xFB88dE099e13c3ED21F80a7a1E49f8CAEcF10df6',
+    IsContained: '0xAa588d3737B611baFD7bD713445b314BD453a5C8',
+    IsLessThan: '0xd5dd64faaf8af5ff95b30d727e2b832b7964c16e',
+    Equal: '0xea1ca2f6e17b158f5b8c3a00e54a8f0e0f8f04bf',
+    VerifyInclusion: '0xfa088b2aaf4839d738d5a3d436021c6ad424269a',
+    IsSameAmount: '0xc8fd3b9399f47610f27d6b604749276865085937'
   },
   deployedPredicateTable: {
     StateUpdatePredicate: {
-      deployedAddress: '0xdDA6327139485221633A1FcD65f4aC932E60A2e1',
+      deployedAddress: '0x82D50AD3C1091866E258Fd0f1a7cC9674609D254',
       source: [
         {
           type: 'CompiledPredicate',
           name: 'StateUpdate',
-          inputDefs: ['token', 'range', 'block_number', 'so'],
+          inputDefs: [
+            { name: 'token', type: 'Address' },
+            { name: 'range', type: 'Range' },
+            { name: 'block_number', type: 'BigNumber' },
+            { name: 'so', type: 'Property' }
+          ],
           contracts: [
             {
               type: 'IntermediateCompiledPredicate',
@@ -41,15 +43,25 @@ export default {
               inputs: [
                 {
                   type: 'AtomicProposition',
-                  predicate: { type: 'AtomicPredicateCall', source: 'Equal' },
+                  predicate: {
+                    type: 'AtomicPredicateCall',
+                    source: 'Equal'
+                  },
                   inputs: [
-                    { type: 'NormalInput', inputIndex: 1, children: [-1] },
+                    {
+                      type: 'NormalInput',
+                      inputIndex: 1,
+                      children: [-1]
+                    },
                     { type: 'ConstantInput', name: 'txAddress' }
                   ]
                 },
                 {
                   type: 'AtomicProposition',
-                  predicate: { type: 'AtomicPredicateCall', source: 'Equal' },
+                  predicate: {
+                    type: 'AtomicPredicateCall',
+                    source: 'Equal'
+                  },
                   inputs: [
                     { type: 'NormalInput', inputIndex: 1, children: [0] },
                     { type: 'NormalInput', inputIndex: 2, children: [] }
@@ -115,7 +127,11 @@ export default {
                   type: 'AtomicProposition',
                   predicate: {
                     type: 'InputPredicateCall',
-                    source: { type: 'NormalInput', inputIndex: 5, children: [] }
+                    source: {
+                      type: 'NormalInput',
+                      inputIndex: 5,
+                      children: []
+                    }
                   },
                   inputs: [{ type: 'NormalInput', inputIndex: 1, children: [] }]
                 }
@@ -145,7 +161,11 @@ export default {
                   },
                   inputs: [
                     { type: 'LabelInput', label: 'StateUpdateTA' },
-                    { type: 'VariableInput', placeholder: 'tx', children: [] },
+                    {
+                      type: 'VariableInput',
+                      placeholder: 'tx',
+                      children: []
+                    },
                     { type: 'NormalInput', inputIndex: 1, children: [] },
                     { type: 'NormalInput', inputIndex: 2, children: [] },
                     { type: 'NormalInput', inputIndex: 3, children: [] },
@@ -163,12 +183,15 @@ export default {
       ]
     },
     OwnershipPredicate: {
-      deployedAddress: '0x0d8cc4b8d15D4c3eF1d70af0071376fb26B5669b',
+      deployedAddress: '0xeec918d74c746167564401103096D45BbD494B74',
       source: [
         {
           type: 'CompiledPredicate',
           name: 'Ownership',
-          inputDefs: ['owner', 'tx'],
+          inputDefs: [
+            { name: 'owner', type: 'Address' },
+            { name: 'tx', type: 'Property' }
+          ],
           contracts: [
             {
               type: 'IntermediateCompiledPredicate',
@@ -187,7 +210,11 @@ export default {
                   },
                   inputs: [
                     { type: 'NormalInput', inputIndex: 2, children: [] },
-                    { type: 'VariableInput', placeholder: 'v0', children: [] },
+                    {
+                      type: 'VariableInput',
+                      placeholder: 'v0',
+                      children: []
+                    },
                     { type: 'NormalInput', inputIndex: 1, children: [] },
                     { type: 'ConstantInput', name: 'secp256k1' }
                   ]
@@ -202,19 +229,19 @@ export default {
       ]
     },
     CheckpointPredicate: {
-      deployedAddress: '0x38cF23C52Bb4B13F051Aec09580a2dE845a7FA35',
+      deployedAddress: '0xEcFcaB0A285d3380E488A39B4BB21e777f8A4EaC',
       source: [
         {
           type: 'CompiledPredicate',
           name: 'Checkpoint',
-          inputDefs: ['su', 'proof'],
+          inputDefs: [{ name: 'su', type: 'Property' }],
           contracts: [
             {
               type: 'IntermediateCompiledPredicate',
               originalPredicateName: 'Checkpoint',
-              name: 'CheckpointA2FO1N',
+              name: 'CheckpointFO1N',
               connective: 'Not',
-              inputDefs: ['CheckpointA2FO1N', 'b', 'su'],
+              inputDefs: ['CheckpointFO1N', 'b', 'su'],
               inputs: [
                 {
                   type: 'AtomicProposition',
@@ -235,9 +262,9 @@ export default {
             {
               type: 'IntermediateCompiledPredicate',
               originalPredicateName: 'Checkpoint',
-              name: 'CheckpointA2FO2FO1N1T',
+              name: 'CheckpointFO2FO1N1T',
               connective: 'ThereExistsSuchThat',
-              inputDefs: ['CheckpointA2FO2FO1N1T', 'old_su', 'su', 'b'],
+              inputDefs: ['CheckpointFO2FO1N1T', 'old_su', 'su', 'b'],
               inputs: [
                 'proof.block${b}.range${token},RANGE,${range}',
                 'v0',
@@ -251,7 +278,11 @@ export default {
                     { type: 'NormalInput', inputIndex: 1, children: [] },
                     { type: 'NormalInput', inputIndex: 2, children: [0] },
                     { type: 'NormalInput', inputIndex: 2, children: [1] },
-                    { type: 'VariableInput', placeholder: 'v0', children: [] },
+                    {
+                      type: 'VariableInput',
+                      placeholder: 'v0',
+                      children: []
+                    },
                     { type: 'NormalInput', inputIndex: 3, children: [] }
                   ]
                 }
@@ -263,18 +294,18 @@ export default {
             {
               type: 'IntermediateCompiledPredicate',
               originalPredicateName: 'Checkpoint',
-              name: 'CheckpointA2FO2FO1N',
+              name: 'CheckpointFO2FO1N',
               connective: 'Not',
-              inputDefs: ['CheckpointA2FO2FO1N', 'old_su', 'su', 'b'],
+              inputDefs: ['CheckpointFO2FO1N', 'old_su', 'su', 'b'],
               inputs: [
                 {
                   type: 'AtomicProposition',
                   predicate: {
                     type: 'AtomicPredicateCall',
-                    source: 'CheckpointA2FO2FO1N1T'
+                    source: 'CheckpointFO2FO1N1T'
                   },
                   inputs: [
-                    { type: 'LabelInput', label: 'CheckpointA2FO2FO1N1T' },
+                    { type: 'LabelInput', label: 'CheckpointFO2FO1N1T' },
                     { type: 'NormalInput', inputIndex: 1, children: [] },
                     { type: 'NormalInput', inputIndex: 2, children: [] },
                     { type: 'NormalInput', inputIndex: 3, children: [] }
@@ -287,18 +318,18 @@ export default {
             {
               type: 'IntermediateCompiledPredicate',
               originalPredicateName: 'Checkpoint',
-              name: 'CheckpointA2FO2FO',
+              name: 'CheckpointFO2FO',
               connective: 'Or',
-              inputDefs: ['CheckpointA2FO2FO', 'old_su', 'su', 'b'],
+              inputDefs: ['CheckpointFO2FO', 'old_su', 'su', 'b'],
               inputs: [
                 {
                   type: 'AtomicProposition',
                   predicate: {
                     type: 'AtomicPredicateCall',
-                    source: 'CheckpointA2FO2FO1N'
+                    source: 'CheckpointFO2FO1N'
                   },
                   inputs: [
-                    { type: 'LabelInput', label: 'CheckpointA2FO2FO1N' },
+                    { type: 'LabelInput', label: 'CheckpointFO2FO1N' },
                     { type: 'NormalInput', inputIndex: 1, children: [] },
                     { type: 'NormalInput', inputIndex: 2, children: [] },
                     { type: 'NormalInput', inputIndex: 3, children: [] }
@@ -309,7 +340,11 @@ export default {
                   type: 'AtomicProposition',
                   predicate: {
                     type: 'InputPredicateCall',
-                    source: { type: 'NormalInput', inputIndex: 1, children: [] }
+                    source: {
+                      type: 'NormalInput',
+                      inputIndex: 1,
+                      children: []
+                    }
                   },
                   inputs: []
                 }
@@ -319,9 +354,9 @@ export default {
             {
               type: 'IntermediateCompiledPredicate',
               originalPredicateName: 'Checkpoint',
-              name: 'CheckpointA2FO2F',
+              name: 'CheckpointFO2F',
               connective: 'ForAllSuchThat',
-              inputDefs: ['CheckpointA2FO2F', 'su', 'b'],
+              inputDefs: ['CheckpointFO2F', 'su', 'b'],
               inputs: [
                 'so.block${b}.range${su.0},RANGE,${su.1}',
                 'old_su',
@@ -329,10 +364,10 @@ export default {
                   type: 'AtomicProposition',
                   predicate: {
                     type: 'AtomicPredicateCall',
-                    source: 'CheckpointA2FO2FO'
+                    source: 'CheckpointFO2FO'
                   },
                   inputs: [
-                    { type: 'LabelInput', label: 'CheckpointA2FO2FO' },
+                    { type: 'LabelInput', label: 'CheckpointFO2FO' },
                     {
                       type: 'VariableInput',
                       placeholder: 'old_su',
@@ -349,18 +384,18 @@ export default {
             {
               type: 'IntermediateCompiledPredicate',
               originalPredicateName: 'Checkpoint',
-              name: 'CheckpointA2FO',
+              name: 'CheckpointFO',
               connective: 'Or',
-              inputDefs: ['CheckpointA2FO', 'b', 'su'],
+              inputDefs: ['CheckpointFO', 'b', 'su'],
               inputs: [
                 {
                   type: 'AtomicProposition',
                   predicate: {
                     type: 'AtomicPredicateCall',
-                    source: 'CheckpointA2FO1N'
+                    source: 'CheckpointFO1N'
                   },
                   inputs: [
-                    { type: 'LabelInput', label: 'CheckpointA2FO1N' },
+                    { type: 'LabelInput', label: 'CheckpointFO1N' },
                     { type: 'NormalInput', inputIndex: 1, children: [] },
                     { type: 'NormalInput', inputIndex: 2, children: [] }
                   ],
@@ -370,10 +405,10 @@ export default {
                   type: 'AtomicProposition',
                   predicate: {
                     type: 'AtomicPredicateCall',
-                    source: 'CheckpointA2FO2F'
+                    source: 'CheckpointFO2F'
                   },
                   inputs: [
-                    { type: 'LabelInput', label: 'CheckpointA2FO2F' },
+                    { type: 'LabelInput', label: 'CheckpointFO2F' },
                     { type: 'NormalInput', inputIndex: 2, children: [] },
                     { type: 'NormalInput', inputIndex: 1, children: [] }
                   ],
@@ -385,9 +420,9 @@ export default {
             {
               type: 'IntermediateCompiledPredicate',
               originalPredicateName: 'Checkpoint',
-              name: 'CheckpointA2F',
+              name: 'CheckpointF',
               connective: 'ForAllSuchThat',
-              inputDefs: ['CheckpointA2F', 'su'],
+              inputDefs: ['CheckpointF', 'su'],
               inputs: [
                 'range,NUMBER,0x0000000000000000000000000000000000000000000000000000000000000000-${su.2}',
                 'b',
@@ -395,81 +430,54 @@ export default {
                   type: 'AtomicProposition',
                   predicate: {
                     type: 'AtomicPredicateCall',
-                    source: 'CheckpointA2FO'
+                    source: 'CheckpointFO'
                   },
                   inputs: [
-                    { type: 'LabelInput', label: 'CheckpointA2FO' },
-                    { type: 'VariableInput', placeholder: 'b', children: [] },
+                    { type: 'LabelInput', label: 'CheckpointFO' },
+                    {
+                      type: 'VariableInput',
+                      placeholder: 'b',
+                      children: []
+                    },
                     { type: 'NormalInput', inputIndex: 1, children: [] }
                   ],
                   isCompiled: true
                 }
               ],
               propertyInputs: []
-            },
-            {
-              type: 'IntermediateCompiledPredicate',
-              originalPredicateName: 'Checkpoint',
-              name: 'CheckpointA',
-              connective: 'And',
-              inputDefs: ['CheckpointA', 'su', 'proof'],
-              inputs: [
-                {
-                  type: 'AtomicProposition',
-                  predicate: {
-                    type: 'AtomicPredicateCall',
-                    source: 'VerifyInclusion'
-                  },
-                  inputs: [
-                    { type: 'NormalInput', inputIndex: 1, children: [3] },
-                    { type: 'NormalInput', inputIndex: 1, children: [0] },
-                    { type: 'NormalInput', inputIndex: 1, children: [1] },
-                    { type: 'NormalInput', inputIndex: 2, children: [] },
-                    { type: 'NormalInput', inputIndex: 1, children: [2] }
-                  ]
-                },
-                {
-                  type: 'AtomicProposition',
-                  predicate: {
-                    type: 'AtomicPredicateCall',
-                    source: 'CheckpointA2F'
-                  },
-                  inputs: [
-                    { type: 'LabelInput', label: 'CheckpointA2F' },
-                    { type: 'NormalInput', inputIndex: 1, children: [] }
-                  ],
-                  isCompiled: true
-                }
-              ],
-              propertyInputs: [
-                { type: 'NormalInput', inputIndex: 1, children: [] }
-              ]
             }
           ],
-          entryPoint: 'CheckpointA'
+          entryPoint: 'CheckpointF'
         }
       ]
     },
     ExitPredicate: {
-      deployedAddress: '0xbaAA2a3237035A2c7fA2A33c76B44a8C6Fe18e87',
+      deployedAddress: '0x4E72770760c011647D4873f60A3CF6cDeA896CD8',
       source: [
         {
           type: 'CompiledPredicate',
           name: 'Exit',
-          inputDefs: ['su', 'proof'],
+          inputDefs: [
+            { name: 'su', type: 'Property' },
+            { name: 'proof', type: 'Bytes' }
+          ],
           contracts: [
             {
               type: 'IntermediateCompiledPredicate',
               originalPredicateName: 'Exit',
-              name: 'ExitA1N',
+              name: 'ExitA2N',
               connective: 'Not',
-              inputDefs: ['ExitA1N', 'su'],
+              inputDefs: ['ExitA2N', 'su'],
               inputs: [
                 {
                   type: 'AtomicProposition',
                   predicate: {
                     type: 'InputPredicateCall',
-                    source: { type: 'NormalInput', inputIndex: 1, children: [] }
+                    source: {
+                      type: 'NormalInput',
+                      inputIndex: 1,
+                      children: []
+                    }
                   },
                   inputs: []
                 }
@@ -485,9 +493,26 @@ export default {
               inputs: [
                 {
                   type: 'AtomicProposition',
-                  predicate: { type: 'AtomicPredicateCall', source: 'ExitA1N' },
+                  predicate: {
+                    type: 'AtomicPredicateCall',
+                    source: 'VerifyInclusion'
+                  },
                   inputs: [
-                    { type: 'LabelInput', label: 'ExitA1N' },
+                    { type: 'NormalInput', inputIndex: 1, children: [] },
+                    { type: 'NormalInput', inputIndex: 1, children: [0] },
+                    { type: 'NormalInput', inputIndex: 1, children: [1] },
+                    { type: 'NormalInput', inputIndex: 2, children: [] },
+                    { type: 'NormalInput', inputIndex: 1, children: [2] }
+                  ]
+                },
+                {
+                  type: 'AtomicProposition',
+                  predicate: {
+                    type: 'AtomicPredicateCall',
+                    source: 'ExitA2N'
+                  },
+                  inputs: [
+                    { type: 'LabelInput', label: 'ExitA2N' },
                     { type: 'NormalInput', inputIndex: 1, children: [] }
                   ],
                   isCompiled: true
@@ -501,7 +526,9 @@ export default {
                   inputs: [{ type: 'NormalInput', inputIndex: 1, children: [] }]
                 }
               ],
-              propertyInputs: []
+              propertyInputs: [
+                { type: 'NormalInput', inputIndex: 1, children: [] }
+              ]
             }
           ],
           entryPoint: 'ExitA',
@@ -515,7 +542,10 @@ export default {
         {
           type: 'CompiledPredicate',
           name: 'ExitDeposit',
-          inputDefs: ['su', 'checkpoint'],
+          inputDefs: [
+            { name: 'su', type: 'Property' },
+            { name: 'checkpoint', type: 'Property' }
+          ],
           contracts: [
             {
               type: 'IntermediateCompiledPredicate',
@@ -549,8 +579,8 @@ export default {
   commitmentContract: '0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0',
   adjudicationContract: '0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F',
   payoutContracts: {
-    DepositContract: '0x2a504B5e7eC284ACa5b6f49716611237239F0b97',
-    OwnershipPayout: '0x82D50AD3C1091866E258Fd0f1a7cC9674609D254'
+    DepositContract: '0xA4392264a2d8c998901D10C154C91725b1BF0158',
+    OwnershipPayout: '0xf204a4Ef082f5c04bB89F7D5E6568B796096735a'
   },
-  PlasmaETH: '0x3d49d1eF2adE060a33c6E6Aa213513A7EE9a6241'
+  PlasmaETH: '0x13274Fe19C0178208bCbee397af8167A7be27f6f'
 }

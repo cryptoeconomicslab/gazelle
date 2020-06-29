@@ -1,1 +1,1 @@
-def bindAddrTest(a) := Equal(a.address, self.address) and Bar(a.0)
+def bindAddrTest(a: BigNumber) := Equal(a.address, self.address) and Bar(a.0)

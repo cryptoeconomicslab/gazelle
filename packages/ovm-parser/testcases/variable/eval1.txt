@@ -1,1 +1,1 @@
-def evalTest(a, b) := Foo(a) and b()
+def evalTest(a: BigNumber, b: BigNumber) := Foo(a) and b()

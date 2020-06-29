@@ -28,7 +28,10 @@ describe('SolidityCodeGenerator', () => {
         {
           type: 'CompiledPredicate',
           name: 'AndTest',
-          inputDefs: ['a', 'b'],
+          inputDefs: [
+            { name: 'a', type: 'Bytes' },
+            { name: 'b', type: 'Bytes' }
+          ],
           contracts: [
             {
               type: 'IntermediateCompiledPredicate',
@@ -65,7 +68,10 @@ describe('SolidityCodeGenerator', () => {
         {
           type: 'CompiledPredicate',
           name: 'OrTest',
-          inputDefs: ['a', 'b'],
+          inputDefs: [
+            { name: 'a', type: 'Bytes' },
+            { name: 'b', type: 'Bytes' }
+          ],
           contracts: [
             {
               type: 'IntermediateCompiledPredicate',
@@ -102,7 +108,7 @@ describe('SolidityCodeGenerator', () => {
         {
           type: 'CompiledPredicate',
           name: 'NotTest',
-          inputDefs: ['a'],
+          inputDefs: [{ name: 'a', type: 'Bytes' }],
           contracts: [
             {
               type: 'IntermediateCompiledPredicate',
@@ -133,7 +139,7 @@ describe('SolidityCodeGenerator', () => {
         {
           type: 'CompiledPredicate',
           name: 'ForallTest',
-          inputDefs: ['a'],
+          inputDefs: [{ name: 'a', type: 'Bytes' }],
           contracts: [
             {
               type: 'IntermediateCompiledPredicate',

@@ -1,1 +1,1 @@
-def orTest(a, b) := Foo(a) or Bar(b)
+def orTest(a: BigNumber, b: Bytes) := Foo(a) or Bar(b)
