@@ -42,7 +42,28 @@ describe('deployCompiledPredicate', () => {
         validChallenges: [],
         invalidChallenges: [],
         decideTrueTestCases: [],
-        invalidDecideTestCases: []
+        invalidDecideTestCases: [],
+        packTypesTestCases: {
+          name: 'name',
+          getTestData: (
+            targetPredicate: ethers.Contract,
+            context: TestContext
+          ) => {
+            return { packedData: '0x001122' }
+          }
+        },
+        packValuesTestCases: {
+          name: 'name',
+          getTestData: (
+            targetPredicate: ethers.Contract,
+            context: TestContext
+          ) => {
+            return {
+              inputs: [],
+              packedData: '0x001122'
+            }
+          }
+        }
       },
       mockTestContext
     )
