@@ -2,19 +2,33 @@ import {
   DeciderManager,
   IsValidSignatureDecider,
   ForAllSuchThatDecider,
-  LogicalConnective
+  LogicalConnective,
+  CompiledPredicate,
+  CompiledDecider
 } from '../../src'
 import { Address, Bytes, Property } from '@cryptoeconomicslab/primitives'
 import * as ethers from 'ethers'
 import { Secp256k1Signer } from '@cryptoeconomicslab/signature'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
-import Coder from '@cryptoeconomicslab/coder'
+import EthCoder from '@cryptoeconomicslab/eth-coder'
 import { setupContext } from '@cryptoeconomicslab/context'
 import { ForAllSuchThatDeciderAddress } from '../helpers/initiateDeciderManager'
-setupContext({ coder: Coder })
+import { OWNERSHIP_SOURCE } from '../decompiler/TestSource'
+setupContext({ coder: EthCoder })
 
 describe('IsValidSignatureDecider', () => {
   const addr = Address.from('0x0000000000000000000000000000000000000001')
+  const ownershipPredicateAddr = Address.from(
+    '0x13274fe19c0178208bcbee397af8167a7be27f6f'
+  )
+  const compiledPredicate = CompiledPredicate.fromSource(
+    ownershipPredicateAddr,
+    OWNERSHIP_SOURCE
+  )
+  const compiledDecider = new CompiledDecider(compiledPredicate, {
+    secp256k1: Bytes.fromString('typedData')
+  })
+
   const db = new InMemoryKeyValueStore(Bytes.fromString('test'))
   const deciderManager = new DeciderManager(db)
   deciderManager.setDecider(
@@ -23,6 +37,11 @@ describe('IsValidSignatureDecider', () => {
     LogicalConnective.ForAllSuchThat
   )
   deciderManager.setDecider(addr, new IsValidSignatureDecider())
+  deciderManager.setDecider(ownershipPredicateAddr, compiledDecider)
+  deciderManager.setCompiledPredicate(
+    compiledPredicate.getPredicateName(),
+    compiledPredicate
+  )
   const wallet = ethers.Wallet.createRandom()
   let publicKey: string, privateKey: Bytes, message: Bytes, signature: Bytes
 
@@ -37,7 +56,7 @@ describe('IsValidSignatureDecider', () => {
     const property = new Property(addr, [
       message,
       signature,
-      Coder.encode(Address.from(publicKey)),
+      EthCoder.encode(Address.from(publicKey)),
       Bytes.fromString('secp256k1')
     ])
 
@@ -49,7 +68,7 @@ describe('IsValidSignatureDecider', () => {
     const property = new Property(addr, [
       message,
       Bytes.fromString('hellohello'),
-      Coder.encode(Address.from(publicKey)),
+      EthCoder.encode(Address.from(publicKey)),
       Bytes.fromString('secp256k1')
     ])
 
@@ -64,7 +83,7 @@ describe('IsValidSignatureDecider', () => {
     const property = new Property(addr, [
       message,
       invalidSig,
-      Coder.encode(Address.from(publicKey)),
+      EthCoder.encode(Address.from(publicKey)),
       Bytes.fromString('secp256k1')
     ])
 
@@ -76,7 +95,7 @@ describe('IsValidSignatureDecider', () => {
     const property = new Property(addr, [
       message,
       signature,
-      Coder.encode(Address.from(publicKey)),
+      EthCoder.encode(Address.from(publicKey)),
       Bytes.fromString('ed25519')
     ])
 
@@ -100,11 +119,14 @@ describe('IsValidSignatureDecider', () => {
       Bytes.fromHexString(
         '0x50796a5cd37512a03bef440be4bbeee54245bd8bf7f7e8e2ae0ef845844ca7c47d06a039145e4f59d11ffd8564f1817855666449c243513ea5e20ff90dd0b9171c'
       ),
-      Coder.encode(Address.from('0x627306090abab3a6e1400e9345bc60c78a8bef57')),
+      EthCoder.encode(
+        Address.from('0x627306090abab3a6e1400e9345bc60c78a8bef57')
+      ),
       Bytes.fromString('typedData')
     ])
 
     const decision = await deciderManager.decide(property)
+    console.log(decision)
     expect(decision.outcome).toBeTruthy()
   })
 })

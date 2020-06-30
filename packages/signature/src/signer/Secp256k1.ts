@@ -1,8 +1,8 @@
+import { keccak256 } from 'ethers/utils/keccak256'
 import { SigningKey } from 'ethers/utils/signing-key'
 import { joinSignature, arrayify } from 'ethers/utils/bytes'
 import { Bytes } from '@cryptoeconomicslab/primitives'
 import Signer from './Signer'
-import { hashMessage } from '@ethersproject/hash'
 
 export default class Secp256k1Signer implements Signer {
   privateKey: Bytes
@@ -19,7 +19,7 @@ export default class Secp256k1Signer implements Signer {
     const signingKey = new SigningKey(arrayify(this.privateKey.data))
     return Bytes.fromHexString(
       joinSignature(
-        signingKey.signDigest(arrayify(hashMessage(arrayify(message.data))))
+        signingKey.signDigest(arrayify(keccak256(arrayify(message.data))))
       )
     )
   }
