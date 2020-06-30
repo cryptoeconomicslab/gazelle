@@ -70,14 +70,14 @@ export class CommitmentContract implements ICommitmentContract {
     this.eventWatcher.subscribe('BlockSubmitted', async (log: EventLog) => {
       const blockNumber = log.values.blockNumber
       const root = log.values.root
-      const mainchainBlockNumber = log.values.mainchainBlockNumber
+      const mainchainBlockNumber = log.mainchainBlockNumber
       const timestamp = (
         await this.connection.provider.getBlock(mainchainBlockNumber.raw)
       ).timestamp
       await handler(
         BigNumber.fromString(blockNumber.toString()),
         FixedBytes.fromHexString(32, root),
-        BigNumber.from(mainchainBlockNumber.toString()),
+        mainchainBlockNumber,
         Integer.from(timestamp)
       )
     })
