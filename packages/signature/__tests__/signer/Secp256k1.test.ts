@@ -8,7 +8,7 @@ describe('secp256k1Signer', () => {
   const message = Bytes.fromString('message')
   const anotherMessage = Bytes.fromString('another message')
   const testSignature = Bytes.fromHexString(
-    '0x87c2acee573d93e025a8d31e9d95df89e0a2982e0c65d42c3405f1c8b5e26f106c2bc437f2af9cbdde0d84c42e92177138a0ac32347cdb23c03097e5f4afd0c11c'
+    '0x682f001aa66b904779bbcd846e52a62f4cf7d643b91826fdec04441ab604a6d66330609ad20a1a14fb52e3967bd2086c131e634ee4823b8a7ce3be8d91038daa1b'
   )
   let signer: Signer
 
