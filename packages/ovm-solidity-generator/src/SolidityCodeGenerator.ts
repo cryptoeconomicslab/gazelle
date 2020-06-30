@@ -13,9 +13,9 @@ import {
   IntermediateCompiledPredicate,
   LogicalConnective,
   AtomicProposition,
-  AtomicPredicateCall,
-  PredicateCall
+  AtomicPredicateCall
 } from '@cryptoeconomicslab/ovm-transpiler'
+import { ArgDef } from '@cryptoeconomicslab/ovm-parser'
 
 const templates: { [key: string]: string } = {
   decide: decide.toString(),
@@ -112,12 +112,34 @@ export class SolidityCodeGenerator implements CodeGenerator {
     )
   }
 
+  getTypeString = (type: string, isDeclare: boolean = false): string => {
+    const map = {
+      Address: 'address',
+      Bytes: 'bytes' + (isDeclare ? ' memory' : ''),
+      BigNumber: 'uint256'
+    }
+    return map[type]
+  }
+
+  generateTypes = (inputDefs: ArgDef[]): string[] => {
+    return inputDefs.map(
+      inputDef => `"${this.getTypeString(inputDef.type)} ${inputDef.name}"`
+    )
+  }
+
+  generateValueNames = (inputDefs: ArgDef[]): string[] => {
+    return inputDefs.map(inputDef => inputDef.name)
+  }
+
   getHelpers = () => {
     return {
       getAddress: this.getAddress,
       indent: this.indent,
       getOVMPath: this.getOVMPath,
-      isNotCompiledPredicate: this.isNotCompiledPredicate
+      isNotCompiledPredicate: this.isNotCompiledPredicate,
+      generateTypes: this.generateTypes,
+      generateValueNames: this.generateValueNames,
+      getTypeString: this.getTypeString
     }
   }
 }

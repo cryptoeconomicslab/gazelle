@@ -203,5 +203,13 @@ contract OrTest {
         return true;
     }
 
+    function packTypes() public pure returns (bytes memory) {
+        return abi.encodePacked("bytes a");
+    }
+
+    function packValues(bytes[] memory _inputs) public pure returns (bytes memory) {
+        bytes memory a = _inputs[0];
+        return abi.encodePacked(a);
+    }
 }
 

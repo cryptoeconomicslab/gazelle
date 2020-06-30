@@ -1,1 +1,1 @@
-def DynamicCallerTest(a, b, c) := DynamicCalledTest(a, b, c) and DynamicCalledTest(a, b, c)
+def DynamicCallerTest(a: Bytes, b: Bytes, c: Address) := DynamicCalledTest(a, b, c) and DynamicCalledTest(a, b, c)

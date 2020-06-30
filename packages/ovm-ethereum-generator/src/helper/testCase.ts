@@ -23,6 +23,15 @@ export interface DecideTestData {
   witnesses: string[]
 }
 
+interface PackTypesTestData {
+  packedData: string
+}
+
+interface PackValuesTestData {
+  inputs: string[]
+  packedData: string
+}
+
 export interface TestContext {
   forAllSuchThat: string
   and: string
@@ -44,4 +53,6 @@ export interface TestCaseSet {
   invalidChallenges: TestCase<IsValidChallengeTestData>[]
   decideTrueTestCases: TestCase<DecideTestData>[]
   invalidDecideTestCases: TestCase<DecideTestData>[]
+  packTypesTestCases: TestCase<PackTypesTestData>
+  packValuesTestCases: TestCase<PackValuesTestData>
 }
