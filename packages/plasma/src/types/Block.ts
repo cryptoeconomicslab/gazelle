@@ -3,7 +3,8 @@ import {
   Bytes,
   Struct,
   List,
-  FixedBytes
+  FixedBytes,
+  Integer
 } from '@cryptoeconomicslab/primitives'
 import { Property } from '@cryptoeconomicslab/ovm'
 import { Keccak256 } from '@cryptoeconomicslab/hash'
@@ -22,7 +23,8 @@ export default class Block {
 
   constructor(
     readonly blockNumber: BigNumber,
-    readonly stateUpdatesMap: Map<string, StateUpdate[]>
+    readonly stateUpdatesMap: Map<string, StateUpdate[]>,
+    readonly timestamp: number
   ) {}
 
   public getTree(): DoubleLayerTree {
@@ -102,7 +104,8 @@ export default class Block {
         )
       )
     })
-    return new this(blockNumber, map)
+    const timestamp = s.data[3].value as Integer
+    return new this(blockNumber, map, timestamp.data)
   }
 
   public toStruct(): Struct {
@@ -142,6 +145,10 @@ export default class Block {
           },
           stateUpdatesList
         )
+      },
+      {
+        key: 'timestamp',
+        value: Integer.from(this.timestamp)
       }
     ])
   }
@@ -167,6 +174,10 @@ export default class Block {
           },
           List.from({ default: Property.getParamType }, [])
         )
+      },
+      {
+        key: 'timestamp',
+        value: Integer.default()
       }
     ])
   }
