@@ -2,19 +2,19 @@ import { Transaction } from '@cryptoeconomicslab/plasma'
 import JSBI from 'jsbi'
 import { CompiledPredicate } from '@cryptoeconomicslab/ovm-transpiler'
 import { recoverTypedSignatureLegacy } from 'eth-sig-util'
-import { DeciderManager } from './DeciderManager'
 import {
   BigNumber,
   Bytes,
   Property,
   Address
 } from '@cryptoeconomicslab/primitives'
+import { DeciderConfig } from './load'
 
 /**
  * EIP712TypedData
  * https://github.com/ethereum/EIPs/blob/master/EIPS/eip-712.md
  */
-interface EIP712TypedData {
+export interface EIP712TypedData {
   name: string
   type: string
   value: any
@@ -85,6 +85,46 @@ function createStateObjectParams(
   })
 }
 
+function getPredicate(address: Address, config: DeciderConfig) {
+  for (let key in config.deployedPredicateTable) {
+    if (
+      Address.from(config.deployedPredicateTable[key].deployedAddress).equals(
+        address
+      )
+    ) {
+      return config.deployedPredicateTable[key].source[0]
+    }
+  }
+}
+
+export function createTypedParams(
+  config: DeciderConfig,
+  transactionMessage: Bytes
+): EIP712TypedData[] {
+  const property = Property.fromStruct(
+    ovmContext.coder.decode(Property.getParamType(), transactionMessage)
+  )
+  const transaction = Transaction.fromProperty(property)
+  const compiledPredicate = getPredicate(
+    transaction.stateObject.deciderAddress,
+    config
+  )
+  if (!compiledPredicate) {
+    throw new Error(
+      `createTypedParams failed because compiledPredicate of ${transaction.stateObject.deciderAddress} was not found.`
+    )
+  }
+  const stateObjectHash = createStateObjectParams(
+    transaction.stateObject,
+    compiledPredicate
+  )
+  return createTransactionParams(
+    transaction,
+    transactionMessage,
+    stateObjectHash
+  )
+}
+
 /**
  * @name verifyTypedDataSignature
  * @description verify signature for EIP712 TypedData
@@ -94,28 +134,12 @@ function createStateObjectParams(
  * @param pubkey address of signer
  */
 export async function verifyTypedDataSignature(
-  manager: DeciderManager,
+  config: DeciderConfig,
   transactionMessage: Bytes,
   signature: Bytes,
   pubkey: Bytes
 ): Promise<boolean> {
-  const property = Property.fromStruct(
-    ovmContext.coder.decode(Property.getParamType(), transactionMessage)
-  )
-  const transaction = Transaction.fromProperty(property)
-  const compiledPredicate = manager.getCompiledPredicateByAddress(
-    transaction.stateObject.deciderAddress
-  )
-  if (!compiledPredicate) return false
-  const stateObjectHash = createStateObjectParams(
-    transaction.stateObject,
-    compiledPredicate.compiled
-  )
-  const params = createTransactionParams(
-    transaction,
-    transactionMessage,
-    stateObjectHash
-  )
+  const params = createTypedParams(config, transactionMessage)
   const address = ovmContext.coder.decode(Address.default(), pubkey)
   return (
     address.data ===

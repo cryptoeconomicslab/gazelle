@@ -7,4 +7,5 @@ export * from './decompiler'
 export * from './load'
 export * from './helpers'
 export * from './propertyFilter'
+export * from './TypedDataVerifier'
 export { hint }

@@ -26,11 +26,8 @@ export class DeciderManager implements DeciderManagerInterface {
   private deciders: Map<string, Decider>
   private shortnames: Map<string, Address>
   private compiledPredicates: Map<string, CompiledPredicate>
-  private addressToCompiledPredicates: Map<string, CompiledPredicate> = new Map<
-    string,
-    CompiledPredicate
-  >()
   public witnessDb: KeyValueStore
+  public config?: DeciderConfig
   constructor(witnessDb: KeyValueStore, readonly coder: Coder = JsonCoder) {
     this.witnessDb = witnessDb
     this.deciders = new Map<string, Decider>()
@@ -73,6 +70,7 @@ export class DeciderManager implements DeciderManagerInterface {
    * @param config
    */
   loadJson(config: DeciderConfig) {
+    this.config = config
     initialize(this, config)
   }
 
@@ -125,14 +123,6 @@ export class DeciderManager implements DeciderManagerInterface {
     compiledPredicate: CompiledPredicate
   ) {
     this.compiledPredicates.set(predicateName, compiledPredicate)
-    this.addressToCompiledPredicates.set(
-      compiledPredicate.deployedAddress.data,
-      compiledPredicate
-    )
-  }
-
-  public getCompiledPredicateByAddress(address: Address) {
-    return this.addressToCompiledPredicates.get(address.data)
   }
 
   public async getStorageDb(): Promise<KeyValueStore> {

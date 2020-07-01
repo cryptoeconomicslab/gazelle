@@ -13,7 +13,7 @@ import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import EthCoder from '@cryptoeconomicslab/eth-coder'
 import { setupContext } from '@cryptoeconomicslab/context'
 import { ForAllSuchThatDeciderAddress } from '../helpers/initiateDeciderManager'
-import { OWNERSHIP_SOURCE } from '../decompiler/TestSource'
+import config from '../data/test.config'
 setupContext({ coder: EthCoder })
 
 describe('IsValidSignatureDecider', () => {
@@ -21,27 +21,16 @@ describe('IsValidSignatureDecider', () => {
   const ownershipPredicateAddr = Address.from(
     '0x13274fe19c0178208bcbee397af8167a7be27f6f'
   )
-  const compiledPredicate = CompiledPredicate.fromSource(
-    ownershipPredicateAddr,
-    OWNERSHIP_SOURCE
-  )
-  const compiledDecider = new CompiledDecider(compiledPredicate, {
-    secp256k1: Bytes.fromString('typedData')
-  })
 
   const db = new InMemoryKeyValueStore(Bytes.fromString('test'))
   const deciderManager = new DeciderManager(db)
+  deciderManager.loadJson(config)
   deciderManager.setDecider(
     ForAllSuchThatDeciderAddress,
     new ForAllSuchThatDecider(),
     LogicalConnective.ForAllSuchThat
   )
   deciderManager.setDecider(addr, new IsValidSignatureDecider())
-  deciderManager.setDecider(ownershipPredicateAddr, compiledDecider)
-  deciderManager.setCompiledPredicate(
-    compiledPredicate.getPredicateName(),
-    compiledPredicate
-  )
   const wallet = ethers.Wallet.createRandom()
   let publicKey: string, privateKey: Bytes, message: Bytes, signature: Bytes
 

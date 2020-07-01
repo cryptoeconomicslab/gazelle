@@ -25,8 +25,11 @@ export class IsValidSignatureDecider implements Decider {
     const [message, signature, publicKey, verifierKey] = inputs
     let result
     if (verifierKey.intoString() === 'typedData') {
+      if (!_manager.config) {
+        throw new Error('not initialized')
+      }
       result = await verifyTypedDataSignature(
-        _manager,
+        _manager.config,
         message,
         signature,
         publicKey
