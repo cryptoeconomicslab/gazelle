@@ -2,9 +2,7 @@ import {
   DeciderManager,
   IsValidSignatureDecider,
   ForAllSuchThatDecider,
-  LogicalConnective,
-  CompiledPredicate,
-  CompiledDecider
+  LogicalConnective
 } from '../../src'
 import { Address, Bytes, Property } from '@cryptoeconomicslab/primitives'
 import * as ethers from 'ethers'
@@ -18,10 +16,6 @@ setupContext({ coder: EthCoder })
 
 describe('IsValidSignatureDecider', () => {
   const addr = Address.from('0x0000000000000000000000000000000000000001')
-  const ownershipPredicateAddr = Address.from(
-    '0x13274fe19c0178208bcbee397af8167a7be27f6f'
-  )
-
   const db = new InMemoryKeyValueStore(Bytes.fromString('test'))
   const deciderManager = new DeciderManager(db)
   deciderManager.loadJson(config)

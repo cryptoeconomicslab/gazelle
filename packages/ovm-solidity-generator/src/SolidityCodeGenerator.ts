@@ -112,7 +112,7 @@ export class SolidityCodeGenerator implements CodeGenerator {
     )
   }
 
-  getTypeString = (type: string, isDeclare: boolean = false): string => {
+  getTypeString = (type: string, isDeclare = false): string => {
     const map = {
       Address: 'address',
       Bytes: 'bytes' + (isDeclare ? ' memory' : ''),

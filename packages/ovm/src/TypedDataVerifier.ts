@@ -76,6 +76,9 @@ function createStateObjectParams(
     0,
     compiledPredicate.inputDefs.length - 1
   )
+  if (inputDefs.length !== stateObject.inputs.length) {
+    throw new Error('incorrect inputs size')
+  }
   return inputDefs.map((inputDef, i) => {
     return {
       type: getTypeString(inputDef.type),
