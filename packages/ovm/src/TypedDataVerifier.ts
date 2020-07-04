@@ -89,7 +89,7 @@ function createStateObjectParams(
 }
 
 function getPredicate(address: Address, config: DeciderConfig) {
-  for (let key in config.deployedPredicateTable) {
+  for (const key in config.deployedPredicateTable) {
     if (
       Address.from(config.deployedPredicateTable[key].deployedAddress).equals(
         address
