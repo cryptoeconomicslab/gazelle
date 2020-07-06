@@ -29,6 +29,7 @@
     "clean": "rm -rf lib docs"
   },
   "dependencies": {
+    "@ethersproject/hash": "^5.0.1",
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {

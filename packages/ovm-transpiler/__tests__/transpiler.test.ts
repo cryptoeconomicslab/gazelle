@@ -17,7 +17,10 @@ describe('Transpiler', () => {
         declarations: [
           {
             name: 'deepNestTest',
-            inputDefs: ['a', 'b'],
+            inputDefs: [
+              { name: 'a', type: 'Bool' },
+              { name: 'b', type: 'Bool' }
+            ],
             body: {
               type: 'PropertyNode',
               predicate: 'ThereExistsSuchThat',
@@ -49,7 +52,10 @@ describe('Transpiler', () => {
           declarations: [
             {
               name: 'BoolQuantifier',
-              inputDefs: ['a', 'b'],
+              inputDefs: [
+                { name: 'a', type: 'Bool' },
+                { name: 'b', type: 'Bool' }
+              ],
               body: {
                 type: 'PropertyNode',
                 predicate: 'Bool',
@@ -70,7 +76,10 @@ describe('Transpiler', () => {
         {
           type: 'CompiledPredicate',
           name: 'DeepNestTest',
-          inputDefs: ['a', 'b'],
+          inputDefs: [
+            { name: 'a', type: 'Bool' },
+            { name: 'b', type: 'Bool' }
+          ],
           contracts: [
             {
               type: 'IntermediateCompiledPredicate',

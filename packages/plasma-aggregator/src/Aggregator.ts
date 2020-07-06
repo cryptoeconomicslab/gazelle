@@ -2,13 +2,13 @@ import express, { Express, Request, Response } from 'express'
 import {
   CompiledPredicate,
   DeciderManager,
-  Property,
   DeciderConfig
 } from '@cryptoeconomicslab/ovm'
 import {
   Address,
   Bytes,
   BigNumber,
+  Property,
   Range
 } from '@cryptoeconomicslab/primitives'
 import {

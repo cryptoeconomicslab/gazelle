@@ -3,7 +3,8 @@ import {
   Range,
   BigNumber,
   Bytes,
-  List
+  List,
+  Property
 } from '@cryptoeconomicslab/primitives'
 import { EthCoder as Coder } from '@cryptoeconomicslab/eth-coder'
 import { setupContext } from '@cryptoeconomicslab/context'
@@ -12,7 +13,6 @@ import {
   SampleDeciderAddress
 } from '../helpers/initiateDeciderManager'
 import {
-  Property,
   CompiledDecider,
   CompiledPredicate,
   DeciderManager,

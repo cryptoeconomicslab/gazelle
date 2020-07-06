@@ -4,7 +4,8 @@ import {
   Range,
   BigNumber,
   Bytes,
-  FixedBytes
+  FixedBytes,
+  Property
 } from '@cryptoeconomicslab/primitives'
 import { EthCoder as Coder } from '@cryptoeconomicslab/eth-coder'
 import { Secp256k1Signer } from '@cryptoeconomicslab/signature'
@@ -16,7 +17,6 @@ import {
   ForAllSuchThatDeciderAddress
 } from '../helpers/initiateDeciderManager'
 import {
-  Property,
   CompiledDecider,
   CompiledPredicate,
   DeciderManager,

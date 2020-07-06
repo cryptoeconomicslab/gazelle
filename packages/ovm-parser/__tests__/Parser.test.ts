@@ -23,7 +23,10 @@ describe('Parser', () => {
           {
             annotations: [],
             name: 'andTest',
-            inputDefs: ['a', 'b'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'BigNumber' }
+            ],
             body: {
               type: 'PropertyNode',
               predicate: 'And',
@@ -42,7 +45,10 @@ describe('Parser', () => {
           {
             annotations: [],
             name: 'orTest',
-            inputDefs: ['a', 'b'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'Bytes' }
+            ],
             body: {
               type: 'PropertyNode',
               predicate: 'Or',
@@ -61,7 +67,7 @@ describe('Parser', () => {
           {
             annotations: [],
             name: 'notTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'Bytes' }],
             body: {
               type: 'PropertyNode',
               predicate: 'Not',
@@ -79,7 +85,7 @@ describe('Parser', () => {
           {
             annotations: [],
             name: 'forallTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'ForAllSuchThat',
@@ -137,7 +143,7 @@ describe('Parser', () => {
           {
             annotations: [],
             name: 'bindAndTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'And',
@@ -156,7 +162,7 @@ describe('Parser', () => {
           {
             annotations: [],
             name: 'bindValTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'ThereExistsSuchThat',
@@ -176,7 +182,7 @@ describe('Parser', () => {
           {
             annotations: [],
             name: 'bind2Test',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'And',
@@ -196,7 +202,7 @@ describe('Parser', () => {
           {
             annotations: [],
             name: 'bindAddrTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'And',
@@ -222,7 +228,10 @@ describe('Parser', () => {
           {
             annotations: [],
             name: 'evalTest',
-            inputDefs: ['a', 'b'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'BigNumber' }
+            ],
             body: {
               type: 'PropertyNode',
               predicate: 'And',
@@ -241,7 +250,7 @@ describe('Parser', () => {
           {
             annotations: [],
             name: 'forValTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'ForAllSuchThat',
@@ -281,7 +290,7 @@ describe('Parser', () => {
           {
             annotations: [],
             name: 'thereValTest',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'ThereExistsSuchThat',
@@ -300,7 +309,7 @@ describe('Parser', () => {
       test('import', () => {
         const testOutput = `
         from aaa import bbb
-        def Foo(a, b) := Bool(a) and Bool(b)
+        def Foo(a: BigNumber, b: BigNumber) := Bool(a) and Bool(b)
         `
         const ast = parser.parse(testOutput)
         expect(ast).toStrictEqual({
@@ -314,7 +323,10 @@ describe('Parser', () => {
             {
               annotations: [],
               name: 'Foo',
-              inputDefs: ['a', 'b'],
+              inputDefs: [
+                { name: 'a', type: 'BigNumber' },
+                { name: 'b', type: 'BigNumber' }
+              ],
               body: {
                 type: 'PropertyNode',
                 predicate: 'And',
@@ -333,7 +345,7 @@ describe('Parser', () => {
       test('annotation', () => {
         const testOutput = `
         @quantifier("bucket\${b},type,\${a}")
-        def Foo(a, b) := Bool(a) and Bool(b)
+        def Foo(a: BigNumber, b: BigNumber) := Bool(a) and Bool(b)
         `
         const ast = parser.parse(testOutput)
         expect(ast).toStrictEqual({
@@ -347,7 +359,10 @@ describe('Parser', () => {
                 }
               ],
               name: 'Foo',
-              inputDefs: ['a', 'b'],
+              inputDefs: [
+                { name: 'a', type: 'BigNumber' },
+                { name: 'b', type: 'BigNumber' }
+              ],
               body: {
                 type: 'PropertyNode',
                 predicate: 'And',
@@ -366,14 +381,14 @@ describe('Parser', () => {
       test('Foo(a).any(c -> Foo(b) and Foo(c))', () => {
         const ast: PropertyDef[] = parser.parse(
           `@quantifier("bucket\${a},type,\${a}")
-def Foo(a) := Bool(a) and Bool(a)
+def Foo(a: BigNumber) := Bool(a) and Bool(a)
 
-def deepNestTest(a, b) := Foo(a).any(c -> Bool(b) and Bool(c))`
+def deepNestTest(a: BigNumber, b: BigNumber) := Foo(a).any(c -> Bool(b) and Bool(c))`
         ).declarations
         expect(ast).toStrictEqual([
           {
             name: 'Foo',
-            inputDefs: ['a'],
+            inputDefs: [{ name: 'a', type: 'BigNumber' }],
             body: {
               type: 'PropertyNode',
               predicate: 'And',
@@ -391,7 +406,10 @@ def deepNestTest(a, b) := Foo(a).any(c -> Bool(b) and Bool(c))`
           },
           {
             name: 'deepNestTest',
-            inputDefs: ['a', 'b'],
+            inputDefs: [
+              { name: 'a', type: 'BigNumber' },
+              { name: 'b', type: 'BigNumber' }
+            ],
             body: {
               type: 'PropertyNode',
               predicate: 'ThereExistsSuchThat',

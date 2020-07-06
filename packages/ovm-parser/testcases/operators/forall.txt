@@ -1,1 +1,1 @@
-def forallTest(a) := A(a).all(b -> Foo(b))
+def forallTest(a: BigNumber) := A(a).all(b -> Foo(b))

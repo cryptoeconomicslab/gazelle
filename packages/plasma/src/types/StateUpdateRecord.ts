@@ -1,5 +1,9 @@
-import { Address, Struct, BigNumber } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
+import {
+  Address,
+  Struct,
+  BigNumber,
+  Property
+} from '@cryptoeconomicslab/primitives'
 
 export default class StateUpdateRecord {
   constructor(

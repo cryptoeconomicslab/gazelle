@@ -20,13 +20,18 @@ export interface Annotation {
   }
 }
 
+export interface ArgDef {
+  name: string
+  type: string
+}
+
 /**
  * Parsed Property definition
  */
 export interface PropertyDef {
   annotations: Annotation[]
   name: string
-  inputDefs: string[]
+  inputDefs: ArgDef[]
   body: PropertyNode
 }
 

@@ -4,7 +4,8 @@ import {
   Bytes,
   BigNumber,
   Integer,
-  Range
+  Range,
+  Property
 } from '@cryptoeconomicslab/primitives'
 import { LevelKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import initializeLightClient from '@cryptoeconomicslab/eth-plasma-light-client'
@@ -16,7 +17,6 @@ import formatUnits = ethers.utils.formatUnits
 import { ActionType } from '@cryptoeconomicslab/plasma-light-client/lib/UserAction'
 import { EthCoder } from '@cryptoeconomicslab/eth-coder'
 import { Block, StateUpdate } from '@cryptoeconomicslab/plasma'
-import { Property } from '@cryptoeconomicslab/ovm'
 import { DateUtils } from '@cryptoeconomicslab/utils'
 import config from '../config.local.json'
 

@@ -4,9 +4,10 @@ import {
   Address,
   BigNumber,
   FixedBytes,
-  List
+  List,
+  Property
 } from '@cryptoeconomicslab/primitives'
-import { Property, ChallengeGame } from '@cryptoeconomicslab/ovm'
+import { ChallengeGame } from '@cryptoeconomicslab/ovm'
 import { EventLog, IAdjudicationContract } from '@cryptoeconomicslab/contract'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import EthEventWatcher from '../events'

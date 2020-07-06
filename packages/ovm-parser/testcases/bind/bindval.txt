@@ -1,1 +1,1 @@
-def bindValTest(a) := Bytes().any(b -> Foo(b.0, a))
+def bindValTest(a: BigNumber) := Bytes().any(b -> Foo(b.0, a))

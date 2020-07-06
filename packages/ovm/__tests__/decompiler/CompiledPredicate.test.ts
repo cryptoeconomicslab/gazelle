@@ -1,5 +1,4 @@
 import {
-  Property,
   FreeVariable,
   CompiledPredicate,
   createAtomicPropositionCall,
@@ -10,7 +9,12 @@ import {
   parseVariable,
   PredicateLabel
 } from '../../src'
-import { Address, Bytes, BigNumber } from '@cryptoeconomicslab/primitives'
+import {
+  Address,
+  Bytes,
+  BigNumber,
+  Property
+} from '@cryptoeconomicslab/primitives'
 import {
   initializeDeciderManager,
   ForAllSuchThatDeciderAddress,
@@ -44,10 +48,10 @@ describe('CompiledPredicate', () => {
         TestPredicateAddress,
         `@library
 @quantifier("bucket,RANGE,\${b}")
-def SampleQuantifier(a, b) :=
+def SampleQuantifier(a: Bytes, b: Bytes) :=
   Bool(a, b) and Bool(a, b)
 
-def test(a) := SampleQuantifier(a).any(b -> b())
+def test(a: Bytes) := SampleQuantifier(a).any(b -> b())
 `
       )
       const hint = compiledPredicate.restoreHint(
@@ -118,7 +122,7 @@ def test(a) := SampleQuantifier(a).any(b -> b())
     it('compiled predicate using logical connective', async () => {
       const compiledPredicateAnd = CompiledPredicate.fromSource(
         TestPredicateAddress,
-        'def test(a, b) := Bool(a) and Bool(b)'
+        'def test(a: Bytes, b: Bytes) := Bool(a) and Bool(b)'
       )
       const testOriginalProperty = {
         deciderAddress: AndDeciderAddress,
@@ -140,7 +144,7 @@ def test(a) := SampleQuantifier(a).any(b -> b())
     it('compiled predicate using input predicate call', async () => {
       const compiledPredicateAnd = CompiledPredicate.fromSource(
         TestPredicateAddress,
-        'def test(a, b) := a() and b()'
+        'def test(a: Bytes, b: Bytes) := a() and b()'
       )
       const testOriginalProperty = {
         deciderAddress: AndDeciderAddress,
@@ -172,7 +176,7 @@ def test(a) := SampleQuantifier(a).any(b -> b())
       const compiledPredicateAnd = CompiledPredicate.fromSource(
         TestPredicateAddress,
         `@library
-def IsValidTx(tx, token, range, block_number) :=
+def IsValidTx(tx: Property, token: Address, range: Range, block_number: BigNumber) :=
   Equal(tx.address, $TransactionAddress)
   and Equal(tx.0, token)
   and IsContained(range, tx.1)
@@ -180,10 +184,10 @@ def IsValidTx(tx, token, range, block_number) :=
 
 @library
 @quantifier("tx.block\${b}.range\${token},RANGE,\${range}")
-def Tx(tx, token, range, b) :=
+def Tx(tx: Property, token: Address, range: Range, b: BigNumber) :=
   IsValidTx(tx, token, range, b)
 
-def test(token, range, block) := Tx(token, range, block).any(tx -> tx())`
+def test(token: Address, range: Range, block: BigNumber) := Tx(token, range, block).any(tx -> tx())`
       )
       const encodeEqDecider = (a: Bytes, b: Bytes) =>
         encodeProperty(new Property(EqualDeciderAddress, [a, b]))
@@ -216,7 +220,7 @@ def test(token, range, block) := Tx(token, range, block).any(tx -> tx())`
   describe('createAtomicPropositionCall', () => {
     const compiledPredicateAnd = CompiledPredicate.fromSource(
       TestPredicateAddress,
-      'def test(a) := Bool(a) and Bool($b) and Bool(self.address) and LibraryPredicate(a)'
+      'def test(a: Bytes) := Bool(a) and Bool($b) and Bool(self.address) and LibraryPredicate(a)'
     )
     const definition = compiledPredicateAnd.compiled.contracts[0]
     const a = BigNumber.from(301)
@@ -290,7 +294,7 @@ def test(token, range, block) := Tx(token, range, block).any(tx -> tx())`
     it('create InputPredicateCall with extra inputs', () => {
       const compiledPredicate = CompiledPredicate.fromSource(
         TestPredicateAddress,
-        'def test(a, b) := Bool(a) and a(b)'
+        'def test(a: Bytes, b: Bytes) := Bool(a) and a(b)'
       )
       const definition = compiledPredicate.compiled.contracts[0]
       const predicateCall = definition.inputs[1] as AtomicProposition
@@ -322,7 +326,7 @@ def test(token, range, block) := Tx(token, range, block).any(tx -> tx())`
     it('creating InputPredicateCall does not support ConstantInput as extra', () => {
       const compiledPredicate = CompiledPredicate.fromSource(
         TestPredicateAddress,
-        'def test(a) := Bool(a) and a($Constant)'
+        'def test(a: Bytes) := Bool(a) and a($Constant)'
       )
       const definition = compiledPredicate.compiled.contracts[0]
       const predicateCall = definition.inputs[1] as AtomicProposition

@@ -21,27 +21,27 @@ describe('QuantifierTranslater', () => {
         parser.parse(`
 @library
 @quantifier("v,KEY,\${c2}")
-def Q3(v, c, c2) := Equal(v, c2)
+def Q3(v: Bytes, c: Bytes, c2: Bytes) := Equal(v, c2)
 
 @library
 @quantifier("v.\${b2},KEY,\${b}")
-def Q2(v, b, b2) := Q3(v, b).any()
+def Q2(v: Bytes, b: Bytes, b2: Bytes) := Q3(v, b).any()
 
 @library
 @quantifier("v,KEY,\${a}")
-def Q1(v, a) := Equal(v, a)`).declarations,
+def Q1(v: Bytes, a: Bytes) := Equal(v, a)`).declarations,
         []
       )
 
       const input = parser.parse(`
-def origin(arg) :=
+def origin(arg: Bytes) :=
   Q1(arg.0).all(q -> Q2(arg.0, q).all(q1 -> q1()))
       `).declarations
       const output = applyLibraries(input, library)
       expect(output).toStrictEqual([
         {
           name: 'origin',
-          inputDefs: ['arg'],
+          inputDefs: [{ name: 'arg', type: 'Bytes' }],
           body: {
             type: 'PropertyNode',
             predicate: 'ForAllSuchThat',
@@ -115,7 +115,10 @@ def origin(arg) :=
         {
           annotations: [],
           name: 'SignedByTest',
-          inputDefs: ['a', 'b'],
+          inputDefs: [
+            { name: 'a', type: 'Bytes' },
+            { name: 'b', type: 'Bytes' }
+          ],
           body: {
             type: 'PropertyNode',
             predicate: 'ThereExistsSuchThat',
@@ -148,7 +151,11 @@ def origin(arg) :=
             }
           ],
           name: 'SignedBy',
-          inputDefs: ['sig', 'message', 'public_key'],
+          inputDefs: [
+            { name: 'sig', type: 'Bytes' },
+            { name: 'message', type: 'Bytes' },
+            { name: 'public_key', type: 'Address' }
+          ],
           body: {
             type: 'PropertyNode',
             predicate: 'IsValidSignature',
@@ -161,7 +168,10 @@ def origin(arg) :=
         {
           annotations: [],
           name: 'SignedByTest',
-          inputDefs: ['a', 'b'],
+          inputDefs: [
+            { name: 'a', type: 'Bytes' },
+            { name: 'b', type: 'Bytes' }
+          ],
           body: {
             type: 'PropertyNode',
             predicate: 'ThereExistsSuchThat',
@@ -184,7 +194,7 @@ def origin(arg) :=
         {
           annotations: [],
           name: 'LessThanTest',
-          inputDefs: ['b'],
+          inputDefs: [{ name: 'b', type: 'BigNumber' }],
           body: {
             type: 'PropertyNode',
             predicate: 'ForAllSuchThat',
@@ -223,7 +233,10 @@ def origin(arg) :=
             }
           ],
           name: 'IsLessThan',
-          inputDefs: ['n', 'upper_bound'],
+          inputDefs: [
+            { name: 'n', type: 'BigNumber' },
+            { name: 'upper_bound', type: 'BigNumber' }
+          ],
           body: {
             type: 'PropertyNode',
             predicate: 'IsLessThan',
@@ -237,7 +250,7 @@ def origin(arg) :=
         {
           annotations: [],
           name: 'LessThanTest',
-          inputDefs: ['b'],
+          inputDefs: [{ name: 'b', type: 'BigNumber' }],
           body: {
             type: 'PropertyNode',
             predicate: 'ForAllSuchThat',
@@ -273,7 +286,11 @@ def origin(arg) :=
         {
           annotations: [],
           name: 'SUTest',
-          inputDefs: ['token', 'range', 'block'],
+          inputDefs: [
+            { name: 'token', type: 'Address' },
+            { name: 'range', type: 'Range' },
+            { name: 'block', type: 'BigNumber' }
+          ],
           body: {
             type: 'PropertyNode',
             predicate: 'ForAllSuchThat',
@@ -298,18 +315,18 @@ def origin(arg) :=
         parser.parse(`
 @library
 @quantifier("proof.block\${b}.range\${t},RANGE,\${r}")
-def IncludedAt(p, l, t, r, b) := 
+def IncludedAt(p: Bytes, l: Bytes, t: Address, r: Range, b: BigNumber) := 
   VerifyInclusion(l, t, r, b, p)
 
 @library
-def IncludedWithin(su, b, t, r) := 
+def IncludedWithin(su: Bytes, b: BigNumber, t: Address, r: Range) := 
   IncludedAt(su, su.0, su.1, b).any()
   and Equal(su.0, t)
   and HasIntersection(su.1, range)
         
 @library
 @quantifier("su.block\${token}.range\${range},RANGE,\${block}")
-def SU(su, token, range, block) := IncludedWithin(su, block, token, range)
+def SU(su: Bytes, token: Address, range: Range, block: BigNumber) := IncludedWithin(su, block, token, range)
       `).declarations,
         []
       )
@@ -318,7 +335,11 @@ def SU(su, token, range, block) := IncludedWithin(su, block, token, range)
         {
           annotations: [],
           name: 'SUTest',
-          inputDefs: ['token', 'range', 'block'],
+          inputDefs: [
+            { name: 'token', type: 'Address' },
+            { name: 'range', type: 'Range' },
+            { name: 'block', type: 'BigNumber' }
+          ],
           body: {
             type: 'PropertyNode',
             predicate: 'ForAllSuchThat',
@@ -378,7 +399,11 @@ def SU(su, token, range, block) := IncludedWithin(su, block, token, range)
         {
           annotations: [],
           name: 'TxTest',
-          inputDefs: ['token', 'range', 'block'],
+          inputDefs: [
+            { name: 'token', type: 'Address' },
+            { name: 'range', type: 'Range' },
+            { name: 'block', type: 'BigNumber' }
+          ],
           body: {
             type: 'PropertyNode',
             predicate: 'ThereExistsSuchThat',
@@ -401,7 +426,7 @@ def SU(su, token, range, block) := IncludedWithin(su, block, token, range)
       const parser = new Parser()
       const library: PropertyDef[] = parser.parse(`
 @library
-def IsTx(tx, t, r, b) := 
+def IsTx(tx: Bytes, t: Address, r: Range, b: BigNumber) := 
   Equal(tx.address, $TransactionAddress)
   and Equal(tx.0, t)
   and HasIntersection(tx.1, range)
@@ -409,14 +434,18 @@ def IsTx(tx, t, r, b) :=
         
 @library
 @quantifier("tx.block\${block}.range\${token},RANGE,\${range}")
-def Tx(tx, token, range, block) := IsTx(tx, token, range, block)
+def Tx(tx: Bytes, token: Address, range: Range, block: BigNumber) := IsTx(tx, token, range, block)
       `).declarations
       const output = applyLibraries(input, library)
       expect(output).toStrictEqual([
         {
           annotations: [],
           name: 'TxTest',
-          inputDefs: ['token', 'range', 'block'],
+          inputDefs: [
+            { name: 'token', type: 'Address' },
+            { name: 'range', type: 'Range' },
+            { name: 'block', type: 'BigNumber' }
+          ],
           body: {
             type: 'PropertyNode',
             predicate: 'ThereExistsSuchThat',
@@ -468,7 +497,10 @@ def Tx(tx, token, range, block) := IsTx(tx, token, range, block)
         {
           annotations: [],
           name: 'OptimisingThereExistsSuchThatTest',
-          inputDefs: ['message', 'owner'],
+          inputDefs: [
+            { name: 'message', type: 'Bytes' },
+            { name: 'owner', type: 'Address' }
+          ],
           body: {
             type: 'PropertyNode',
             predicate: 'ThereExistsSuchThat',
@@ -503,14 +535,17 @@ def Tx(tx, token, range, block) := IsTx(tx, token, range, block)
       const library: PropertyDef[] = parser.parse(`
 @library
 @quantifier("signatures,KEY,\${message}")
-def SignedBy(sig, message, owner) := IsValidSignature(message, sig, owner)
+def SignedBy(sig: Bytes, message: Bytes, owner: Address) := IsValidSignature(message, sig, owner)
       `).declarations
       const output = applyLibraries(input, library)
       expect(output).toStrictEqual([
         {
           annotations: [],
           name: 'OptimisingThereExistsSuchThatTest',
-          inputDefs: ['message', 'owner'],
+          inputDefs: [
+            { name: 'message', type: 'Bytes' },
+            { name: 'owner', type: 'Address' }
+          ],
           body: {
             type: 'PropertyNode',
             predicate: 'ThereExistsSuchThat',
@@ -550,7 +585,16 @@ def SignedBy(sig, message, owner) := IsValidSignature(message, sig, owner)
       ]
     }
     test('replace inputs', () => {
-      expect(replaceInputs(node, ['aa', 'bb'], ['a', 'b'])).toStrictEqual({
+      expect(
+        replaceInputs(
+          node,
+          ['aa', 'bb'],
+          [
+            { name: 'a', type: 'Bytes' },
+            { name: 'b', type: 'Bytes' }
+          ]
+        )
+      ).toStrictEqual({
         type: 'PropertyNode',
         predicate: 'ThereExistsSuchThat',
         inputs: [
@@ -564,7 +608,16 @@ def SignedBy(sig, message, owner) := IsValidSignature(message, sig, owner)
     })
 
     test('throw error', () => {
-      expect(() => replaceInputs(node, ['aa'], ['a', 'b'])).toThrowError(
+      expect(() =>
+        replaceInputs(
+          node,
+          ['aa'],
+          [
+            { name: 'a', type: 'Bytes' },
+            { name: 'b', type: 'Bytes' }
+          ]
+        )
+      ).toThrowError(
         'The size of inputDefs must be less than or equal the size of callingInputs at ThereExistsSuchThat.'
       )
     })
@@ -605,7 +658,11 @@ def SignedBy(sig, message, owner) := IsValidSignature(message, sig, owner)
         }
       ],
       name: 'FooLib',
-      inputDefs: ['v', 'a', 'b'],
+      inputDefs: [
+        { name: 'v', type: 'Bytes' },
+        { name: 'a', type: 'Bytes' },
+        { name: 'b', type: 'Bytes' }
+      ],
       body: {
         type: 'PropertyNode',
         predicate: 'Foo',

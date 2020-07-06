@@ -9,7 +9,6 @@ import {
   PlasmaContractConfig
 } from '@cryptoeconomicslab/plasma'
 import {
-  Property,
   CompiledPredicate,
   DeciderManager,
   DeciderConfig,
@@ -21,6 +20,7 @@ import {
   Bytes,
   FixedBytes,
   BigNumber,
+  Property,
   Range
 } from '@cryptoeconomicslab/primitives'
 import {

@@ -3,9 +3,9 @@ import {
   Bytes,
   BigNumber,
   Integer,
+  Property,
   Range
 } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
 import { Block, StateUpdate } from '../src'
 import Coder from '@cryptoeconomicslab/coder'
 import { DateUtils } from '@cryptoeconomicslab/utils'

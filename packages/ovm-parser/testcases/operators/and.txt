@@ -1,1 +1,1 @@
-def andTest(a, b) := Foo(a) and Bar(b)
+def andTest(a: BigNumber, b: BigNumber) := Foo(a) and Bar(b)

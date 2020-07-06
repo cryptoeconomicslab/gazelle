@@ -1,2 +1,2 @@
-def thereValTest(a) :=
+def thereValTest(a: BigNumber) :=
 B().any(b -> a(b))

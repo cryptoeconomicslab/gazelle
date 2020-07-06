@@ -13,7 +13,7 @@ import "<%= getOVMPath() %>/CompiledPredicate.sol";
     const constants = claimDef.constants || []
 %>
 /**
- * <%= claimDef.name %>(<%= claimDef.inputDefs %>)
+ * <%= claimDef.name %>(<%= claimDef.inputDefs.map(def => def.name) %>)
  */
 contract <%= claimDef.name %> {
 <%
@@ -183,5 +183,26 @@ contract <%= claimDef.name %> {
   })
 -%>
 
+<%
+  const inputDefs = claimDef.inputDefs.slice(0, claimDef.inputDefs.length - 1)
+  if(inputDefs.length > 0) {
+-%>
+    function packTypes() public pure returns (bytes memory) {
+        return abi.encodePacked(<%- generateTypes(inputDefs).join(',') %>);
+    }
+
+    function packValues(bytes[] memory _inputs) public pure returns (bytes memory) {
+<%
+  inputDefs.forEach((inputDef, index) => {
+-%>
+        <%= getTypeString(inputDef.type, true) %> <%= inputDef.name %> = <% if(inputDef.type == 'Bytes') { %>_inputs[<%= index %>]<% }else{ %>abi.decode(_inputs[<%= index %>], (<%= getTypeString(inputDef.type) %>))<% } %>;
+<%
+  })
+-%>
+        return abi.encodePacked(<%= generateValueNames(inputDefs) %>);
+    }
+<%
+  }
+-%>
 }
 <% } %>

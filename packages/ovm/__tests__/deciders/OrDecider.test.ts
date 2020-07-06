@@ -1,11 +1,10 @@
 import {
   AtomicPredicate,
   LogicalConnective,
-  Property,
   OrDecider,
   encodeProperty
 } from '../../src'
-import { Bytes, Integer } from '@cryptoeconomicslab/primitives'
+import { Bytes, Integer, Property } from '@cryptoeconomicslab/primitives'
 import { MockDeciderManager } from '../mocks/MockDeciderManager'
 import JsonCoder from '@cryptoeconomicslab/coder'
 import { setupContext } from '@cryptoeconomicslab/context'

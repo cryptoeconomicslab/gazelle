@@ -15,7 +15,6 @@ import {
   ForAllSuchThatDeciderAddress
 } from '../helpers/initiateDeciderManager'
 import {
-  Property,
   CompiledDecider,
   CompiledPredicate,
   DeciderManager,
@@ -23,6 +22,7 @@ import {
   PredicateLabel
 } from '../../src'
 import { putWitness, replaceHint } from '@cryptoeconomicslab/db'
+import { Property } from '@cryptoeconomicslab/primitives'
 import {
   DoubleLayerTreeGenerator,
   DoubleLayerTreeLeaf

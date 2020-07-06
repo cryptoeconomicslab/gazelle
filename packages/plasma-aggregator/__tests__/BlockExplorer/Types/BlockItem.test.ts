@@ -5,9 +5,9 @@ import {
   Bytes,
   BigNumber,
   Integer,
+  Property,
   Range
 } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
 import Coder from '@cryptoeconomicslab/coder'
 import { setupContext } from '@cryptoeconomicslab/context'
 import { DateUtils } from '@cryptoeconomicslab/utils'

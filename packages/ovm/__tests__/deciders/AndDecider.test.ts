@@ -1,5 +1,4 @@
 import {
-  Property,
   LogicalConnective,
   AtomicPredicate,
   AndDecider,
@@ -17,7 +16,8 @@ import {
   Integer,
   List,
   Address,
-  BigNumber
+  BigNumber,
+  Property
 } from '@cryptoeconomicslab/primitives'
 import DefaultCoder from '@cryptoeconomicslab/coder'
 import { MockDeciderManager } from '../mocks/MockDeciderManager'
@@ -96,7 +96,7 @@ describe('AndDecider', () => {
       deciderManager = initializeDeciderManager()
 
       const source = `
-      def test(a, b, c) := !IsLessThan(a, c) and IsLessThan(b, c)
+      def test(a: BigNumber, b: BigNumber, c: BigNumber) := !IsLessThan(a, c) and IsLessThan(b, c)
       `
 
       // Sets instance of CompiledDecider TestF

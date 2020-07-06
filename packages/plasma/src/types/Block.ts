@@ -4,9 +4,9 @@ import {
   Struct,
   List,
   FixedBytes,
-  Integer
+  Integer,
+  Property
 } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
 import { Keccak256 } from '@cryptoeconomicslab/hash'
 import {
   DoubleLayerTree,

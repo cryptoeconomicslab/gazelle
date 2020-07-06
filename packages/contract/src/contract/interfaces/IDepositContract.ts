@@ -3,9 +3,9 @@ import {
   BigNumber,
   Bytes,
   Address,
+  Property,
   Range
 } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
 
 export interface IDepositContract {
   address: Address

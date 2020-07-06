@@ -1,5 +1,10 @@
-import { Bytes, BigNumber, List } from '@cryptoeconomicslab/primitives'
-import { ChallengeGame, Property } from '@cryptoeconomicslab/ovm'
+import {
+  Bytes,
+  BigNumber,
+  List,
+  Property
+} from '@cryptoeconomicslab/primitives'
+import { ChallengeGame } from '@cryptoeconomicslab/ovm'
 
 export interface IAdjudicationContract {
   /**

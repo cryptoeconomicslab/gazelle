@@ -1,8 +1,8 @@
-import { Address, Bytes } from '@cryptoeconomicslab/primitives'
+import { Address, Bytes, Property } from '@cryptoeconomicslab/primitives'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import JsonCoder, { Coder } from '@cryptoeconomicslab/coder'
 import { Decider } from './interfaces/Decider'
-import { Property, Decision, FreeVariable } from './types'
+import { Decision, FreeVariable } from './types'
 import { initialize, DeciderConfig } from './load'
 import { CompiledPredicate, CompiledDecider } from './decompiler'
 import { TraceInfoCreator } from './Tracer'
@@ -27,6 +27,7 @@ export class DeciderManager implements DeciderManagerInterface {
   private shortnames: Map<string, Address>
   private compiledPredicates: Map<string, CompiledPredicate>
   public witnessDb: KeyValueStore
+  public config?: DeciderConfig
   constructor(witnessDb: KeyValueStore, readonly coder: Coder = JsonCoder) {
     this.witnessDb = witnessDb
     this.deciders = new Map<string, Decider>()
@@ -69,6 +70,7 @@ export class DeciderManager implements DeciderManagerInterface {
    * @param config
    */
   loadJson(config: DeciderConfig) {
+    this.config = config
     initialize(this, config)
   }
 

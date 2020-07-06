@@ -1,4 +1,9 @@
-import { Bytes, BigNumber, Address } from '@cryptoeconomicslab/primitives'
+import {
+  Bytes,
+  BigNumber,
+  Address,
+  Property
+} from '@cryptoeconomicslab/primitives'
 import Coder from '@cryptoeconomicslab/coder'
 import {
   initializeDeciderManager,
@@ -10,7 +15,6 @@ import {
   IsLessThanDeciderAddress
 } from '../helpers/initiateDeciderManager'
 import {
-  Property,
   FreeVariable,
   CompiledPredicate,
   CompiledDecider,
@@ -133,10 +137,10 @@ describe('ForAllsuchThatDecider', () => {
     beforeAll(() => {
       const source = `@library
       @quantifier("range,NUMBER,\${zero}-\${upper_bound}")
-      def Q(n, upper_bound) :=
+      def Q(n: BigNumberBigNumber, upper_bound: BigNumber) :=
         IsLessThan(n, upper_bound)
           
-      def test(a) := Q(a).all(b -> Bool())
+      def test(a: BigNumber) := Q(a).all(b -> Bool())
       `
 
       // Sets instance of CompiledDecider TestF

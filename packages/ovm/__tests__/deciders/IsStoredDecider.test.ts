@@ -1,9 +1,8 @@
-import { Address, Bytes } from '@cryptoeconomicslab/primitives'
+import { Address, Bytes, Property } from '@cryptoeconomicslab/primitives'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import {
   DeciderManager,
   IsStoredDecider,
-  Property,
   ForAllSuchThatDecider,
   LogicalConnective
 } from '../../src'
