@@ -1,10 +1,9 @@
-import { Address, Bytes } from '@cryptoeconomicslab/primitives'
+import { Address, Bytes, Property } from '@cryptoeconomicslab/primitives'
 import { Keccak256 } from '@cryptoeconomicslab/hash'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import {
   DeciderManager,
   IsHashPreimageDecider,
-  Property,
   ForAllSuchThatDecider,
   LogicalConnective
 } from '../../src'

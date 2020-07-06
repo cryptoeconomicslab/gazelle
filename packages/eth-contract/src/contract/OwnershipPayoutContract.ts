@@ -1,7 +1,6 @@
 import * as ethers from 'ethers'
 import { IOwnershipPayoutContract } from '@cryptoeconomicslab/contract'
-import { Address, BigNumber } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
+import { Address, BigNumber, Property } from '@cryptoeconomicslab/primitives'
 
 export class OwnershipPayoutContract implements IOwnershipPayoutContract {
   public static abi = [

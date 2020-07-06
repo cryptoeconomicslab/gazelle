@@ -4,9 +4,9 @@ import {
   Integer,
   Address,
   Bytes,
+  Property,
   Range
 } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { IDepositContract, EventLog } from '@cryptoeconomicslab/contract'
 import EthEventWatcher from '../events'

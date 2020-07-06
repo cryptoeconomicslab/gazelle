@@ -1,8 +1,12 @@
 import APIClient from '../src/APIClient'
 import axios from 'axios'
-import { BigNumber, Address, Range } from '@cryptoeconomicslab/primitives'
+import {
+  BigNumber,
+  Address,
+  Property,
+  Range
+} from '@cryptoeconomicslab/primitives'
 import { StateUpdate, Transaction } from '@cryptoeconomicslab/plasma'
-import { Property } from '@cryptoeconomicslab/ovm'
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
 setupContext({ coder: JsonCoder })

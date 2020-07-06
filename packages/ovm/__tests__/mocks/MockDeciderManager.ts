@@ -1,10 +1,9 @@
-import { Bytes, Address } from '@cryptoeconomicslab/primitives'
+import { Bytes, Address, Property } from '@cryptoeconomicslab/primitives'
 import JsonCoder, { Coder } from '@cryptoeconomicslab/coder'
 import {
   AtomicPredicate,
   DeciderManagerInterface,
   LogicalConnective,
-  Property,
   Decision
 } from '../../src'
 import { setupContext } from '@cryptoeconomicslab/context'

@@ -1,5 +1,4 @@
 import {
-  Property,
   FreeVariable,
   CompiledPredicate,
   createAtomicPropositionCall,
@@ -10,7 +9,12 @@ import {
   parseVariable,
   PredicateLabel
 } from '../../src'
-import { Address, Bytes, BigNumber } from '@cryptoeconomicslab/primitives'
+import {
+  Address,
+  Bytes,
+  BigNumber,
+  Property
+} from '@cryptoeconomicslab/primitives'
 import {
   initializeDeciderManager,
   ForAllSuchThatDeciderAddress,

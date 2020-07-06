@@ -1,14 +1,13 @@
 import {
   CompiledPredicate,
   CompiledDecider,
-  Property,
   DeciderManager,
   FreeVariable,
   AtomicPredicate,
   LogicalConnective,
   PredicateLabel
 } from '../../src'
-import { Address, Bytes } from '@cryptoeconomicslab/primitives'
+import { Address, Bytes, Property } from '@cryptoeconomicslab/primitives'
 import { initializeDeciderManager } from '../helpers/initiateDeciderManager'
 import Coder from '@cryptoeconomicslab/coder'
 import { setupContext } from '@cryptoeconomicslab/context'

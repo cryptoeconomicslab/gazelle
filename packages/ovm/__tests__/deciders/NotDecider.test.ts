@@ -1,5 +1,5 @@
-import { Property, AtomicPredicate, NotDecider } from '../../src'
-import { Bytes } from '@cryptoeconomicslab/primitives'
+import { AtomicPredicate, NotDecider } from '../../src'
+import { Bytes, Property } from '@cryptoeconomicslab/primitives'
 import Coder from '@cryptoeconomicslab/coder'
 import { MockDeciderManager } from '../mocks/MockDeciderManager'
 import { setupContext } from '@cryptoeconomicslab/context'

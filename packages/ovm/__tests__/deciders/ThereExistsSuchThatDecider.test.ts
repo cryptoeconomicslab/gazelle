@@ -1,5 +1,10 @@
 import Coder from '@cryptoeconomicslab/coder'
-import { Address, Bytes, BigNumber } from '@cryptoeconomicslab/primitives'
+import {
+  Address,
+  Bytes,
+  BigNumber,
+  Property
+} from '@cryptoeconomicslab/primitives'
 import {
   initializeDeciderManager,
   ThereExistsSuchThatDeciderAddress,
@@ -7,7 +12,7 @@ import {
   GreaterThanDeciderAddress,
   IsValidSignatureDeciderAddress
 } from '../helpers/initiateDeciderManager'
-import { Property, FreeVariable, DeciderManager } from '../../src'
+import { FreeVariable, DeciderManager } from '../../src'
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
 setupContext({ coder: Coder })

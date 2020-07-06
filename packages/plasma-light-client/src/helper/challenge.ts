@@ -1,5 +1,5 @@
-import { Bytes, List } from '@cryptoeconomicslab/primitives'
-import { Challenge, DeciderManager, Property } from '@cryptoeconomicslab/ovm'
+import { Bytes, List, Property } from '@cryptoeconomicslab/primitives'
+import { Challenge, DeciderManager } from '@cryptoeconomicslab/ovm'
 import { IAdjudicationContract } from '@cryptoeconomicslab/contract'
 
 /**
