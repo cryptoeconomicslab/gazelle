@@ -1,11 +1,10 @@
 import {
   DeciderManager,
   IsValidSignatureDecider,
-  Property,
   ForAllSuchThatDecider,
   LogicalConnective
 } from '../../src'
-import { Address, Bytes } from '@cryptoeconomicslab/primitives'
+import { Address, Bytes, Property } from '@cryptoeconomicslab/primitives'
 import * as ethers from 'ethers'
 import { Secp256k1Signer } from '@cryptoeconomicslab/signature'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
