@@ -1,1 +1,1 @@
-def forValTest(a) := A(a).all(b -> b())
+def forValTest(a: BigNumber) := A(a).all(b -> b())

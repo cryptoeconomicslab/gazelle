@@ -1,1 +1,1 @@
-def free(a) := Foo(a) and Bar(b)
+def free(a: BigNumber) := Foo(a) and Bar(b)

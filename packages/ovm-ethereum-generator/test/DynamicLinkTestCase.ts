@@ -67,6 +67,28 @@ export const createTestCaseOfDynamicLink = (
           }
         }
       }
-    ]
+    ],
+    packTypesTestCases: {
+      name: 'packTypes a b',
+      getTestData: (
+        notNotTestPredicate: ethers.Contract,
+        context: TestContext
+      ) => {
+        return { packedData: '0x6279746573206162797465732062' }
+      }
+    },
+    packValuesTestCases: {
+      name: 'pack a b c',
+      getTestData: (
+        notNotTestPredicate: ethers.Contract,
+        context: TestContext
+      ) => {
+        return {
+          inputs: [inputA, inputB, inputC],
+          packedData:
+            '0x000000000000000000000000000000000000000001000000000000000000000000000000000000000002'
+        }
+      }
+    }
   }
 }

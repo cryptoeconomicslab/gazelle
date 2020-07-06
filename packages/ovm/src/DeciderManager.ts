@@ -27,6 +27,7 @@ export class DeciderManager implements DeciderManagerInterface {
   private shortnames: Map<string, Address>
   private compiledPredicates: Map<string, CompiledPredicate>
   public witnessDb: KeyValueStore
+  public config?: DeciderConfig
   constructor(witnessDb: KeyValueStore, readonly coder: Coder = JsonCoder) {
     this.witnessDb = witnessDb
     this.deciders = new Map<string, Decider>()
@@ -69,6 +70,7 @@ export class DeciderManager implements DeciderManagerInterface {
    * @param config
    */
   loadJson(config: DeciderConfig) {
+    this.config = config
     initialize(this, config)
   }
 

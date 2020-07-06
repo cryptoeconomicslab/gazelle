@@ -16,7 +16,7 @@ describe('utils', () => {
           }
         ],
         name: 'SignedBy',
-        inputDefs: ['a'],
+        inputDefs: [{ name: 'a', type: 'Bytes' }],
         body: {
           type: 'PropertyNode',
           predicate: 'Foo',
@@ -38,7 +38,7 @@ describe('utils', () => {
           }
         ],
         name: 'SignedBy',
-        inputDefs: ['a'],
+        inputDefs: [{ name: 'a', type: 'Bytes' }],
         body: {
           type: 'PropertyNode',
           predicate: 'Foo',

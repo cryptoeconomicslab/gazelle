@@ -1,1 +1,1 @@
-def notTest(a) := !Foo(a)
+def notTest(a: Bytes) := !Foo(a)

@@ -137,10 +137,10 @@ describe('ForAllsuchThatDecider', () => {
     beforeAll(() => {
       const source = `@library
       @quantifier("range,NUMBER,\${zero}-\${upper_bound}")
-      def Q(n, upper_bound) :=
+      def Q(n: BigNumberBigNumber, upper_bound: BigNumber) :=
         IsLessThan(n, upper_bound)
           
-      def test(a) := Q(a).all(b -> Bool())
+      def test(a: BigNumber) := Q(a).all(b -> Bool())
       `
 
       // Sets instance of CompiledDecider TestF

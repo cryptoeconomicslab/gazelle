@@ -91,6 +91,27 @@ export const createTestCaseOfAndLogicalConnective = (
           }
         }
       }
-    ]
+    ],
+    packTypesTestCases: {
+      name: 'packTypes a b',
+      getTestData: (
+        notNotTestPredicate: ethers.Contract,
+        context: TestContext
+      ) => {
+        return { packedData: '0x62797465732061' }
+      }
+    },
+    packValuesTestCases: {
+      name: 'pack a b',
+      getTestData: (
+        notNotTestPredicate: ethers.Contract,
+        context: TestContext
+      ) => {
+        return {
+          inputs: [transactionA, transactionB],
+          packedData: '0x000001'
+        }
+      }
+    }
   }
 }

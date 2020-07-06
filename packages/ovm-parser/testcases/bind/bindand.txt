@@ -1,1 +1,1 @@
-def bindAndTest(a) := Foo(a.0) and Bar(a.1)
+def bindAndTest(a: BigNumber) := Foo(a.0) and Bar(a.1)

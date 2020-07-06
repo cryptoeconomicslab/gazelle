@@ -18,7 +18,7 @@ describe('secp256k1Signer', () => {
 
   it('return signature', async () => {
     const signature = await signer.sign(message)
-    expect(signature).toEqual(testSignature)
+    expect(signature.toHexString()).toEqual(testSignature.toHexString())
   })
 
   it('return another signature from another message', async () => {

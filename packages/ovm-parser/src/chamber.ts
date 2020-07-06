@@ -39,7 +39,7 @@ AnnotationBodyWithArgs
     }
   }
 PropertyDeclaration
-  = a:Annotation* _ "def" _ dec:Decider _ ":=" _ s:Statement _ {
+  = a:Annotation* _ "def" _ dec:DeciderDef _ ":=" _ s:Statement _ {
     return {
       name: dec.predicate,
       inputDefs: dec.inputs,
@@ -51,6 +51,30 @@ Statement
   = expr:Expression tail:(Expression)*
 Predicate
   = UniversalQuantifier / ThereExistsQuantifier / NotPredicate / Decider
+
+ArgDef
+  = name:String ":" _ type:String {
+    return {name: name, type: type}
+  }
+NoArgDefs
+  = "(" _ ")" {
+    return []
+  }
+ArgsDefExist
+  = "(" arg:ArgDef args:("," _ ArgDef)* ")" {
+    return [arg].concat(args.map((a) => a[2]))
+  }
+ArgDefs
+  = ArgsDefExist / NoArgDefs
+DeciderDef
+  = name:String _ args:ArgDefs {
+  return {
+    type: 'PropertyNode',
+    predicate: name,
+    inputs: args
+  }
+}
+
 NoArgs
   = "(" _ ")" {
     return []

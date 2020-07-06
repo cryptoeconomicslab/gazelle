@@ -1,5 +1,5 @@
 @library
 @quantifier("signatures,KEY,${m}")
-def SignedBy(sig, m, signer) := IsValidSignature(m, signer, sig)
+def SignedBy(sig: Bytes, m: Bytes, signer: Address) := IsValidSignature(m, signer, sig)
 
-def andTest(a, b) := SignedBy(a, b).any() and SignedBy(a, b).any()
+def andTest(a: Bytes, b: Address) := SignedBy(a, b).any() and SignedBy(a, b).any()

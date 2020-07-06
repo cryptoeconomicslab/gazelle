@@ -24,7 +24,12 @@ const config: DeciderConfig & EthContractConfig = {
         {
           type: 'CompiledPredicate',
           name: 'StateUpdate',
-          inputDefs: ['token', 'range', 'block_number', 'so'],
+          inputDefs: [
+            { name: 'token', type: 'Address' },
+            { name: 'range', type: 'Range' },
+            { name: 'block_number', type: 'BigNumber' },
+            { name: 'so', type: 'Property' }
+          ],
           contracts: [
             {
               type: 'IntermediateCompiledPredicate',
@@ -186,7 +191,10 @@ const config: DeciderConfig & EthContractConfig = {
         {
           type: 'CompiledPredicate',
           name: 'Ownership',
-          inputDefs: ['owner', 'tx'],
+          inputDefs: [
+            { name: 'owner', type: 'Address' },
+            { name: 'tx', type: 'Property' }
+          ],
           contracts: [
             {
               type: 'IntermediateCompiledPredicate',
@@ -229,7 +237,7 @@ const config: DeciderConfig & EthContractConfig = {
         {
           type: 'CompiledPredicate',
           name: 'Checkpoint',
-          inputDefs: ['su'],
+          inputDefs: [{ name: 'su', type: 'Property' }],
           contracts: [
             {
               type: 'IntermediateCompiledPredicate',
@@ -452,7 +460,10 @@ const config: DeciderConfig & EthContractConfig = {
         {
           type: 'CompiledPredicate',
           name: 'Exit',
-          inputDefs: ['su', 'proof'],
+          inputDefs: [
+            { name: 'su', type: 'Property' },
+            { name: 'proof', type: 'Bytes' }
+          ],
           contracts: [
             {
               type: 'IntermediateCompiledPredicate',

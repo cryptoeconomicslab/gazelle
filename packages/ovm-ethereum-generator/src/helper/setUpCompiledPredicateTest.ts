@@ -151,6 +151,31 @@ export function setUpCompiledPredicateTest(
             })
           })
         })
+
+        describe('packTypes', () => {
+          it('packTypes return types bytes', async () => {
+            const result = await targetPredicate.packTypes()
+            expect(result).to.be.eq(
+              testcase.packTypesTestCases.getTestData(
+                targetPredicate,
+                testContext
+              ).packedData
+            )
+          })
+        })
+
+        describe('packValues return values bytes', () => {
+          it('packValues return', async () => {
+            const packValuesTestData = testcase.packValuesTestCases.getTestData(
+              targetPredicate,
+              testContext
+            )
+            const result = await targetPredicate.packValues(
+              packValuesTestData.inputs
+            )
+            expect(result).to.be.eq(packValuesTestData.packedData)
+          })
+        })
       })
     })
   })

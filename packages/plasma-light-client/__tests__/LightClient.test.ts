@@ -339,7 +339,7 @@ describe('LightClient', () => {
       )
 
       checkpointPredicate = client['deciderManager'].compiledPredicateMap.get(
-        'ExitDeposit'
+        'Checkpoint'
       ) as CompiledPredicate
       checkpoint = new Checkpoint(
         checkpointPredicate.deployedAddress,
