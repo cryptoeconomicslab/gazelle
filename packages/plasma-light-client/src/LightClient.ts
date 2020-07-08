@@ -55,11 +55,11 @@ import UserAction, {
 
 import EventEmitter from 'event-emitter'
 import {
-  StateManager,
   SyncManager,
   CheckpointManager,
   DepositedRangeManager
 } from './managers'
+import { StateUpdateRepository } from './repository'
 import APIClient from './APIClient'
 import TokenManager from './managers/TokenManager'
 import { executeChallenge } from './helper/challenge'
@@ -117,7 +117,6 @@ export default class LightClient {
     private tokenContractFactory: (address: Address) => IERC20DetailedContract,
     private commitmentContract: ICommitmentContract,
     private ownershipPayoutContract: IOwnershipPayoutContract,
-    private stateManager: StateManager,
     private syncManager: SyncManager,
     private checkpointManager: CheckpointManager,
     private depositedRangeManager: DepositedRangeManager,
@@ -143,7 +142,6 @@ export default class LightClient {
    */
   static async initilize(options: LightClientOptions): Promise<LightClient> {
     const witnessDb = options.witnessDb
-    const stateDb = await witnessDb.bucket(Bytes.fromString('state'))
     const syncDb = await witnessDb.bucket(Bytes.fromString('sync'))
     const checkpointDb = await witnessDb.bucket(Bytes.fromString('checkpoint'))
     const depositedRangeDb = await witnessDb.bucket(
@@ -157,7 +155,6 @@ export default class LightClient {
       options.tokenContractFactory,
       options.commitmentContract,
       options.ownershipPayoutContract,
-      new StateManager(stateDb),
       new SyncManager(syncDb),
       new CheckpointManager(checkpointDb),
       new DepositedRangeManager(new RangeDb(depositedRangeDb)),
@@ -245,6 +242,10 @@ export default class LightClient {
       tokenContractAddress: string
     }>
   > {
+    const stateUpdateRepository = await StateUpdateRepository.init(
+      this.witnessDb
+    )
+
     const resultPromise = this.tokenManager.tokenContractAddresses.map(
       async addr => {
         const depositContractAddress = this.tokenManager.getDepositContractAddress(
@@ -252,7 +253,7 @@ export default class LightClient {
         )
         if (!depositContractAddress)
           throw new Error('Deposit Contract Address not found')
-        const data = await this.stateManager.getVerifiedStateUpdates(
+        const data = await stateUpdateRepository.getVerifiedStateUpdates(
           Address.from(depositContractAddress),
           new Range(BigNumber.from(0), BigNumber.MAX_NUMBER) // TODO: get all stateUpdate method
         )
@@ -331,6 +332,9 @@ export default class LightClient {
     this._syncing = true
     const { coder } = ovmContext
     console.log(`start syncing state: ${blockNumber.toString()}`)
+    const stateUpdateRepository = await StateUpdateRepository.init(
+      this.witnessDb
+    )
 
     const rootHint = Hint.createRootHint(
       blockNumber,
@@ -364,7 +368,7 @@ export default class LightClient {
           console.log(e)
         }
 
-        await this.stateManager.insertVerifiedStateUpdate(
+        await stateUpdateRepository.insertVerifiedStateUpdate(
           su.depositContractAddress,
           su
         )
@@ -408,8 +412,12 @@ export default class LightClient {
    */
   private async verifyPendingStateUpdates(blockNumber: BigNumber) {
     console.group('VERIFY PENDING STATE UPDATES: ', blockNumber.raw)
+    const stateUpdateRepository = await StateUpdateRepository.init(
+      this.witnessDb
+    )
+
     this.tokenManager.depositContractAddresses.forEach(async addr => {
-      const pendingStateUpdates = await this.stateManager.getPendingStateUpdates(
+      const pendingStateUpdates = await stateUpdateRepository.getPendingStateUpdates(
         addr,
         new Range(BigNumber.from(0), BigNumber.MAX_NUMBER)
       )
@@ -447,7 +455,7 @@ export default class LightClient {
           console.info(
             `Pended state update (${su.range.start.data.toString()}, ${su.range.end.data.toString()}) verified. remove from stateDB`
           )
-          await this.stateManager.removePendingStateUpdate(
+          await stateUpdateRepository.removePendingStateUpdate(
             su.depositContractAddress,
             su.range
           )
@@ -772,7 +780,11 @@ export default class LightClient {
     if (!depositContractAddress) {
       throw new Error('Deposit Contract Address not found')
     }
-    const stateUpdates = await this.stateManager.resolveStateUpdate(
+    const stateUpdateRepository = await StateUpdateRepository.init(
+      this.witnessDb
+    )
+
+    const stateUpdates = await stateUpdateRepository.resolveStateUpdate(
       Address.from(depositContractAddress),
       JSBI.BigInt(amount)
     )
@@ -818,11 +830,11 @@ export default class LightClient {
       for await (const receipt of receipts) {
         if (receipt.status.data === 1) {
           for await (const su of stateUpdates) {
-            await this.stateManager.removeVerifiedStateUpdate(
+            await stateUpdateRepository.removeVerifiedStateUpdate(
               su.depositContractAddress,
               su.range
             )
-            await this.stateManager.insertPendingStateUpdate(
+            await stateUpdateRepository.insertPendingStateUpdate(
               su.depositContractAddress,
               su
             )
@@ -867,6 +879,10 @@ export default class LightClient {
 
     depositContract.subscribeCheckpointFinalized(
       async (checkpointId: Bytes, checkpoint: [Property]) => {
+        const stateUpdateRepository = await StateUpdateRepository.init(
+          this.witnessDb
+        )
+
         const checkpointPredicate = this.deciderManager.compiledPredicateMap.get(
           'Checkpoint'
         )
@@ -890,7 +906,7 @@ export default class LightClient {
         const stateUpdate = StateUpdate.fromProperty(checkpoint[0])
         const owner = this.getOwner(stateUpdate)
         if (owner && owner.data === this.wallet.getAddress().data) {
-          await this.stateManager.insertVerifiedStateUpdate(
+          await stateUpdateRepository.insertVerifiedStateUpdate(
             depositContract.address,
             stateUpdate
           )
@@ -945,7 +961,11 @@ export default class LightClient {
     if (!depositContractAddress) {
       throw new Error('Deposit Contract Address not found')
     }
-    const stateUpdates = await this.stateManager.resolveStateUpdate(
+    const stateUpdateRepository = await StateUpdateRepository.init(
+      this.witnessDb
+    )
+
+    const stateUpdates = await stateUpdateRepository.resolveStateUpdate(
       Address.from(depositContractAddress),
       JSBI.BigInt(amount)
     )
@@ -1071,6 +1091,9 @@ export default class LightClient {
         )
         const claimDb = await this.getClaimDb()
         await claimDb.put(gameId, ovmContext.coder.encode(property.toStruct()))
+        const stateUpdateRepository = await StateUpdateRepository.init(
+          this.witnessDb
+        )
 
         const exit = this.createExitFromProperty(property)
         if (exit) {
@@ -1078,7 +1101,7 @@ export default class LightClient {
           const { range, depositContractAddress } = exit.stateUpdate
 
           // TODO: implement general way to check if client should challenge claimed property.
-          const stateUpdates = await this.stateManager.getVerifiedStateUpdates(
+          const stateUpdates = await stateUpdateRepository.getVerifiedStateUpdates(
             depositContractAddress,
             range
           )
@@ -1117,11 +1140,15 @@ export default class LightClient {
       stateUpdate.range.end.data,
       propertyBytes
     )
-    await this.stateManager.removeVerifiedStateUpdate(
+    const stateUpdateRepository = await StateUpdateRepository.init(
+      this.witnessDb
+    )
+
+    await stateUpdateRepository.removeVerifiedStateUpdate(
       stateUpdate.depositContractAddress,
       stateUpdate.range
     )
-    await this.stateManager.insertExitStateUpdate(
+    await stateUpdateRepository.insertExitStateUpdate(
       stateUpdate.depositContractAddress,
       stateUpdate
     )
@@ -1184,26 +1211,6 @@ export default class LightClient {
       item = await iter.next()
     }
     return result
-  }
-
-  //
-  // Store witnesses
-  //
-  private async storeStateUpdates(stateUpdates: StateUpdate[]) {
-    const { coder } = ovmContext
-    await Promise.all(
-      stateUpdates.map(async su => {
-        await putWitness(
-          this.deciderManager.witnessDb,
-          Hint.createStateUpdateHint(
-            su.blockNumber,
-            su.depositContractAddress,
-            su.range
-          ),
-          coder.encode(su.property.toStruct())
-        )
-      })
-    )
   }
 
   //

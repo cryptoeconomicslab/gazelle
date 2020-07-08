@@ -15,8 +15,15 @@ enum Kind {
   Exit = 'Exit'
 }
 
-export default class StateManager {
-  constructor(readonly db: KeyValueStore) {}
+export class StateUpdateRepository {
+  static BUCKET_KEY = Bytes.fromString('STATE_UPDATE')
+
+  static async init(witnessDb: KeyValueStore): Promise<StateUpdateRepository> {
+    const storage = await witnessDb.bucket(this.BUCKET_KEY)
+    return new StateUpdateRepository(storage)
+  }
+
+  private constructor(private db: KeyValueStore) {}
 
   private async getRangeDb(kind: Kind, addr: Address): Promise<RangeDb> {
     const bucket = await (await this.db.bucket(Bytes.fromString(kind))).bucket(
