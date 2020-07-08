@@ -1,5 +1,4 @@
 import LightClient from '../src/LightClient'
-import SyncManager from '../src/managers/SyncManager'
 import DepositedRangeManager from '../src/managers/DepositedRangeManager'
 import { StateUpdateRepository } from '../src/repository'
 import { setupContext } from '@cryptoeconomicslab/context'
@@ -219,7 +218,6 @@ describe('LightClient', () => {
   describe('initialize', () => {
     test('suceed to initialize', async () => {
       const { lightClient } = await initialize()
-      expect(lightClient['syncManager']).toBeInstanceOf(SyncManager)
       expect(lightClient['checkpointManager']).toBeInstanceOf(CheckpointManager)
       expect(lightClient['depositedRangeManager']).toBeInstanceOf(
         DepositedRangeManager

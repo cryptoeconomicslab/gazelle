@@ -54,12 +54,8 @@ import UserAction, {
 } from './UserAction'
 
 import EventEmitter from 'event-emitter'
-import {
-  SyncManager,
-  CheckpointManager,
-  DepositedRangeManager
-} from './managers'
-import { StateUpdateRepository } from './repository'
+import { CheckpointManager, DepositedRangeManager } from './managers'
+import { StateUpdateRepository, SyncRepository } from './repository'
 import APIClient from './APIClient'
 import TokenManager from './managers/TokenManager'
 import { executeChallenge } from './helper/challenge'
@@ -117,7 +113,6 @@ export default class LightClient {
     private tokenContractFactory: (address: Address) => IERC20DetailedContract,
     private commitmentContract: ICommitmentContract,
     private ownershipPayoutContract: IOwnershipPayoutContract,
-    private syncManager: SyncManager,
     private checkpointManager: CheckpointManager,
     private depositedRangeManager: DepositedRangeManager,
     private deciderConfig: DeciderConfig & PlasmaContractConfig,
@@ -142,7 +137,6 @@ export default class LightClient {
    */
   static async initilize(options: LightClientOptions): Promise<LightClient> {
     const witnessDb = options.witnessDb
-    const syncDb = await witnessDb.bucket(Bytes.fromString('sync'))
     const checkpointDb = await witnessDb.bucket(Bytes.fromString('checkpoint'))
     const depositedRangeDb = await witnessDb.bucket(
       Bytes.fromString('depositedRange')
@@ -155,7 +149,6 @@ export default class LightClient {
       options.tokenContractFactory,
       options.commitmentContract,
       options.ownershipPayoutContract,
-      new SyncManager(syncDb),
       new CheckpointManager(checkpointDb),
       new DepositedRangeManager(new RangeDb(depositedRangeDb)),
       options.deciderConfig,
@@ -305,7 +298,8 @@ export default class LightClient {
    * @param blockNum block number to which client should sync
    */
   private async syncStateUntill(blockNum: BigNumber): Promise<void> {
-    let synced = await this.syncManager.getLatestSyncedBlockNumber()
+    const syncRepository = await SyncRepository.init(this.witnessDb)
+    let synced = await syncRepository.getSyncedBlockNumber()
     console.log(`sync state from ${synced} to ${blockNum}`)
     if (JSBI.greaterThan(synced.data, blockNum.data)) {
       throw new Error('Synced state is greater than latest block')
@@ -395,7 +389,10 @@ export default class LightClient {
         this.ee.emit(UserActionEvent.RECIEVE, action)
       })
       await Promise.all(promises)
-      await this.syncManager.updateSyncedBlockNumber(blockNumber, root)
+      const syncRepository = await SyncRepository.init(this.witnessDb)
+      await syncRepository.updateSyncedBlockNumber(blockNumber)
+      await syncRepository.insertBlockRoot(blockNumber, root)
+
       this.ee.emit(EmitterEvent.SYNC_FINISHED, blockNumber)
       console.log(`Finish syncing state: ${blockNumber.toString()}`)
     } catch (e) {
@@ -422,7 +419,8 @@ export default class LightClient {
         new Range(BigNumber.from(0), BigNumber.MAX_NUMBER)
       )
       const verifier = new DoubleLayerTreeVerifier()
-      const root = await this.syncManager.getRoot(blockNumber)
+      const syncRepository = await SyncRepository.init(this.witnessDb)
+      const root = await syncRepository.getBlockRoot(blockNumber)
       if (!root) {
         return
       }
@@ -792,7 +790,8 @@ export default class LightClient {
       throw new Error('Not enough amount')
     }
 
-    const latestBlock = await this.syncManager.getLatestSyncedBlockNumber()
+    const syncRepository = await SyncRepository.init(this.witnessDb)
+    const latestBlock = await syncRepository.getSyncedBlockNumber()
     const transactions = await Promise.all(
       stateUpdates.map(async su => {
         const tx = new Transaction(
