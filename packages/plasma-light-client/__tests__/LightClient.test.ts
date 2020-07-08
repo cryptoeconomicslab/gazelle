@@ -2,7 +2,8 @@ import LightClient from '../src/LightClient'
 import {
   StateUpdateRepository,
   CheckpointRepository,
-  DepositedRangeRepository
+  DepositedRangeRepository,
+  UserActionRepository
 } from '../src/repository'
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
@@ -579,13 +580,8 @@ describe('LightClient', () => {
         range,
         blockNumber
       )
-      const db = await client['getUserActionDb'](blockNumber)
-      await db.put(
-        range.start.data,
-        range.end.data,
-        ovmContext.coder.encode(action.toStruct())
-      )
-
+      const repository = await UserActionRepository.init(db)
+      await repository.insertAction(blockNumber, range, action)
       const actions = await client.getAllUserActions()
       expect(actions).toEqual([action])
     })

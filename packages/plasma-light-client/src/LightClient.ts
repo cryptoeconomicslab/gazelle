@@ -23,13 +23,7 @@ import {
   Property,
   Range
 } from '@cryptoeconomicslab/primitives'
-import {
-  KeyValueStore,
-  RangeDb,
-  getWitnesses,
-  putWitness,
-  RangeStore
-} from '@cryptoeconomicslab/db'
+import { KeyValueStore, getWitnesses, putWitness } from '@cryptoeconomicslab/db'
 import {
   ICommitmentContract,
   IDepositContract,
@@ -59,7 +53,8 @@ import {
   SyncRepository,
   CheckpointRepository,
   DepositedRangeRepository,
-  ExitRepository
+  ExitRepository,
+  UserActionRepository
 } from './repository'
 import APIClient from './APIClient'
 import TokenManager from './managers/TokenManager'
@@ -196,12 +191,6 @@ export default class LightClient {
 
   private async getClaimDb(): Promise<KeyValueStore> {
     return await this.witnessDb.bucket(Bytes.fromString('claimedProperty'))
-  }
-
-  private async getUserActionDb(blockNumber: BigNumber): Promise<RangeStore> {
-    const db = await this.witnessDb.bucket(Bytes.fromString('userAction'))
-    const bucket = await db.bucket(Bytes.fromString(blockNumber.raw))
-    return new RangeDb(bucket)
   }
 
   /**
@@ -358,18 +347,16 @@ export default class LightClient {
         )
         if (!tokenContractAddress)
           throw new Error('Token Contract Address not found')
+
         const action = createReceiveUserAction(
           Address.from(tokenContractAddress),
           range,
           owner, // FIXME: this is same as client's owner
           su.blockNumber
         )
-        const db = await this.getUserActionDb(su.blockNumber)
-        await db.put(
-          range.start.data,
-          range.end.data,
-          ovmContext.coder.encode(action.toStruct())
-        )
+        const actionRepository = await UserActionRepository.init(this.witnessDb)
+        await actionRepository.insertAction(su.blockNumber, range, action)
+
         this.ee.emit(UserActionEvent.RECIEVE, action)
       })
       await Promise.all(promises)
@@ -462,18 +449,17 @@ export default class LightClient {
           )
           if (!tokenContractAddress)
             throw new Error('Token Contract Address not found')
+          const actionRepository = await UserActionRepository.init(
+            this.witnessDb
+          )
           const action = createSendUserAction(
             Address.from(tokenContractAddress),
             range,
             owner,
             su.blockNumber
           )
-          const db = await this.getUserActionDb(su.blockNumber)
-          await db.put(
-            range.start.data,
-            range.end.data,
-            ovmContext.coder.encode(action.toStruct())
-          )
+          await actionRepository.insertAction(su.blockNumber, range, action)
+
           this.ee.emit(UserActionEvent.SEND, action)
           this.ee.emit(EmitterEvent.TRANSFER_COMPLETE, su)
         }
@@ -899,12 +885,11 @@ export default class LightClient {
             range,
             blockNumber
           )
-          const db = await this.getUserActionDb(blockNumber)
-          await db.put(
-            range.start.data,
-            range.end.data,
-            ovmContext.coder.encode(action.toStruct())
+          const actionRepository = await UserActionRepository.init(
+            this.witnessDb
           )
+          await actionRepository.insertAction(blockNumber, range, action)
+
           this.ee.emit(UserActionEvent.DEPOSIT, action)
         }
         this.ee.emit(
@@ -1142,12 +1127,9 @@ export default class LightClient {
       range,
       blockNumber
     )
-    const db = await this.getUserActionDb(blockNumber)
-    await db.put(
-      range.start.data,
-      range.end.data,
-      ovmContext.coder.encode(action.toStruct())
-    )
+    const actionRepository = await UserActionRepository.init(this.witnessDb)
+    await actionRepository.insertAction(blockNumber, range, action)
+
     this.ee.emit(UserActionEvent.EXIT, action)
   }
 
@@ -1158,30 +1140,13 @@ export default class LightClient {
     let result: UserAction[] = []
     const currentBlockNumber = await this.commitmentContract.getCurrentBlock()
     let blockNumber = JSBI.BigInt(0)
+    const actionRepository = await UserActionRepository.init(this.witnessDb)
     while (JSBI.lessThanOrEqual(blockNumber, currentBlockNumber.data)) {
-      const actions = await this.getUserActions(BigNumber.from(blockNumber))
+      const actions = await actionRepository.getUserActions(
+        BigNumber.from(blockNumber)
+      )
       result = result.concat(actions)
       blockNumber = JSBI.add(blockNumber, JSBI.BigInt(1))
-    }
-    return result
-  }
-
-  /**
-   * get user actions at given blockNumber
-   * @param blockNumber blockNumber to get userAction
-   */
-  private async getUserActions(blockNumber: BigNumber): Promise<UserAction[]> {
-    const bucket = await this.getUserActionDb(blockNumber)
-    const iter = bucket.iter(JSBI.BigInt(0))
-    let item = await iter.next()
-    const result: UserAction[] = []
-    while (item !== null) {
-      result.push(
-        UserAction.fromStruct(
-          ovmContext.coder.decode(UserAction.getParamTypes(), item.value)
-        )
-      )
-      item = await iter.next()
     }
     return result
   }
