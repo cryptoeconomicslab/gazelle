@@ -1,6 +1,6 @@
 import LightClient from '../src/LightClient'
 import DepositedRangeManager from '../src/managers/DepositedRangeManager'
-import { StateUpdateRepository } from '../src/repository'
+import { StateUpdateRepository, CheckpointRepository } from '../src/repository'
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
@@ -73,7 +73,6 @@ import {
   Range
 } from '@cryptoeconomicslab/primitives'
 import { ethers } from 'ethers'
-import { CheckpointManager } from '../src/managers'
 import deciderConfig from './config.local'
 import { DeciderConfig, CompiledPredicate } from '@cryptoeconomicslab/ovm'
 import {
@@ -218,7 +217,6 @@ describe('LightClient', () => {
   describe('initialize', () => {
     test('suceed to initialize', async () => {
       const { lightClient } = await initialize()
-      expect(lightClient['checkpointManager']).toBeInstanceOf(CheckpointManager)
       expect(lightClient['depositedRangeManager']).toBeInstanceOf(
         DepositedRangeManager
       )
@@ -415,7 +413,8 @@ describe('LightClient', () => {
 
     test('startWithdrawal calls claimProperty with exitDeposit property', async () => {
       // store checkpoint
-      await client['checkpointManager'].insertCheckpointWithRange(
+      const checkpointRepository = await CheckpointRepository.init(db)
+      await checkpointRepository.insertCheckpoint(
         Address.from(depositContractAddress),
         checkpoint
       )

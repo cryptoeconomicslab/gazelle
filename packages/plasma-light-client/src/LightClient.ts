@@ -54,8 +54,12 @@ import UserAction, {
 } from './UserAction'
 
 import EventEmitter from 'event-emitter'
-import { CheckpointManager, DepositedRangeManager } from './managers'
-import { StateUpdateRepository, SyncRepository } from './repository'
+import { DepositedRangeManager } from './managers'
+import {
+  StateUpdateRepository,
+  SyncRepository,
+  CheckpointRepository
+} from './repository'
 import APIClient from './APIClient'
 import TokenManager from './managers/TokenManager'
 import { executeChallenge } from './helper/challenge'
@@ -113,7 +117,6 @@ export default class LightClient {
     private tokenContractFactory: (address: Address) => IERC20DetailedContract,
     private commitmentContract: ICommitmentContract,
     private ownershipPayoutContract: IOwnershipPayoutContract,
-    private checkpointManager: CheckpointManager,
     private depositedRangeManager: DepositedRangeManager,
     private deciderConfig: DeciderConfig & PlasmaContractConfig,
     private aggregatorEndpoint: string = 'http://localhost:3000'
@@ -137,7 +140,6 @@ export default class LightClient {
    */
   static async initilize(options: LightClientOptions): Promise<LightClient> {
     const witnessDb = options.witnessDb
-    const checkpointDb = await witnessDb.bucket(Bytes.fromString('checkpoint'))
     const depositedRangeDb = await witnessDb.bucket(
       Bytes.fromString('depositedRange')
     )
@@ -149,7 +151,6 @@ export default class LightClient {
       options.tokenContractFactory,
       options.commitmentContract,
       options.ownershipPayoutContract,
-      new CheckpointManager(checkpointDb),
       new DepositedRangeManager(new RangeDb(depositedRangeDb)),
       options.deciderConfig,
       options.aggregatorEndpoint
@@ -633,9 +634,10 @@ export default class LightClient {
     if (!exitDepositPredicate)
       throw new Error('ExitDeposit predicate not found')
 
+    const checkpointRepository = await CheckpointRepository.init(this.witnessDb)
     const { coder } = ovmContext
     const inputsOfExitProperty = [coder.encode(stateUpdate.property.toStruct())]
-    const checkpoints = await this.checkpointManager.getCheckpointsWithRange(
+    const checkpoints = await checkpointRepository.getCheckpoints(
       stateUpdate.depositContractAddress,
       stateUpdate.range
     )
@@ -881,6 +883,9 @@ export default class LightClient {
         const stateUpdateRepository = await StateUpdateRepository.init(
           this.witnessDb
         )
+        const checkpointRepository = await CheckpointRepository.init(
+          this.witnessDb
+        )
 
         const checkpointPredicate = this.deciderManager.compiledPredicateMap.get(
           'Checkpoint'
@@ -892,15 +897,7 @@ export default class LightClient {
           checkpointPredicate.deployedAddress,
           checkpoint[0]
         )
-        await this.checkpointManager.insertCheckpoint(
-          depositContract.address,
-          checkpointId,
-          c
-        )
-        await this.checkpointManager.insertCheckpointWithRange(
-          depositContract.address,
-          c
-        )
+        await checkpointRepository.insertCheckpoint(depositContract.address, c)
 
         const stateUpdate = StateUpdate.fromProperty(checkpoint[0])
         const owner = this.getOwner(stateUpdate)
