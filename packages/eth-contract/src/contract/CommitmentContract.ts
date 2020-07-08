@@ -72,7 +72,9 @@ export class CommitmentContract implements ICommitmentContract {
       const root = log.values.root
       const mainchainBlockNumber = log.mainchainBlockNumber
       const timestamp = (
-        await this.connection.provider.getBlock(mainchainBlockNumber.raw)
+        await this.connection.provider.getBlock(
+          Number(mainchainBlockNumber.raw)
+        )
       ).timestamp
       await handler(
         BigNumber.fromString(blockNumber.toString()),
