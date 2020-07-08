@@ -1,13 +1,28 @@
-import { RangeStore } from '@cryptoeconomicslab/db'
-import { Address, Range, BigNumber } from '@cryptoeconomicslab/primitives'
+import { RangeStore, KeyValueStore, RangeDb } from '@cryptoeconomicslab/db'
+import {
+  Address,
+  Range,
+  BigNumber,
+  Bytes
+} from '@cryptoeconomicslab/primitives'
 import JSBI from 'jsbi'
 
 /**
  * DepositedRangeManager
  * DepositedRangemanager keeps track of depositedRanges in depositContracts
  */
-export default class DepositedRangeManager {
-  constructor(private db: RangeStore) {}
+export class DepositedRangeRepository {
+  static BUCKET_KEY = Bytes.fromString('DEPOSITED_RANGE')
+
+  static async init(
+    witnessDb: KeyValueStore
+  ): Promise<DepositedRangeRepository> {
+    const storage = await witnessDb.bucket(this.BUCKET_KEY)
+    const db = new RangeDb(storage)
+    return new DepositedRangeRepository(db)
+  }
+
+  private constructor(private db: RangeStore) {}
 
   private async getBucket(addr: Address): Promise<RangeStore> {
     return await this.db.bucket(ovmContext.coder.encode(addr))

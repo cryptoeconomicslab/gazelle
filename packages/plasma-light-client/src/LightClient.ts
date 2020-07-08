@@ -54,11 +54,11 @@ import UserAction, {
 } from './UserAction'
 
 import EventEmitter from 'event-emitter'
-import { DepositedRangeManager } from './managers'
 import {
   StateUpdateRepository,
   SyncRepository,
-  CheckpointRepository
+  CheckpointRepository,
+  DepositedRangeRepository
 } from './repository'
 import APIClient from './APIClient'
 import TokenManager from './managers/TokenManager'
@@ -117,7 +117,6 @@ export default class LightClient {
     private tokenContractFactory: (address: Address) => IERC20DetailedContract,
     private commitmentContract: ICommitmentContract,
     private ownershipPayoutContract: IOwnershipPayoutContract,
-    private depositedRangeManager: DepositedRangeManager,
     private deciderConfig: DeciderConfig & PlasmaContractConfig,
     private aggregatorEndpoint: string = 'http://localhost:3000'
   ) {
@@ -139,10 +138,6 @@ export default class LightClient {
    * @param options LightClientOptions to instantiate LightClient
    */
   static async initilize(options: LightClientOptions): Promise<LightClient> {
-    const witnessDb = options.witnessDb
-    const depositedRangeDb = await witnessDb.bucket(
-      Bytes.fromString('depositedRange')
-    )
     return new LightClient(
       options.wallet,
       options.witnessDb,
@@ -151,7 +146,6 @@ export default class LightClient {
       options.tokenContractFactory,
       options.commitmentContract,
       options.ownershipPayoutContract,
-      new DepositedRangeManager(new RangeDb(depositedRangeDb)),
       options.deciderConfig,
       options.aggregatorEndpoint
     )
@@ -857,6 +851,9 @@ export default class LightClient {
     erc20ContractAddress: string,
     depositContractAddress: string
   ) {
+    const depositedRangeRepository = await DepositedRangeRepository.init(
+      this.witnessDb
+    )
     const depositContract = this.depositContractFactory(
       Address.from(depositContractAddress)
     )
@@ -865,17 +862,11 @@ export default class LightClient {
     )
     await this.tokenManager.addContracts(erc20Contract, depositContract)
     depositContract.subscribeDepositedRangeExtended(async (range: Range) => {
-      await this.depositedRangeManager.extendRange(
-        depositContract.address,
-        range
-      )
+      await depositedRangeRepository.extendRange(depositContract.address, range)
     })
 
     depositContract.subscribeDepositedRangeRemoved(async (range: Range) => {
-      await this.depositedRangeManager.removeRange(
-        depositContract.address,
-        range
-      )
+      await depositedRangeRepository.removeRange(depositContract.address, range)
     })
 
     depositContract.subscribeCheckpointFinalized(
@@ -999,8 +990,11 @@ export default class LightClient {
         throw new Error('Exit property is not decidable')
       }
     }
+    const depositedRangeRepository = await DepositedRangeRepository.init(
+      this.witnessDb
+    )
 
-    const depositedRangeId = await this.depositedRangeManager.getDepositedRangeId(
+    const depositedRangeId = await depositedRangeRepository.getDepositedRangeId(
       exit.stateUpdate.depositContractAddress,
       exit.range
     )

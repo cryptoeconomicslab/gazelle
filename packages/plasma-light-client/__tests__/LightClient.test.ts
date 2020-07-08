@@ -1,6 +1,9 @@
 import LightClient from '../src/LightClient'
-import DepositedRangeManager from '../src/managers/DepositedRangeManager'
-import { StateUpdateRepository, CheckpointRepository } from '../src/repository'
+import {
+  StateUpdateRepository,
+  CheckpointRepository,
+  DepositedRangeRepository
+} from '../src/repository'
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
@@ -211,15 +214,12 @@ describe('LightClient', () => {
     const { lightClient, witnessDb } = await initialize()
     client = lightClient
     db = witnessDb
-    client.registerToken(erc20Address, depositContractAddress)
+    await client.registerToken(erc20Address, depositContractAddress)
   })
 
   describe('initialize', () => {
     test('suceed to initialize', async () => {
       const { lightClient } = await initialize()
-      expect(lightClient['depositedRangeManager']).toBeInstanceOf(
-        DepositedRangeManager
-      )
       expect(lightClient['aggregatorEndpoint']).toEqual('http://localhost:3000')
     })
     test('initialize with aggregatorEndpoint', async () => {
@@ -502,7 +502,8 @@ describe('LightClient', () => {
 
     test('completeWithdrawal', async () => {
       // setup depositedRangeId
-      await client['depositedRangeManager'].extendRange(
+      const depositedRangeRepository = await DepositedRangeRepository.init(db)
+      await depositedRangeRepository.extendRange(
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(50))
       )
@@ -527,7 +528,8 @@ describe('LightClient', () => {
 
     test('completeWithdrawal with exitDeposit', async () => {
       // setup depositedRangeId
-      await client['depositedRangeManager'].extendRange(
+      const depositedRangeRepository = await DepositedRangeRepository.init(db)
+      await depositedRangeRepository.extendRange(
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(50))
       )
