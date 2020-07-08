@@ -58,7 +58,8 @@ import {
   StateUpdateRepository,
   SyncRepository,
   CheckpointRepository,
-  DepositedRangeRepository
+  DepositedRangeRepository,
+  ExitRepository
 } from './repository'
 import APIClient from './APIClient'
 import TokenManager from './managers/TokenManager'
@@ -191,18 +192,6 @@ export default class LightClient {
 
   public get syncing(): boolean {
     return this.syncing
-  }
-
-  private async getExitDb(
-    depositContractAddress: Address
-  ): Promise<RangeStore> {
-    const exitDb = new RangeDb(
-      await this.witnessDb.bucket(Bytes.fromString('exit'))
-    )
-    const bucket = await exitDb.bucket(
-      ovmContext.coder.encode(depositContractAddress)
-    )
-    return bucket
   }
 
   private async getClaimDb(): Promise<KeyValueStore> {
@@ -1013,22 +1002,15 @@ export default class LightClient {
    * Get pending withdrawal list
    */
   public async getPendingWithdrawals(): Promise<IExit[]> {
-    const { coder } = ovmContext
+    const exitRepository = await ExitRepository.init(
+      this.witnessDb,
+      this.deciderManager.getDeciderAddress('Exit'),
+      this.deciderManager.getDeciderAddress('ExitDeposit')
+    )
+
     const exitList = await Promise.all(
       this.tokenManager.depositContractAddresses.map(async addr => {
-        const exitDb = await this.getExitDb(addr)
-        const iter = exitDb.iter(JSBI.BigInt(0))
-        let item = await iter.next()
-        const result: IExit[] = []
-        while (item !== null) {
-          const p = decodeStructable(Property, coder, item.value)
-          const exit = this.createExitFromProperty(p)
-          if (exit) {
-            result.push(exit)
-          }
-          item = await iter.next()
-        }
-        return result
+        return await exitRepository.getAllExits(addr)
       })
     )
     return Array.prototype.concat.apply([], exitList)
@@ -1124,12 +1106,13 @@ export default class LightClient {
     const { coder } = ovmContext
     const stateUpdate = exit.stateUpdate
     const propertyBytes = coder.encode(exit.property.toStruct())
-    const exitDb = await this.getExitDb(stateUpdate.depositContractAddress)
-    await exitDb.put(
-      stateUpdate.range.start.data,
-      stateUpdate.range.end.data,
-      propertyBytes
+    const exitRepository = await ExitRepository.init(
+      this.witnessDb,
+      this.deciderManager.getDeciderAddress('Exit'),
+      this.deciderManager.getDeciderAddress('ExitDeposit')
     )
+    await exitRepository.insertExit(stateUpdate.depositContractAddress, exit)
+
     const stateUpdateRepository = await StateUpdateRepository.init(
       this.witnessDb
     )
