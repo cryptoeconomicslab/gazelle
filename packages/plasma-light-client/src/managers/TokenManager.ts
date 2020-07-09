@@ -7,7 +7,7 @@ import { Integer, Address } from '@cryptoeconomicslab/primitives'
 /**
  * @description TokenManager manages token contracts and deposit contracts
  */
-export default class TokenManager {
+export class TokenManager {
   private depositContractAddressStrings: Set<string> = new Set()
   private depositContracts: Map<string, IDepositContract> = new Map()
   private tokenContractAddressStrings: Set<string> = new Set()
@@ -180,3 +180,15 @@ export default class TokenManager {
     return decimals.data
   }
 }
+
+// export singleton
+function tokenManagerSingleton() {
+  const tokenManager = new TokenManager()
+  return () => {
+    return tokenManager
+  }
+}
+
+const getTokenManager = tokenManagerSingleton()
+
+export default getTokenManager

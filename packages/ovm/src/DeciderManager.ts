@@ -126,7 +126,7 @@ export class DeciderManager implements DeciderManagerInterface {
   }
 
   public async getStorageDb(): Promise<KeyValueStore> {
-    const bucket = await this.witnessDb.bucket(Bytes.fromString('storage'))
+    const bucket = await this.witnessDb.bucket(Bytes.fromString('STORAGE'))
     return bucket
   }
 

@@ -10,6 +10,7 @@ import JsonCoder from '@cryptoeconomicslab/coder'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { LevelKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import { hint } from '@cryptoeconomicslab/ovm'
+import { getOwner } from '../src/helper/stateUpdateHelper'
 
 const mockClaimProperty = jest.fn()
 const mockIsDecided = jest.fn().mockResolvedValue(true)
@@ -588,7 +589,7 @@ describe('LightClient', () => {
   })
 
   test('getOwner', () => {
-    const owner = client.getOwner(
+    const owner = getOwner(
       new StateUpdate(
         Address.from(
           deciderConfig.deployedPredicateTable.StateUpdatePredicate

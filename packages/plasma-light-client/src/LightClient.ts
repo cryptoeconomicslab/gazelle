@@ -43,7 +43,6 @@ import JSBI from 'jsbi'
 import UserAction, {
   createDepositUserAction,
   createExitUserAction,
-  createReceiveUserAction,
   createSendUserAction
 } from './UserAction'
 
@@ -56,9 +55,12 @@ import {
   ExitRepository,
   UserActionRepository
 } from './repository'
+import { StateSyncer } from './usecase/StateSyncer'
 import APIClient from './APIClient'
-import TokenManager from './managers/TokenManager'
+import getTokenManager, { TokenManager } from './managers/TokenManager'
 import { executeChallenge } from './helper/challenge'
+import { UserActionEvent, EmitterEvent } from './ClientEvent'
+import { getOwner } from './helper/stateUpdateHelper'
 
 type Numberish =
   | {
@@ -70,20 +72,6 @@ type Numberish =
   | {
       [Symbol.toPrimitive]
     }
-
-enum UserActionEvent {
-  DEPOSIT = 'DEPOSIT',
-  SEND = 'SEND',
-  RECIEVE = 'RECIEVE',
-  EXIT = 'EXIT'
-}
-
-enum EmitterEvent {
-  CHECKPOINT_FINALIZED = 'CHECKPOINT_FINALIZED',
-  TRANSFER_COMPLETE = 'TRANSFER_COMPLETE',
-  SYNC_FINISHED = 'SYNC_FINISHED',
-  EXIT_FINALIZED = 'EXIT_FINALIZED'
-}
 
 interface LightClientOptions {
   wallet: Wallet
@@ -104,6 +92,7 @@ export default class LightClient {
   private deciderManager: DeciderManager
   private apiClient: APIClient
   private tokenManager: TokenManager
+  private stateSyncer: StateSyncer
 
   constructor(
     private wallet: Wallet,
@@ -126,7 +115,14 @@ export default class LightClient {
     }
     this.ownershipPredicate = ownershipPredicate
     this.apiClient = new APIClient(this.aggregatorEndpoint)
-    this.tokenManager = new TokenManager()
+    this.tokenManager = getTokenManager()
+    this.stateSyncer = new StateSyncer(
+      this.ee,
+      this.witnessDb,
+      this.commitmentContract,
+      Address.from(this.deciderConfig.commitmentContract),
+      this.apiClient
+    )
   }
 
   /**
@@ -174,19 +170,12 @@ export default class LightClient {
     ])
   }
 
-  public getOwner(stateUpdate: StateUpdate): Address {
-    return ovmContext.coder.decode(
-      Address.default(),
-      stateUpdate.stateObject.inputs[0]
-    )
-  }
-
   public get address(): string {
     return this.wallet.getAddress().data
   }
 
   public get syncing(): boolean {
-    return this.syncing
+    return this._syncing
   }
 
   private async getClaimDb(): Promise<KeyValueStore> {
@@ -242,13 +231,14 @@ export default class LightClient {
     this.commitmentContract.subscribeBlockSubmitted(
       async (blockNumber, root) => {
         console.log('new block submitted event:', root.toHexString())
-        await this.syncState(blockNumber, root)
+        await this.stateSyncer.sync(blockNumber, Address.from(this.address))
         await this.verifyPendingStateUpdates(blockNumber)
       }
     )
     this.commitmentContract.startWatchingEvents()
     const blockNumber = await this.commitmentContract.getCurrentBlock()
-    await this.syncStateUntill(blockNumber)
+
+    await this.stateSyncer.syncUntil(blockNumber, Address.from(this.address))
     await this.watchAdjudicationContract()
   }
 
@@ -264,113 +254,6 @@ export default class LightClient {
         depositContract.unsubscribeAll()
       }
     })
-  }
-
-  /**
-   * sync local state to given block number
-   * @param blockNum block number to which client should sync
-   */
-  private async syncStateUntill(blockNum: BigNumber): Promise<void> {
-    const syncRepository = await SyncRepository.init(this.witnessDb)
-    let synced = await syncRepository.getSyncedBlockNumber()
-    console.log(`sync state from ${synced} to ${blockNum}`)
-    if (JSBI.greaterThan(synced.data, blockNum.data)) {
-      throw new Error('Synced state is greater than latest block')
-    }
-
-    while (JSBI.notEqual(synced.data, blockNum.data)) {
-      synced = BigNumber.from(JSBI.add(synced.data, JSBI.BigInt(1)))
-      const root = await this.commitmentContract.getRoot(synced)
-      if (!root) {
-        // FIXME: check if root is default bytes32 value
-        throw new Error('Block root hash is null')
-      }
-      await this.syncState(synced, root)
-    }
-  }
-
-  /**
-   * fetch latest state from aggregator
-   * update local database with new state updates.
-   * @param blockNumber block number to sync state
-   * @param root root hash of new block to be synced
-   */
-  private async syncState(blockNumber: BigNumber, root: FixedBytes) {
-    this._syncing = true
-    const { coder } = ovmContext
-    console.log(`start syncing state: ${blockNumber.toString()}`)
-    const stateUpdateRepository = await StateUpdateRepository.init(
-      this.witnessDb
-    )
-
-    const rootHint = Hint.createRootHint(
-      blockNumber,
-      Address.from(this.deciderConfig.commitmentContract)
-    )
-    await putWitness(
-      this.deciderManager.witnessDb,
-      rootHint,
-      coder.encode(root)
-    )
-    const storageDb = await this.deciderManager.getStorageDb()
-    const bucket = await storageDb.bucket(
-      ovmContext.coder.encode(
-        Address.from(this.deciderConfig.commitmentContract)
-      )
-    )
-    await bucket.put(coder.encode(blockNumber), coder.encode(root))
-
-    try {
-      const res = await this.apiClient.syncState(this.address, blockNumber)
-      const stateUpdates: StateUpdate[] = res.data.map((s: string) =>
-        StateUpdate.fromProperty(
-          decodeStructable(Property, coder, Bytes.fromHexString(s))
-        )
-      )
-      const promises = stateUpdates.map(async su => {
-        try {
-          const verified = await this.verifyStateUpdateHistory(su, blockNumber)
-          if (!verified) return
-        } catch (e) {
-          console.log(e)
-        }
-
-        await stateUpdateRepository.insertVerifiedStateUpdate(
-          su.depositContractAddress,
-          su
-        )
-        // store receive user action
-        const { range } = su
-        const owner = this.getOwner(su)
-        const tokenContractAddress = this.tokenManager.getTokenContractAddress(
-          su.depositContractAddress
-        )
-        if (!tokenContractAddress)
-          throw new Error('Token Contract Address not found')
-
-        const action = createReceiveUserAction(
-          Address.from(tokenContractAddress),
-          range,
-          owner, // FIXME: this is same as client's owner
-          su.blockNumber
-        )
-        const actionRepository = await UserActionRepository.init(this.witnessDb)
-        await actionRepository.insertAction(su.blockNumber, range, action)
-
-        this.ee.emit(UserActionEvent.RECIEVE, action)
-      })
-      await Promise.all(promises)
-      const syncRepository = await SyncRepository.init(this.witnessDb)
-      await syncRepository.updateSyncedBlockNumber(blockNumber)
-      await syncRepository.insertBlockRoot(blockNumber, root)
-
-      this.ee.emit(EmitterEvent.SYNC_FINISHED, blockNumber)
-      console.log(`Finish syncing state: ${blockNumber.toString()}`)
-    } catch (e) {
-      console.log(`Failed syncing state: ${blockNumber.toString()}`, e)
-    } finally {
-      this._syncing = false
-    }
   }
 
   /**
@@ -443,7 +326,7 @@ export default class LightClient {
 
           // store send user action
           const { range } = su
-          const owner = this.getOwner(su)
+          const owner = getOwner(su)
           const tokenContractAddress = this.tokenManager.getTokenContractAddress(
             su.depositContractAddress
           )
@@ -866,7 +749,7 @@ export default class LightClient {
         await checkpointRepository.insertCheckpoint(depositContract.address, c)
 
         const stateUpdate = StateUpdate.fromProperty(checkpoint[0])
-        const owner = this.getOwner(stateUpdate)
+        const owner = getOwner(stateUpdate)
         if (owner && owner.data === this.wallet.getAddress().data) {
           await stateUpdateRepository.insertVerifiedStateUpdate(
             depositContract.address,
@@ -1064,7 +947,7 @@ export default class LightClient {
           )
           if (stateUpdates.length > 0) {
             const decision = await this.deciderManager.decide(property)
-            if (this.getOwner(exit.stateUpdate).data === this.address) {
+            if (getOwner(exit.stateUpdate).data === this.address) {
               // exit initiated with this client. save exit into db
               await this.saveExit(exit)
             } else if (!decision.outcome && decision.challenge) {
@@ -1175,6 +1058,10 @@ export default class LightClient {
     handler: (checkpointId: Bytes, checkpoint: [Range, Property]) => void
   ) {
     this.ee.on(EmitterEvent.CHECKPOINT_FINALIZED, handler)
+  }
+
+  public subscribeSyncStarted(handler: (blockNumber: BigNumber) => void) {
+    this.ee.on(EmitterEvent.SYNC_STARTED, handler)
   }
 
   public subscribeSyncFinished(handler: (blockNumber: BigNumber) => void) {
