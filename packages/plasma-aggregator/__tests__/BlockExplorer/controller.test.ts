@@ -4,6 +4,7 @@ import {
   Address,
   Bytes,
   BigNumber,
+  Integer,
   Property,
   Range
 } from '@cryptoeconomicslab/primitives'
@@ -31,7 +32,12 @@ const TIME_STAMP = DateUtils.getCurrentDate()
 const block = (bn: number, addr: string, sus: StateUpdate[]) => {
   const map = new Map()
   map.set(addr, sus)
-  return new Block(BigNumber.from(bn), map, TIME_STAMP)
+  return new Block(
+    BigNumber.from(bn),
+    map,
+    BigNumber.from(10),
+    Integer.from(TIME_STAMP)
+  )
 }
 
 describe('BlockExplorerController', () => {
@@ -60,6 +66,7 @@ describe('BlockExplorerController', () => {
       expect(b).toEqual({
         blockNumber: '1',
         transactions: 3,
+        mainchainBlockNumber: '10',
         timestamp: TIME_STAMP
       })
     })
@@ -83,16 +90,66 @@ describe('BlockExplorerController', () => {
       const controller = new BlockExplorerController(blockManager, stateManager)
       const blocks = await controller.handleBlockList()
       expect(blocks).toEqual([
-        { blockNumber: '3', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '4', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '5', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '6', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '7', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '8', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '9', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '10', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '11', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '12', transactions: 1, timestamp: TIME_STAMP }
+        {
+          blockNumber: '3',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '4',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '5',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '6',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '7',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '8',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '9',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '10',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '11',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '12',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        }
       ])
     })
 
@@ -103,9 +160,24 @@ describe('BlockExplorerController', () => {
         to: BigNumber.from(9)
       })
       expect(blocks).toEqual([
-        { blockNumber: '7', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '8', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '9', transactions: 1, timestamp: TIME_STAMP }
+        {
+          blockNumber: '7',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '8',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '9',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        }
       ])
     })
 
@@ -115,12 +187,42 @@ describe('BlockExplorerController', () => {
         from: BigNumber.from(7)
       })
       expect(blocks).toEqual([
-        { blockNumber: '7', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '8', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '9', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '10', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '11', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '12', transactions: 1, timestamp: TIME_STAMP }
+        {
+          blockNumber: '7',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '8',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '9',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '10',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '11',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '12',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        }
       ])
     })
 
@@ -130,16 +232,66 @@ describe('BlockExplorerController', () => {
         to: BigNumber.from(11)
       })
       expect(blocks).toEqual([
-        { blockNumber: '2', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '3', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '4', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '5', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '6', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '7', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '8', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '9', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '10', transactions: 1, timestamp: TIME_STAMP },
-        { blockNumber: '11', transactions: 1, timestamp: TIME_STAMP }
+        {
+          blockNumber: '2',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '3',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '4',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '5',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '6',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '7',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '8',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '9',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '10',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        },
+        {
+          blockNumber: '11',
+          transactions: 1,
+          mainchainBlockNumber: '10',
+          timestamp: TIME_STAMP
+        }
       ])
     })
 
@@ -173,6 +325,7 @@ describe('BlockExplorerController', () => {
         stateUpdates.map(su => ({
           hash: su.hash.toHexString(),
           timestamp: TIME_STAMP,
+          mainchainBlockNumber: '10',
           blockNumber: '1',
           depositContractAddress: su.depositContractAddress.data,
           stateObject: {
@@ -215,6 +368,7 @@ describe('BlockExplorerController', () => {
       expect(tx).toEqual({
         hash: s.hash.toHexString(),
         timestamp: TIME_STAMP,
+        mainchainBlockNumber: '10',
         blockNumber: '1',
         depositContractAddress: s.depositContractAddress.data,
         stateObject: {

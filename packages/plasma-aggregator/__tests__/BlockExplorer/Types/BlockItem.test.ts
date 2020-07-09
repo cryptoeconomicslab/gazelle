@@ -4,6 +4,7 @@ import {
   Address,
   Bytes,
   BigNumber,
+  Integer,
   Property,
   Range
 } from '@cryptoeconomicslab/primitives'
@@ -31,12 +32,18 @@ describe('BlockItem', () => {
   map.set(testAddr, [su, su])
   map.set(testAddr2, [su, su, su])
   const timestamp = DateUtils.getCurrentDate()
-  const block = new Block(BigNumber.from(5), map, timestamp)
+  const block = new Block(
+    BigNumber.from(5),
+    map,
+    BigNumber.from(10),
+    Integer.from(timestamp)
+  )
 
   test('transformBlockItemFrom', () => {
     expect(transformBlockItemFrom(block)).toEqual({
       blockNumber: '5',
       transactions: 5,
+      mainchainBlockNumber: '10',
       timestamp
     })
   })

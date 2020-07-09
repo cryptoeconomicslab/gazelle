@@ -2,6 +2,7 @@ import {
   Address,
   Bytes,
   BigNumber,
+  Integer,
   Property,
   Range
 } from '@cryptoeconomicslab/primitives'
@@ -35,7 +36,12 @@ describe('Block', () => {
       StateUpdate.fromProperty(stateUpdateProperty)
     ])
     const timestamp = DateUtils.getCurrentDate()
-    const block = new Block(BigNumber.from(5), map, timestamp)
+    const block = new Block(
+      BigNumber.from(5),
+      map,
+      BigNumber.from(10),
+      Integer.from(timestamp)
+    )
     const encoded = Coder.encode(block.toStruct())
     const decoded = Block.fromStruct(
       Coder.decode(Block.getParamType(), encoded)
@@ -60,7 +66,12 @@ describe('Block', () => {
     const map = new Map()
     map.set(testAddr.data, [StateUpdate.fromProperty(stateUpdateProperty)])
     const timestamp = DateUtils.getCurrentDate()
-    const block = new Block(BigNumber.from(5), map, timestamp)
+    const block = new Block(
+      BigNumber.from(5),
+      map,
+      BigNumber.from(10),
+      Integer.from(timestamp)
+    )
     const inclusionProof = block.getInclusionProof(
       StateUpdate.fromProperty(stateUpdateProperty)
     )
