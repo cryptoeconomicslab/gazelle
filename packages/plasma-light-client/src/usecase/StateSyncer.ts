@@ -10,12 +10,13 @@ import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { StateUpdate } from '@cryptoeconomicslab/plasma'
 import { KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
 import { ICommitmentContract } from '@cryptoeconomicslab/contract'
-import { hint as Hint } from '@cryptoeconomicslab/ovm'
+import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
 import {
   SyncRepository,
   StateUpdateRepository,
   UserActionRepository
 } from '../repository'
+import { HistoryVerifier } from '../verifier'
 import { EmitterEvent, UserActionEvent } from '../ClientEvent'
 import { createReceiveUserAction } from '../UserAction'
 import APIClient from '../APIClient'
@@ -24,13 +25,21 @@ import { getStorageDb } from '../helper/storageDbHelper'
 import getTokenManager from '../managers/TokenManager'
 
 export class StateSyncer {
+  private historyVerifier: HistoryVerifier
   constructor(
     private ee: EventEmitter,
     private witnessDb: KeyValueStore,
     private commitmentContract: ICommitmentContract,
     private commitmentContractAddress: Address,
-    private apiClient: APIClient
-  ) {}
+    private apiClient: APIClient,
+    deciderManager: DeciderManager // will be removed when using checkpointDispute
+  ) {
+    this.historyVerifier = new HistoryVerifier(
+      witnessDb,
+      apiClient,
+      deciderManager
+    )
+  }
 
   /**
    * sync local state to given block number
@@ -92,8 +101,10 @@ export class StateSyncer {
       )
       const promises = stateUpdates.map(async su => {
         try {
-          // TODO: use stateUpdateHistoryVerifier
-          const verified = true // TODO: await this.verifyStateUpdateHistory(su, blockNumber)
+          const verified = await this.historyVerifier.verifyStateUpdateHistory(
+            su,
+            blockNumber
+          )
           if (!verified) return
         } catch (e) {
           console.log(e)
