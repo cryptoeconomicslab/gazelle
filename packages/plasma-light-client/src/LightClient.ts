@@ -61,17 +61,7 @@ import getTokenManager, { TokenManager } from './managers/TokenManager'
 import { executeChallenge } from './helper/challenge'
 import { UserActionEvent, EmitterEvent } from './ClientEvent'
 import { getOwner } from './helper/stateUpdateHelper'
-
-type Numberish =
-  | {
-      toString(): string
-    }
-  | {
-      valueOf: string | number
-    }
-  | {
-      [Symbol.toPrimitive]
-    }
+import { Numberish } from './types'
 
 interface LightClientOptions {
   wallet: Wallet
