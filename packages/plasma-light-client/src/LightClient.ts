@@ -1,7 +1,5 @@
 import {
   StateUpdate,
-  Transaction,
-  TransactionReceipt,
   Checkpoint,
   IExit,
   PlasmaContractConfig
@@ -34,13 +32,13 @@ import UserAction, { createDepositUserAction } from './UserAction'
 import EventEmitter from 'event-emitter'
 import {
   StateUpdateRepository,
-  SyncRepository,
   CheckpointRepository,
   DepositedRangeRepository,
   UserActionRepository
 } from './repository'
 import { StateSyncer } from './usecase/StateSyncer'
 import { ExitUsecase } from './usecase/ExitUsecase'
+import { TransferUsecase } from './usecase/TransferUsecase'
 import { PendingStateUpdatesVerifier } from './verifier/PendingStateUpdatesVerifier'
 import APIClient from './APIClient'
 import getTokenManager, { TokenManager } from './managers/TokenManager'
@@ -70,6 +68,7 @@ export default class LightClient {
   private tokenManager: TokenManager
   private stateSyncer: StateSyncer
   private exitUsecase: ExitUsecase
+  private transferUsecase: TransferUsecase
   private pendingStateUpdatesVerifier: PendingStateUpdatesVerifier
 
   constructor(
@@ -109,6 +108,11 @@ export default class LightClient {
       this.commitmentContract,
       this.ownershipPayoutContract,
       this.deciderManager
+    )
+    this.transferUsecase = new TransferUsecase(
+      this.witnessDb,
+      this.wallet,
+      this.apiClient
     )
     this.pendingStateUpdatesVerifier = new PendingStateUpdatesVerifier(
       this.ee,
@@ -282,12 +286,8 @@ export default class LightClient {
       toAddress
     )
     const to = Address.from(toAddress)
-    const ownershipStateObject = this.ownershipProperty(to)
-    await this.sendTransaction(
-      amount,
-      tokenContractAddress,
-      ownershipStateObject
-    )
+    const so = this.ownershipProperty(to)
+    await this.transferUsecase.sendTransaction(amount, tokenContractAddress, so)
   }
 
   /**
@@ -301,77 +301,11 @@ export default class LightClient {
     tokenContractAddress: string,
     stateObject: Property
   ) {
-    const depositContractAddress = this.tokenManager.getDepositContractAddress(
-      Address.from(tokenContractAddress)
+    await this.transferUsecase.sendTransaction(
+      amount,
+      tokenContractAddress,
+      stateObject
     )
-    if (!depositContractAddress) {
-      throw new Error('Deposit Contract Address not found')
-    }
-    const stateUpdateRepository = await StateUpdateRepository.init(
-      this.witnessDb
-    )
-
-    const stateUpdates = await stateUpdateRepository.resolveStateUpdate(
-      Address.from(depositContractAddress),
-      JSBI.BigInt(amount)
-    )
-    if (stateUpdates === null) {
-      throw new Error('Not enough amount')
-    }
-
-    const syncRepository = await SyncRepository.init(this.witnessDb)
-    const latestBlock = await syncRepository.getSyncedBlockNumber()
-    const transactions = await Promise.all(
-      stateUpdates.map(async su => {
-        const tx = new Transaction(
-          Address.from(depositContractAddress),
-          su.range,
-          BigNumber.from(JSBI.add(latestBlock.data, JSBI.BigInt(5))),
-          stateObject,
-          this.wallet.getAddress()
-        )
-        const sig = await this.wallet.signMessage(
-          ovmContext.coder.encode(tx.toProperty(Address.default()).toStruct())
-        )
-        tx.signature = sig
-        return tx
-      })
-    )
-
-    let res
-    try {
-      res = await this.apiClient.sendTransaction(transactions)
-    } catch (e) {
-      console.log(e)
-    }
-
-    if (Array.isArray(res.data)) {
-      const receipts = res.data.map(d => {
-        return decodeStructable(
-          TransactionReceipt,
-          ovmContext.coder,
-          Bytes.fromHexString(d)
-        )
-      })
-
-      // TODO: is this valid handling?
-      for await (const receipt of receipts) {
-        if (receipt.status.data === 1) {
-          for await (const su of stateUpdates) {
-            await stateUpdateRepository.removeVerifiedStateUpdate(
-              su.depositContractAddress,
-              su.range
-            )
-            await stateUpdateRepository.insertPendingStateUpdate(
-              su.depositContractAddress,
-              su
-            )
-          }
-        } else {
-          throw new Error('Invalid transaction')
-        }
-      }
-    }
   }
 
   /**
@@ -478,6 +412,7 @@ export default class LightClient {
   }
 
   /**
+   * FIXME: use DisputeContract.challenge method
    * @name executeChallenge
    * @description execute challenge procedure to game with challenge property
    * @param gameId Id of the game to challenge
@@ -492,6 +427,7 @@ export default class LightClient {
     )
   }
 
+  // FIXME: watch Dispute Contract
   private async watchAdjudicationContract() {
     this.adjudicationContract.subscribeClaimChallenged(
       async (gameId, challengeGameId) => {
