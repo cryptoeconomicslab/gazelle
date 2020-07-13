@@ -3,7 +3,7 @@ import { SigningKey } from 'ethers/utils'
 import { secp256k1Verifier } from '@cryptoeconomicslab/signature'
 import { Address, Bytes, BigNumber } from '@cryptoeconomicslab/primitives'
 import { Wallet, Balance } from '@cryptoeconomicslab/wallet'
-import { signTypedDataLegacy } from 'eth-sig-util'
+import { signTypedDataLegacy, recoverTypedSignatureLegacy } from 'eth-sig-util'
 import { createTypedParams, DeciderConfig } from '@cryptoeconomicslab/ovm'
 
 const ERC20abi = [
@@ -59,7 +59,7 @@ export class EthWallet implements Wallet {
     return Bytes.fromHexString(
       signTypedDataLegacy(
         Buffer.from(Bytes.fromHexString(this.ethersWallet.privateKey).data),
-        createTypedParams(this.config, message)
+        { data: createTypedParams(this.config, message) }
       )
     )
   }
@@ -72,8 +72,12 @@ export class EthWallet implements Wallet {
     message: Bytes,
     signature: Bytes
   ): Promise<boolean> {
-    const publicKey = Bytes.fromHexString(this.getAddress().data)
-    return await secp256k1Verifier.verify(message, signature, publicKey)
+    return (
+      recoverTypedSignatureLegacy({
+        data: createTypedParams(this.config, message),
+        sig: signature.toHexString()
+      }) === this.getAddress().data
+    )
   }
 
   /**
