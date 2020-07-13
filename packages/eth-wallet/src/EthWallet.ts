@@ -1,11 +1,10 @@
 import * as ethers from 'ethers'
 import { SigningKey } from 'ethers/utils'
-import {
-  Secp256k1Signer,
-  secp256k1Verifier
-} from '@cryptoeconomicslab/signature'
+import { secp256k1Verifier } from '@cryptoeconomicslab/signature'
 import { Address, Bytes, BigNumber } from '@cryptoeconomicslab/primitives'
 import { Wallet, Balance } from '@cryptoeconomicslab/wallet'
+import { signTypedDataLegacy } from 'eth-sig-util'
+import { createTypedParams, DeciderConfig } from '@cryptoeconomicslab/ovm'
 
 const ERC20abi = [
   'function balanceOf(address tokenOwner) view returns (uint)',
@@ -17,7 +16,7 @@ export class EthWallet implements Wallet {
   private ethersWallet: ethers.Wallet
   private signingKey: SigningKey
 
-  constructor(ethersWallet: ethers.Wallet) {
+  constructor(ethersWallet: ethers.Wallet, readonly config: DeciderConfig) {
     this.ethersWallet = ethersWallet
     this.signingKey = new SigningKey(this.ethersWallet.privateKey)
   }
@@ -57,10 +56,12 @@ export class EthWallet implements Wallet {
    * @param message is hex string
    */
   public async signMessage(message: Bytes): Promise<Bytes> {
-    const signer = new Secp256k1Signer(
-      Bytes.fromHexString(this.signingKey.privateKey)
+    return Bytes.fromHexString(
+      signTypedDataLegacy(
+        Buffer.from(Bytes.fromHexString(this.ethersWallet.privateKey).data),
+        createTypedParams(this.config, message)
+      )
     )
-    return signer.sign(message)
   }
 
   /**
