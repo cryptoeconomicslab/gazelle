@@ -31,6 +31,7 @@ export class StateSyncer {
     private witnessDb: KeyValueStore,
     private commitmentContract: ICommitmentContract,
     private commitmentContractAddress: Address,
+    private commitmentVerifierAddress: Address,
     private apiClient: APIClient,
     deciderManager: DeciderManager, // will be removed when using checkpointDispute
     private tokenManager: TokenManager
@@ -86,11 +87,16 @@ export class StateSyncer {
       this.witnessDb
     )
 
-    const rootHint = Hint.createRootHint(blockNumber, commitmentAddress)
+    const rootHint = Hint.createRootHint(
+      blockNumber,
+      this.commitmentVerifierAddress
+    )
     await putWitness(this.witnessDb, rootHint, coder.encode(root))
 
     const storageDb = await getStorageDb(this.witnessDb)
-    const bucket = await storageDb.bucket(coder.encode(commitmentAddress))
+    const bucket = await storageDb.bucket(
+      coder.encode(this.commitmentVerifierAddress)
+    )
     await bucket.put(coder.encode(blockNumber), coder.encode(root))
 
     try {

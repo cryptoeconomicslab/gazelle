@@ -41,7 +41,7 @@ export default async function initialize(options: EthLightClientOptions) {
     return new ERC20Contract(address, options.wallet)
   }
   const commitmentContract = new CommitmentContract(
-    Address.from(options.config.commitmentContract),
+    Address.from(options.config.commitment),
     eventDb,
     options.wallet
   )

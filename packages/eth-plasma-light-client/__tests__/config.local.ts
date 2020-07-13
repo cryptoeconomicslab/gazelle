@@ -545,7 +545,7 @@ const config: DeciderConfig & EthContractConfig = {
     txAddress:
       '0x0000000000000000000000000000000000000000000000000000000000000000'
   },
-  commitmentContract: '0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0',
+  commitment: '0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0',
   adjudicationContract: '0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F',
   payoutContracts: {
     DepositContract: '0xA4392264a2d8c998901D10C154C91725b1BF0158',
