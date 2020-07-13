@@ -53,7 +53,7 @@ const instantiate = async (
         ? new ethers.providers.JsonRpcProvider(process.env.MAIN_CHAIN_HOST)
         : ethers.getDefaultProvider(network)
     ),
-    contractConfig
+    contractConfig as any
   )
 
   const stateBucket = await kvs.bucket(Bytes.fromString('state_update'))
