@@ -8,7 +8,10 @@ import {
 } from '@cryptoeconomicslab/primitives'
 import { LevelKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import initializeLightClient from '@cryptoeconomicslab/eth-plasma-light-client'
-import LightClient from '@cryptoeconomicslab/plasma-light-client'
+import LightClient, {
+  Numberish,
+  StateUpdateRepository
+} from '@cryptoeconomicslab/plasma-light-client'
 import JSBI from 'jsbi'
 import parseEther = ethers.utils.parseEther
 import parseUnits = ethers.utils.parseUnits
@@ -18,17 +21,6 @@ import { EthCoder } from '@cryptoeconomicslab/eth-coder'
 import { Block, StateUpdate } from '@cryptoeconomicslab/plasma'
 import { DateUtils } from '@cryptoeconomicslab/utils'
 import config from '../config.local.json'
-
-declare type Numberish =
-  | {
-      toString(): string
-    }
-  | {
-      valueOf: string | number
-    }
-  | {
-      [Symbol.toPrimitive]: any
-    }
 
 jest.setTimeout(120000)
 
@@ -149,9 +141,8 @@ describe('light client', () => {
       config.payoutContracts.DepositContract
     )
     const owner = Address.from(client.address)
-    const stateUpdates: StateUpdate[] = await client[
-      'stateManager'
-    ].getVerifiedStateUpdates(
+    const repository = await StateUpdateRepository.init(client['witnessDb'])
+    const stateUpdates: StateUpdate[] = await repository.getVerifiedStateUpdates(
       depositContractAddress,
       new Range(BigNumber.from(0), BigNumber.MAX_NUMBER)
     )
@@ -196,12 +187,6 @@ describe('light client', () => {
     operatorWallet = new ethers.Wallet(
       '0xc87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3',
       provider
-    )
-    const kvs1 = new LevelKeyValueStore(
-      Bytes.fromString('plasma_light_client_' + senderWallet.address)
-    )
-    const kvs2 = new LevelKeyValueStore(
-      Bytes.fromString('plasma_light_client_' + recieverWallet.address)
     )
 
     await operatorWallet.sendTransaction({
@@ -485,13 +470,16 @@ describe('light client', () => {
       amount: JSBI
     ) => {
       const addr = Address.from(depositContractAddress)
-      return await client['stateManager'].resolveStateUpdate(addr, amount)
+      const repository = await StateUpdateRepository.init(client['witnessDb'])
+      return await repository.resolveStateUpdate(addr, amount)
     }
     const exit = async (client: LightClient, stateUpdates: any[]) => {
       for (const stateUpdate of stateUpdates) {
-        const exitObject = await client['createExit'](stateUpdate)
+        const exitObject = await client['exitUsecase']['createExit'](
+          stateUpdate
+        )
         await client['adjudicationContract'].claimProperty(exitObject.property)
-        await client['saveExit'](exitObject)
+        await client['exitUsecase'].saveExit(exitObject)
       }
     }
 
