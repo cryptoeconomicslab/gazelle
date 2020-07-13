@@ -1,1 +1,1 @@
-export * from './Nuberish'
+export * from './Numberish'
