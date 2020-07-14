@@ -1,4 +1,4 @@
-import StateManager from '../src/managers/StateManager'
+import { StateUpdateRepository } from '../../src/repository'
 import { StateUpdate } from '@cryptoeconomicslab/plasma'
 
 import { KeyValueStore } from '@cryptoeconomicslab/db'
@@ -32,25 +32,25 @@ function su(start: JSBI, end: JSBI): StateUpdate {
   return StateUpdate.fromProperty(property)
 }
 
-describe('StateManager', () => {
-  let stateManager: StateManager, db: KeyValueStore
+describe('StateUpdateRepository', () => {
+  let repository: StateUpdateRepository, db: KeyValueStore
 
   beforeEach(async () => {
     db = new IndexedDbKeyValueStore(Bytes.fromString('state'))
-    stateManager = new StateManager(db)
+    repository = await StateUpdateRepository.init(db)
   })
 
   test('resolve state update with single state update', async () => {
-    await stateManager.insertVerifiedStateUpdate(
+    await repository.insertVerifiedStateUpdate(
       Address.default(),
       su(JSBI.BigInt(0), JSBI.BigInt(10))
     )
-    await stateManager.insertVerifiedStateUpdate(
+    await repository.insertVerifiedStateUpdate(
       Address.default(),
       su(JSBI.BigInt(10), JSBI.BigInt(20))
     )
 
-    const s = await stateManager.resolveStateUpdate(
+    const s = await repository.resolveStateUpdate(
       Address.default(),
       JSBI.BigInt(5)
     )
@@ -58,16 +58,16 @@ describe('StateManager', () => {
   })
 
   test('resolve state update with multiple state updates', async () => {
-    await stateManager.insertVerifiedStateUpdate(
+    await repository.insertVerifiedStateUpdate(
       Address.default(),
       su(JSBI.BigInt(0), JSBI.BigInt(10))
     )
-    await stateManager.insertVerifiedStateUpdate(
+    await repository.insertVerifiedStateUpdate(
       Address.default(),
       su(JSBI.BigInt(10), JSBI.BigInt(20))
     )
 
-    const resolvedStateUpdates = await stateManager.resolveStateUpdate(
+    const resolvedStateUpdates = await repository.resolveStateUpdate(
       Address.default(),
       JSBI.BigInt(15)
     )
@@ -80,16 +80,16 @@ describe('StateManager', () => {
   })
 
   test('resolve state update to be null', async () => {
-    await stateManager.insertVerifiedStateUpdate(
+    await repository.insertVerifiedStateUpdate(
       Address.default(),
       su(JSBI.BigInt(0), JSBI.BigInt(10))
     )
-    await stateManager.insertVerifiedStateUpdate(
+    await repository.insertVerifiedStateUpdate(
       Address.default(),
       su(JSBI.BigInt(10), JSBI.BigInt(20))
     )
 
-    const resolvedStateUpdates = await stateManager.resolveStateUpdate(
+    const resolvedStateUpdates = await repository.resolveStateUpdate(
       Address.default(),
       JSBI.BigInt(25)
     )

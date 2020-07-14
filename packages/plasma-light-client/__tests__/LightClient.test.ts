@@ -1,12 +1,16 @@
 import LightClient from '../src/LightClient'
-import StateManager from '../src/managers/StateManager'
-import SyncManager from '../src/managers/SyncManager'
-import DepositedRangeManager from '../src/managers/DepositedRangeManager'
+import {
+  StateUpdateRepository,
+  CheckpointRepository,
+  DepositedRangeRepository,
+  UserActionRepository
+} from '../src/repository'
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { LevelKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import { hint } from '@cryptoeconomicslab/ovm'
+import { getOwner } from '../src/helper/stateUpdateHelper'
 
 const mockClaimProperty = jest.fn()
 const mockIsDecided = jest.fn().mockResolvedValue(true)
@@ -74,7 +78,6 @@ import {
   Range
 } from '@cryptoeconomicslab/primitives'
 import { ethers } from 'ethers'
-import { CheckpointManager } from '../src/managers'
 import deciderConfig from './config.local'
 import { DeciderConfig, CompiledPredicate } from '@cryptoeconomicslab/ovm'
 import {
@@ -159,7 +162,10 @@ const MockWallet = jest.fn().mockImplementation(() => {
   }
 })
 
-async function initialize(aggregatorEndpoint?: string): Promise<LightClient> {
+// returns LightClient instance and witnessDb instance
+async function initialize(
+  aggregatorEndpoint?: string
+): Promise<{ lightClient: LightClient; witnessDb: KeyValueStore }> {
   const kvs = new LevelKeyValueStore(Bytes.fromString('root'))
   const witnessDb = await kvs.bucket(Bytes.fromString('witness'))
   const wallet = new MockWallet()
@@ -180,7 +186,7 @@ async function initialize(aggregatorEndpoint?: string): Promise<LightClient> {
   )
   const ownershipPayoutContract = new MockOwnershipPayoutContract()
 
-  return await LightClient.initilize({
+  const lightClient = await LightClient.initilize({
     wallet,
     witnessDb,
     adjudicationContract,
@@ -191,37 +197,37 @@ async function initialize(aggregatorEndpoint?: string): Promise<LightClient> {
     deciderConfig: deciderConfig as DeciderConfig & PlasmaContractConfig,
     aggregatorEndpoint
   })
+
+  return { lightClient, witnessDb }
 }
 const erc20Address = deciderConfig.PlasmaETH
 const depositContractAddress = deciderConfig.payoutContracts.DepositContract
 
 describe('LightClient', () => {
   let client: LightClient
+  let db: KeyValueStore
+
   beforeEach(async () => {
     MockAdjudicationContract.mockClear()
     MockDepositContract.mockClear()
     MockCommitmentContract.mockClear()
     MockERC20Contract.mockClear()
 
-    client = await initialize()
-    client.registerToken(erc20Address, depositContractAddress)
+    const { lightClient, witnessDb } = await initialize()
+    client = lightClient
+    db = witnessDb
+    await client.registerToken(erc20Address, depositContractAddress)
   })
 
   describe('initialize', () => {
     test('suceed to initialize', async () => {
-      const client = await initialize()
-      expect(client['stateManager']).toBeInstanceOf(StateManager)
-      expect(client['syncManager']).toBeInstanceOf(SyncManager)
-      expect(client['checkpointManager']).toBeInstanceOf(CheckpointManager)
-      expect(client['depositedRangeManager']).toBeInstanceOf(
-        DepositedRangeManager
-      )
-      expect(client['aggregatorEndpoint']).toEqual('http://localhost:3000')
+      const { lightClient } = await initialize()
+      expect(lightClient['aggregatorEndpoint']).toEqual('http://localhost:3000')
     })
     test('initialize with aggregatorEndpoint', async () => {
       const aggregatorEndpoint = 'http://test.com'
-      const client = await initialize(aggregatorEndpoint)
-      expect(client['aggregatorEndpoint']).toEqual(aggregatorEndpoint)
+      const { lightClient } = await initialize(aggregatorEndpoint)
+      expect(lightClient['aggregatorEndpoint']).toEqual(aggregatorEndpoint)
     })
   })
 
@@ -280,7 +286,8 @@ describe('LightClient', () => {
     })
 
     test('call sendTransaction without exception', async () => {
-      await client['stateManager'].insertVerifiedStateUpdate(
+      const repository = await StateUpdateRepository.init(db)
+      await repository.insertVerifiedStateUpdate(
         Address.from(depositContractAddress),
         su
       )
@@ -350,14 +357,15 @@ describe('LightClient', () => {
     beforeEach(async () => {
       // let's say ownership stateupdate of range 0-20 and inclusion proof for that is stored in client.
       const { coder } = ovmContext
+      const repository = await StateUpdateRepository.init(db)
 
       // setup
       // store ownership stateupdate
-      await client['stateManager'].insertVerifiedStateUpdate(
+      await repository.insertVerifiedStateUpdate(
         Address.from(depositContractAddress),
         su1
       )
-      await client['stateManager'].insertVerifiedStateUpdate(
+      await repository.insertVerifiedStateUpdate(
         Address.from(depositContractAddress),
         su2
       )
@@ -386,6 +394,7 @@ describe('LightClient', () => {
     })
 
     test('startWithdrawal calls claimProperty of adjudicationContract', async () => {
+      const repository = await StateUpdateRepository.init(db)
       const { coder } = ovmContext
       await client.startWithdrawal(20, erc20Address)
 
@@ -397,9 +406,7 @@ describe('LightClient', () => {
       ])
       expect(mockClaimProperty).toHaveBeenLastCalledWith(exitProperty)
 
-      const exitingStateUpdate = await client[
-        'stateManager'
-      ].getExitStateUpdates(
+      const exitingStateUpdate = await repository.getExitStateUpdates(
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(20))
       )
@@ -408,7 +415,8 @@ describe('LightClient', () => {
 
     test('startWithdrawal calls claimProperty with exitDeposit property', async () => {
       // store checkpoint
-      await client['checkpointManager'].insertCheckpointWithRange(
+      const checkpointRepository = await CheckpointRepository.init(db)
+      await checkpointRepository.insertCheckpoint(
         Address.from(depositContractAddress),
         checkpoint
       )
@@ -452,10 +460,9 @@ describe('LightClient', () => {
 
       expect(mockClaimProperty).toHaveBeenCalledWith(exitProperty)
       expect(mockClaimProperty).toHaveBeenCalledWith(exitProperty2)
+      const repository = await StateUpdateRepository.init(db)
 
-      const exitingStateUpdates = await client[
-        'stateManager'
-      ].getExitStateUpdates(
+      const exitingStateUpdates = await repository.getExitStateUpdates(
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(40))
       )
@@ -497,7 +504,8 @@ describe('LightClient', () => {
 
     test('completeWithdrawal', async () => {
       // setup depositedRangeId
-      await client['depositedRangeManager'].extendRange(
+      const depositedRangeRepository = await DepositedRangeRepository.init(db)
+      await depositedRangeRepository.extendRange(
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(50))
       )
@@ -522,7 +530,8 @@ describe('LightClient', () => {
 
     test('completeWithdrawal with exitDeposit', async () => {
       // setup depositedRangeId
-      await client['depositedRangeManager'].extendRange(
+      const depositedRangeRepository = await DepositedRangeRepository.init(db)
+      await depositedRangeRepository.extendRange(
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(50))
       )
@@ -572,20 +581,15 @@ describe('LightClient', () => {
         range,
         blockNumber
       )
-      const db = await client['getUserActionDb'](blockNumber)
-      await db.put(
-        range.start.data,
-        range.end.data,
-        ovmContext.coder.encode(action.toStruct())
-      )
-
+      const repository = await UserActionRepository.init(db)
+      await repository.insertAction(blockNumber, range, action)
       const actions = await client.getAllUserActions()
       expect(actions).toEqual([action])
     })
   })
 
   test('getOwner', () => {
-    const owner = client.getOwner(
+    const owner = getOwner(
       new StateUpdate(
         Address.from(
           deciderConfig.deployedPredicateTable.StateUpdatePredicate

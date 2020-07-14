@@ -7,6 +7,7 @@ import {
 } from '@cryptoeconomicslab/primitives'
 import { KeyValueStore, RangeDb } from '@cryptoeconomicslab/db'
 import JSBI from 'jsbi'
+import { Numberish } from '../types'
 
 enum Kind {
   Verified = 'Verified',
@@ -15,8 +16,15 @@ enum Kind {
   Exit = 'Exit'
 }
 
-export default class StateManager {
-  constructor(readonly db: KeyValueStore) {}
+export class StateUpdateRepository {
+  static BUCKET_KEY = Bytes.fromString('STATE_UPDATE')
+
+  static async init(witnessDb: KeyValueStore): Promise<StateUpdateRepository> {
+    const storage = await witnessDb.bucket(this.BUCKET_KEY)
+    return new StateUpdateRepository(storage)
+  }
+
+  private constructor(private db: KeyValueStore) {}
 
   private async getRangeDb(kind: Kind, addr: Address): Promise<RangeDb> {
     const bucket = await (await this.db.bucket(Bytes.fromString(kind))).bucket(
@@ -195,7 +203,6 @@ export default class StateManager {
   ): Promise<void> {
     await this.insertStateUpdate(Kind.Exit, depositContractAddress, stateUpdate)
   }
-
   public async removeExitStateUpdate(
     depositContractAddress: Address,
     range: Range
@@ -218,8 +225,9 @@ export default class StateManager {
    */
   public async resolveStateUpdate(
     depositContractAddress: Address,
-    amount: JSBI
+    val: Numberish
   ): Promise<StateUpdate[] | null> {
+    const amount = JSBI.BigInt(val)
     const db = await this.getRangeDb(Kind.Verified, depositContractAddress)
     const stateUpdates: StateUpdate[] = []
     const iter = db.iter(JSBI.BigInt(0))

@@ -1,4 +1,4 @@
-import DepositedRangeManager from '../src/managers/DepositedRangeManager'
+import { DepositedRangeRepository } from '../../src/repository'
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
 import { RangeDb, RangeRecord, KeyValueStore } from '@cryptoeconomicslab/db'
@@ -14,8 +14,8 @@ import JSBI from '@cryptoeconomicslab/primitives/node_modules/jsbi'
 setupContext({ coder: JsonCoder })
 
 describe('DepositedRangeManager', () => {
-  let depositedRangeManager: DepositedRangeManager
-  let db: RangeDb
+  let repository: DepositedRangeRepository
+  let db: KeyValueStore
 
   async function clearDb(kvs: KeyValueStore) {
     await new Promise(resolve => {
@@ -30,22 +30,20 @@ describe('DepositedRangeManager', () => {
   }
 
   beforeEach(async () => {
-    db = new RangeDb(
-      new IndexedDbKeyValueStore(Bytes.fromString('depositedRange'))
-    )
-    depositedRangeManager = new DepositedRangeManager(db)
+    db = new IndexedDbKeyValueStore(Bytes.fromString('depositedRange'))
+    repository = await DepositedRangeRepository.init(db)
   })
 
   afterEach(async () => {
-    await clearDb(db.kvs)
+    await clearDb(db)
   })
 
   test('extendRange successfully save range into appropriate bucket for the initial insertion', async () => {
-    await depositedRangeManager.extendRange(
+    await repository.extendRange(
       Address.default(),
       new Range(BigNumber.from(0), BigNumber.from(100))
     )
-    const bucket = await depositedRangeManager['getBucket'](Address.default())
+    const bucket = await repository['getBucket'](Address.default())
     const ranges = await bucket.get(JSBI.BigInt(0), JSBI.BigInt(100))
     expect(ranges).toStrictEqual([
       new RangeRecord(
@@ -57,15 +55,15 @@ describe('DepositedRangeManager', () => {
   })
 
   test('extendRange successfully override range', async () => {
-    await depositedRangeManager.extendRange(
+    await repository.extendRange(
       Address.default(),
       new Range(BigNumber.from(0), BigNumber.from(40))
     )
-    await depositedRangeManager.extendRange(
+    await repository.extendRange(
       Address.default(),
       new Range(BigNumber.from(0), BigNumber.from(100))
     )
-    const bucket = await depositedRangeManager['getBucket'](Address.default())
+    const bucket = await repository['getBucket'](Address.default())
     const ranges = await bucket.get(JSBI.BigInt(0), JSBI.BigInt(100))
     expect(ranges).toStrictEqual([
       new RangeRecord(
@@ -77,15 +75,15 @@ describe('DepositedRangeManager', () => {
   })
 
   test('removeRange successfully remove range from depositedRange', async () => {
-    await depositedRangeManager.extendRange(
+    await repository.extendRange(
       Address.default(),
       new Range(BigNumber.from(0), BigNumber.from(100))
     )
-    await depositedRangeManager.removeRange(
+    await repository.removeRange(
       Address.default(),
       new Range(BigNumber.from(30), BigNumber.from(40))
     )
-    const bucket = await depositedRangeManager['getBucket'](Address.default())
+    const bucket = await repository['getBucket'](Address.default())
     const ranges = await bucket.get(JSBI.BigInt(0), JSBI.BigInt(100))
     expect(ranges).toStrictEqual([
       new RangeRecord(
@@ -102,29 +100,29 @@ describe('DepositedRangeManager', () => {
   })
 
   test('removeRange completely', async () => {
-    await depositedRangeManager.extendRange(
+    await repository.extendRange(
       Address.default(),
       new Range(BigNumber.from(0), BigNumber.from(100))
     )
-    await depositedRangeManager.removeRange(
+    await repository.removeRange(
       Address.default(),
       new Range(BigNumber.from(0), BigNumber.from(50))
     )
-    await depositedRangeManager.removeRange(
+    await repository.removeRange(
       Address.default(),
       new Range(BigNumber.from(50), BigNumber.from(100))
     )
-    const bucket = await depositedRangeManager['getBucket'](Address.default())
+    const bucket = await repository['getBucket'](Address.default())
     const ranges = await bucket.get(JSBI.BigInt(0), JSBI.BigInt(1000))
     expect(ranges).toStrictEqual([])
   })
 
   test('getDepositedRangeId', async () => {
-    await depositedRangeManager.extendRange(
+    await repository.extendRange(
       Address.default(),
       new Range(BigNumber.from(0), BigNumber.from(100))
     )
-    const depositedRangeId = await depositedRangeManager.getDepositedRangeId(
+    const depositedRangeId = await repository.getDepositedRangeId(
       Address.default(),
       new Range(BigNumber.from(7), BigNumber.from(20))
     )
@@ -132,16 +130,16 @@ describe('DepositedRangeManager', () => {
   })
 
   test('fail to getDepositedRangeId with multiple ranges detected', async () => {
-    await depositedRangeManager.extendRange(
+    await repository.extendRange(
       Address.default(),
       new Range(BigNumber.from(0), BigNumber.from(100))
     )
-    await depositedRangeManager.removeRange(
+    await repository.removeRange(
       Address.default(),
       new Range(BigNumber.from(40), BigNumber.from(50))
     )
     await expect(
-      depositedRangeManager.getDepositedRangeId(
+      repository.getDepositedRangeId(
         Address.default(),
         new Range(BigNumber.from(35), BigNumber.from(55))
       )
@@ -150,7 +148,7 @@ describe('DepositedRangeManager', () => {
 
   test('fail to getDepositedRangeId with no range detected', async () => {
     await expect(
-      depositedRangeManager.getDepositedRangeId(
+      repository.getDepositedRangeId(
         Address.default(),
         new Range(BigNumber.from(0), BigNumber.from(5))
       )
