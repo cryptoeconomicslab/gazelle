@@ -9,7 +9,7 @@ import { Transaction, TransactionReceipt } from '@cryptoeconomicslab/plasma'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { StateUpdateRepository, SyncRepository } from '../repository'
-import getTokenManager from '../managers/TokenManager'
+import TokenManager from '../managers/TokenManager'
 import { Numberish } from '../types'
 import { Wallet } from '@cryptoeconomicslab/wallet'
 import APIClient from '../APIClient'
@@ -18,7 +18,8 @@ export class TransferUsecase {
   constructor(
     private witnessDb: KeyValueStore,
     private wallet: Wallet,
-    private apiClient: APIClient
+    private apiClient: APIClient,
+    private tokenManager: TokenManager
   ) {}
 
   /**
@@ -33,8 +34,7 @@ export class TransferUsecase {
     stateObject: Property
   ) {
     const { coder } = ovmContext
-    const tokenManager = getTokenManager()
-    const depositContractAddress = tokenManager.getDepositContractAddress(
+    const depositContractAddress = this.tokenManager.getDepositContractAddress(
       Address.from(tokenContractAddress)
     )
     if (!depositContractAddress) {

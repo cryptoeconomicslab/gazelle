@@ -15,7 +15,7 @@ import {
 } from '@cryptoeconomicslab/merkle-tree'
 import { Keccak256 } from '@cryptoeconomicslab/hash'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
-import getTokenManager from '../managers/TokenManager'
+import TokenManager from '../managers/TokenManager'
 import {
   StateUpdateRepository,
   SyncRepository,
@@ -30,7 +30,8 @@ export class PendingStateUpdatesVerifier {
   constructor(
     private ee: EventEmitter,
     private witnessDb: KeyValueStore,
-    private apiClient: APIClient
+    private apiClient: APIClient,
+    private tokenManager: TokenManager
   ) {}
 
   /**
@@ -44,8 +45,7 @@ export class PendingStateUpdatesVerifier {
       this.witnessDb
     )
 
-    const tokenManager = getTokenManager()
-    tokenManager.depositContractAddresses.forEach(async addr => {
+    this.tokenManager.depositContractAddresses.forEach(async addr => {
       const pendingStateUpdates = await stateUpdateRepository.getPendingStateUpdates(
         addr,
         new Range(BigNumber.from(0), BigNumber.MAX_NUMBER)
@@ -105,7 +105,7 @@ export class PendingStateUpdatesVerifier {
           // store send user action
           const { range } = su
           const owner = getOwner(su)
-          const tokenContractAddress = tokenManager.getTokenContractAddress(
+          const tokenContractAddress = this.tokenManager.getTokenContractAddress(
             su.depositContractAddress
           )
           if (!tokenContractAddress)

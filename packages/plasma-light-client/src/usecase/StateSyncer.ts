@@ -22,7 +22,7 @@ import { createReceiveUserAction } from '../UserAction'
 import APIClient from '../APIClient'
 import { getOwner } from '../helper/stateUpdateHelper'
 import { getStorageDb } from '../helper/storageDbHelper'
-import getTokenManager from '../managers/TokenManager'
+import TokenManager from '../managers/TokenManager'
 
 export class StateSyncer {
   private historyVerifier: HistoryVerifier
@@ -32,7 +32,8 @@ export class StateSyncer {
     private commitmentContract: ICommitmentContract,
     private commitmentContractAddress: Address,
     private apiClient: APIClient,
-    deciderManager: DeciderManager // will be removed when using checkpointDispute
+    deciderManager: DeciderManager, // will be removed when using checkpointDispute
+    private tokenManager: TokenManager
   ) {
     this.historyVerifier = new HistoryVerifier(
       witnessDb,
@@ -116,7 +117,7 @@ export class StateSyncer {
         )
         // store receive user action
         const { range } = su
-        const tokenContractAddress = getTokenManager().getTokenContractAddress(
+        const tokenContractAddress = this.tokenManager.getTokenContractAddress(
           su.depositContractAddress
         )
         if (!tokenContractAddress)

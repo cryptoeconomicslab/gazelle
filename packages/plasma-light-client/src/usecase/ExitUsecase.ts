@@ -10,7 +10,7 @@ import {
 import { getWitnesses, KeyValueStore } from '@cryptoeconomicslab/db'
 import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
 import { Numberish } from '../types'
-import getTokenManager from '../managers/TokenManager'
+import TokenManager from '../managers/TokenManager'
 import {
   StateUpdateRepository,
   CheckpointRepository,
@@ -34,7 +34,8 @@ export class ExitUsecase {
     private adjudicationContract: IAdjudicationContract,
     private commitmentContract: ICommitmentContract,
     private ownershipPayoutContract: IOwnershipPayoutContract,
-    private deciderManager: DeciderManager
+    private deciderManager: DeciderManager,
+    private tokenManager: TokenManager
   ) {}
 
   private async getClaimDb(): Promise<KeyValueStore> {
@@ -54,9 +55,10 @@ export class ExitUsecase {
     amount: Numberish,
     tokenContractAddress: string
   ) {
-    const tokenManager = getTokenManager()
     const addr = Address.from(tokenContractAddress)
-    const depositContractAddress = tokenManager.getDepositContractAddress(addr)
+    const depositContractAddress = this.tokenManager.getDepositContractAddress(
+      addr
+    )
     if (!depositContractAddress) {
       throw new Error('Deposit Contract Address not found')
     }
@@ -132,10 +134,8 @@ export class ExitUsecase {
       this.deciderManager.getDeciderAddress('ExitDeposit')
     )
 
-    const tokenManager = getTokenManager()
-
     const exitList = await Promise.all(
-      tokenManager.depositContractAddresses.map(async addr => {
+      this.tokenManager.depositContractAddresses.map(async addr => {
         return await exitRepository.getAllExits(addr)
       })
     )
@@ -226,7 +226,6 @@ export class ExitUsecase {
 
   public async saveExit(exit: IExit) {
     const { coder } = ovmContext
-    const tokenManager = getTokenManager()
     const stateUpdate = exit.stateUpdate
     const propertyBytes = coder.encode(exit.property.toStruct())
     const exitRepository = await ExitRepository.init(
@@ -255,7 +254,7 @@ export class ExitUsecase {
     // put exit action
     const { range } = stateUpdate
     const blockNumber = await this.commitmentContract.getCurrentBlock()
-    const tokenContractAddress = tokenManager.getTokenContractAddress(
+    const tokenContractAddress = this.tokenManager.getTokenContractAddress(
       stateUpdate.depositContractAddress
     )
     if (!tokenContractAddress)

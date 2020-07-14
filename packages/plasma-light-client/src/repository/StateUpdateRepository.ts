@@ -203,7 +203,6 @@ export class StateUpdateRepository {
   ): Promise<void> {
     await this.insertStateUpdate(Kind.Exit, depositContractAddress, stateUpdate)
   }
-
   public async removeExitStateUpdate(
     depositContractAddress: Address,
     range: Range

@@ -41,7 +41,7 @@ import { ExitUsecase } from './usecase/ExitUsecase'
 import { TransferUsecase } from './usecase/TransferUsecase'
 import { PendingStateUpdatesVerifier } from './verifier/PendingStateUpdatesVerifier'
 import APIClient from './APIClient'
-import getTokenManager, { TokenManager } from './managers/TokenManager'
+import TokenManager from './managers/TokenManager'
 import { executeChallenge } from './helper/challenge'
 import { UserActionEvent, EmitterEvent } from './ClientEvent'
 import { getOwner } from './helper/stateUpdateHelper'
@@ -92,14 +92,15 @@ export default class LightClient {
     }
     this.ownershipPredicate = ownershipPredicate
     this.apiClient = new APIClient(this.aggregatorEndpoint)
-    this.tokenManager = getTokenManager()
+    this.tokenManager = new TokenManager()
     this.stateSyncer = new StateSyncer(
       this.ee,
       this.witnessDb,
       this.commitmentContract,
       Address.from(this.deciderConfig.commitmentContract),
       this.apiClient,
-      this.deciderManager
+      this.deciderManager,
+      this.tokenManager
     )
     this.exitUsecase = new ExitUsecase(
       this.ee,
@@ -107,17 +108,20 @@ export default class LightClient {
       this.adjudicationContract,
       this.commitmentContract,
       this.ownershipPayoutContract,
-      this.deciderManager
+      this.deciderManager,
+      this.tokenManager
     )
     this.transferUsecase = new TransferUsecase(
       this.witnessDb,
       this.wallet,
-      this.apiClient
+      this.apiClient,
+      this.tokenManager
     )
     this.pendingStateUpdatesVerifier = new PendingStateUpdatesVerifier(
       this.ee,
       this.witnessDb,
-      this.apiClient
+      this.apiClient,
+      this.tokenManager
     )
   }
 
