@@ -1,4 +1,4 @@
-import { TokenManager } from '../src/managers/TokenManager'
+import TokenManager from '../src/managers/TokenManager'
 import { Integer, Address } from '@cryptoeconomicslab/primitives'
 import {
   IERC20DetailedContract,
