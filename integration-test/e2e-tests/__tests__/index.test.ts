@@ -514,7 +514,7 @@ describe('light client', () => {
     expect(await getBalance(aliceLightClient)).toEqual('0.1')
     expect(await getBalance(bobLightClient)).toEqual('0.4')
 
-    await exit(bobLightClient, stateUpdates)
+    await exit(bobLightClient, stateUpdates || [])
 
     await increaseBlock()
 

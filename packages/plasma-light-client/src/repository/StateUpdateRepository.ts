@@ -7,6 +7,7 @@ import {
 } from '@cryptoeconomicslab/primitives'
 import { KeyValueStore, RangeDb } from '@cryptoeconomicslab/db'
 import JSBI from 'jsbi'
+import { Numberish } from '../types'
 
 enum Kind {
   Verified = 'Verified',
@@ -225,8 +226,9 @@ export class StateUpdateRepository {
    */
   public async resolveStateUpdate(
     depositContractAddress: Address,
-    amount: JSBI
+    val: Numberish
   ): Promise<StateUpdate[] | null> {
+    const amount = JSBI.BigInt(val)
     const db = await this.getRangeDb(Kind.Verified, depositContractAddress)
     const stateUpdates: StateUpdate[] = []
     const iter = db.iter(JSBI.BigInt(0))
