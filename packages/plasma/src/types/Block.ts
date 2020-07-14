@@ -24,8 +24,25 @@ export default class Block {
   constructor(
     readonly blockNumber: BigNumber,
     readonly stateUpdatesMap: Map<string, StateUpdate[]>,
-    readonly timestamp: number
+    private _mainchainBlockNumber: BigNumber = BigNumber.from(0),
+    private _timestamp: Integer = Integer.from(0)
   ) {}
+
+  public get mainchainBlockNumber(): BigNumber {
+    return this._mainchainBlockNumber
+  }
+
+  public get timestamp(): Integer {
+    return this._timestamp
+  }
+
+  public setMainchainBlockNumber(mainchainBlockNumber: BigNumber) {
+    this._mainchainBlockNumber = mainchainBlockNumber
+  }
+
+  public setTimestamp(timestamp: Integer) {
+    this._timestamp = timestamp
+  }
 
   public getTree(): DoubleLayerTree {
     if (this.tree) return this.tree
@@ -104,8 +121,9 @@ export default class Block {
         )
       )
     })
-    const timestamp = s.data[3].value as Integer
-    return new this(blockNumber, map, timestamp.data)
+    const mainchainBlockNumber = s.data[3].value as BigNumber
+    const timestamp = s.data[4].value as Integer
+    return new this(blockNumber, map, mainchainBlockNumber, timestamp)
   }
 
   public toStruct(): Struct {
@@ -147,8 +165,12 @@ export default class Block {
         )
       },
       {
+        key: 'mainchainBlockNumber',
+        value: this.mainchainBlockNumber
+      },
+      {
         key: 'timestamp',
-        value: Integer.from(this.timestamp)
+        value: this.timestamp
       }
     ])
   }
@@ -174,6 +196,10 @@ export default class Block {
           },
           List.from({ default: Property.getParamType }, [])
         )
+      },
+      {
+        key: 'mainchainBlockNumber',
+        value: BigNumber.default()
       },
       {
         key: 'timestamp',

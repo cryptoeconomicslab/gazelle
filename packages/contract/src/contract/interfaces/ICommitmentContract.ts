@@ -1,4 +1,4 @@
-import { FixedBytes, BigNumber } from '@cryptoeconomicslab/primitives'
+import { FixedBytes, BigNumber, Integer } from '@cryptoeconomicslab/primitives'
 
 export interface ICommitmentContract {
   submit(blockNumber: BigNumber, root: FixedBytes): Promise<void>
@@ -8,7 +8,12 @@ export interface ICommitmentContract {
   getRoot(blockNumber: BigNumber): Promise<FixedBytes>
 
   subscribeBlockSubmitted(
-    handler: (blockNumber: BigNumber, root: FixedBytes) => Promise<void>
+    handler: (
+      blockNumber: BigNumber,
+      root: FixedBytes,
+      mainchainBlockNumber: BigNumber,
+      mainchainTimestamp: Integer
+    ) => Promise<void>
   ): void
 
   startWatchingEvents(): void

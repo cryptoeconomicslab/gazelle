@@ -2,18 +2,18 @@
 
 gazelle is a scaling technology for blockchain based on Plasma and Optimistic Game Semantics (OGS). Current scope of it's functionality includes transfer of WrappedETH and ERC20 tokens.
 
-Go to the [Getting Started](https://gzle.io/docs/getting-started/Try_Gazelle_In_Local).
+Go to the [Getting Started](https://gzle.io/docs/get-started/Try_Gazelle_In_Local).
 
 ## [Documentation](https://gzle.io/docs/Introduction)
 
 You can see the gazelle documentation [on this website](https://gzle.io/docs/Introduction).
 
-Check out the [Getting Started](https://gzle.io/docs/getting-started/Try_Gazelle_In_Local) page for a quick overview.
+Check out the [Getting Started](https://gzle.io/docs/get-started/Try_Gazelle_In_Local) page for a quick overview.
 
 The documentation consists of the following sections.
 
-- [Getting Started](https://gzle.io/docs/getting-started/Try_Gazelle_In_Local)
-- [Tutorial](https://gzle.io/docs/tutorial/cli-wallet/README)
+- [Getting Started](https://gzle.io/docs/get-started/Try_Gazelle_In_Local)
+- [Tutorial](https://gzle.io/docs/tutorial/cli-wallet/Introduction)
 - [API Reference](https://gzle.io/docs/api/Plasma_Aggregator)
 - [For Contributors](https://gzle.io/docs/contributors/Related_Repositories)
 
