@@ -1,17 +1,30 @@
-import { Bytes } from '@cryptoeconomicslab/primitives'
+import {
+  Address,
+  Property,
+  Bytes,
+  BigNumber
+} from '@cryptoeconomicslab/primitives'
 import { ICheckpointDisputeContract } from '@cryptoeconomicslab/contract'
-import { KeyValueStore } from '@cryptoeconomicslab/db'
-import { StateUpdate } from '@cryptoeconomicslab/plasma'
+import { KeyValueStore, getWitnesses, putWitness } from '@cryptoeconomicslab/db'
+import { StateUpdate, Transaction } from '@cryptoeconomicslab/plasma'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
+import { decodeStructable } from '@cryptoeconomicslab/coder'
+import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
+import { StateUpdateRepository } from '../repository'
+import APIClient from '../APIClient'
+import JSBI from 'jsbi'
+import { verifyTransaction } from '../verifier/TransactionVerifier'
+import { mergeWitness } from '../helper/stateObjectHelper'
 
-type CheckpointDecision =
-  | { decision: true }
-  | { decision: false; challenge: CheckpointChallenge }
+type CheckpointDecision = {
+  decision: boolean
+  challenge?: StateUpdate
+}
 
-interface CheckpointChallenge {
-  stateUpdate: StateUpdate
-  challenge: StateUpdate
-  witness: DoubleLayerInclusionProof
+type CheckpointWitness = {
+  stateUpdate: string
+  transaction: { tx: string; witness: string }
+  inclusionProof: string | null
 }
 
 /**
@@ -26,7 +39,9 @@ interface CheckpointChallenge {
 export class CheckpointDispute {
   constructor(
     private contract: ICheckpointDisputeContract,
-    private witnessDb: KeyValueStore
+    private witnessDb: KeyValueStore,
+    private deciderManager: DeciderManager,
+    private apiClient: APIClient
   ) {
     contract.subscribeCheckpointClaimed(this.handleCheckpointClaimed)
     contract.subscribeCheckpointChallenged(this.handleCheckpointChallenged)
@@ -39,20 +54,103 @@ export class CheckpointDispute {
    * if not, returns false and challenge inputs and witness
    * @param stateUpdate to create checkpoint
    */
-  public async evaluate(stateUpdate: StateUpdate): Promise<CheckpointDecision> {
-    // TODO: implement
+  public async verifyCheckpoint(
+    stateUpdate: StateUpdate
+  ): Promise<CheckpointDecision> {
+    const { coder } = ovmContext
+    const { depositContractAddress, range } = stateUpdate
+    const suHint = (b: JSBI) =>
+      Hint.createStateUpdateHint(
+        BigNumber.from(b),
+        depositContractAddress,
+        range
+      )
+    const txHint = (su: StateUpdate) =>
+      Hint.createTxHint(su.blockNumber, su.depositContractAddress, su.range)
+
+    for (
+      let b = JSBI.BigInt(0);
+      JSBI.lessThan(b, stateUpdate.blockNumber.data);
+      b = JSBI.add(b, JSBI.BigInt(1))
+    ) {
+      // get stateUpdates and transaction
+      const stateUpdateWitnesses = await getWitnesses(this.witnessDb, suHint(b))
+      await Promise.all(
+        stateUpdateWitnesses.map(async stateUpdateWitness => {
+          const su = StateUpdate.fromProperty(
+            decodeStructable(Property, coder, stateUpdateWitness)
+          )
+
+          const txWitnesses = await getWitnesses(this.witnessDb, txHint(su))
+          if (txWitnesses.length !== 1) {
+            return { decision: false, challenge: su }
+          }
+          const tx = Transaction.fromProperty(
+            decodeStructable(Property, coder, txWitnesses[0])
+          )
+
+          // validate transaction
+          const verified = verifyTransaction(su, tx)
+          if (!verified) {
+            return { decision: false, challenge: su }
+          }
+
+          // validate stateObject
+          const stateObject = mergeWitness(su.stateObject, txWitnesses)
+          const decision = await this.deciderManager.decide(stateObject)
+          if (!decision.outcome) {
+            return { decision: false, challenge: su }
+          }
+        })
+      )
+    }
+
     return { decision: true }
   }
 
-  private handleCheckpointClaimed(
+  private async handleCheckpointClaimed(
     stateUpdate: StateUpdate,
-    inclusionProof: DoubleLayerInclusionProof
+    _inclusionProof: DoubleLayerInclusionProof
   ) {
-    // challenge if claimed stateUpdate is same range but greater blockNumber
-    // than client owning stateUpdate
-    console.log(
-      'checkpoint claim detected. check the validity and challenge if invalid'
+    const { coder } = ovmContext
+    const repository = await StateUpdateRepository.init(this.witnessDb)
+
+    // check if claimed stateUpdate is same range and greater blockNumber of owning stateUpdate
+    const stateUpdates = await repository.getVerifiedStateUpdates(
+      stateUpdate.depositContractAddress,
+      stateUpdate.range
     )
+    if (stateUpdates.length === 0) return
+
+    const challengeSu = stateUpdates.find(su =>
+      JSBI.lessThan(su.blockNumber.data, stateUpdate.blockNumber.data)
+    )
+    if (!challengeSu) return
+
+    await this.prepareCheckpointWitness(stateUpdate)
+
+    // evaluate the stateUpdate history validity and
+    const result = await this.verifyCheckpoint(stateUpdate)
+    if (result.decision && !result.challenge) return
+
+    // get inclusionProof of challengingStateUpdate
+    const challengingStateUpdate = result.challenge
+    const inclusionProofBytes = await getWitnesses(
+      this.witnessDb,
+      Hint.createInclusionProofHint(
+        challengingStateUpdate.blockNumber,
+        challengingStateUpdate.depositContractAddress,
+        challengingStateUpdate.range
+      )
+    )
+    const inclusionProof = decodeStructable(
+      DoubleLayerInclusionProof,
+      coder,
+      inclusionProofBytes[0]
+    )
+
+    await this.challenge(stateUpdate, challengingStateUpdate, inclusionProof)
+    // TODO: Log
   }
 
   private handleCheckpointChallenged(
@@ -123,5 +221,69 @@ export class CheckpointDispute {
    */
   public async settle(stateUpdate: StateUpdate) {
     await this.contract.settle(stateUpdate)
+  }
+
+  private async prepareCheckpointWitness(stateUpdate: StateUpdate) {
+    const { coder } = ovmContext
+    const res = await this.apiClient.checkpointWitness(
+      stateUpdate.depositContractAddress,
+      stateUpdate.blockNumber,
+      stateUpdate.range
+    )
+
+    // FIXME: use repository instead of `putWitness`
+    const witnessDb = this.witnessDb
+    await Promise.all(
+      res.data.data.map(async (witness: CheckpointWitness) => {
+        const stateUpdate = StateUpdate.fromProperty(
+          decodeStructable(
+            Property,
+            coder,
+            Bytes.fromHexString(witness.stateUpdate)
+          )
+        )
+        const { blockNumber, depositContractAddress, range } = stateUpdate
+        await putWitness(
+          witnessDb,
+          Hint.createStateUpdateHint(
+            blockNumber,
+            depositContractAddress,
+            range
+          ),
+          Bytes.fromHexString(witness.stateUpdate)
+        )
+        if (witness.inclusionProof) {
+          await putWitness(
+            witnessDb,
+            Hint.createInclusionProofHint(
+              blockNumber,
+              depositContractAddress,
+              range
+            ),
+            Bytes.fromHexString(witness.inclusionProof)
+          )
+        }
+        if (witness.transaction) {
+          const txBytes = Bytes.fromHexString(witness.transaction.tx)
+          const txPropertyBytes = coder.encode(
+            Transaction.fromStruct(
+              coder.decode(Transaction.getParamTypes(), txBytes)
+            )
+              .toProperty(Address.default())
+              .toStruct()
+          )
+          await putWitness(
+            witnessDb,
+            Hint.createTxHint(blockNumber, depositContractAddress, range),
+            txPropertyBytes
+          )
+          await putWitness(
+            witnessDb,
+            Hint.createSignatureHint(txPropertyBytes),
+            Bytes.fromHexString(witness.transaction.witness)
+          )
+        }
+      })
+    )
   }
 }
