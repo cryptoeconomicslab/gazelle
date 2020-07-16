@@ -161,14 +161,12 @@ export class ExitUsecase {
     const checkpointRepository = await CheckpointRepository.init(this.witnessDb)
     const { coder } = ovmContext
     const inputsOfExitProperty = [coder.encode(stateUpdate.property.toStruct())]
-    const checkpoints = await checkpointRepository.getCheckpoints(
+    const checkpoints = await checkpointRepository.getSettledCheckpoints(
       stateUpdate.depositContractAddress,
       stateUpdate.range
     )
     if (checkpoints.length > 0) {
-      const checkpointStateUpdate = StateUpdate.fromProperty(
-        checkpoints[0].stateUpdate
-      )
+      const checkpointStateUpdate = checkpoints[0]
       // check stateUpdate is subrange of checkpoint
       if (
         checkpointStateUpdate.depositContractAddress.data ===

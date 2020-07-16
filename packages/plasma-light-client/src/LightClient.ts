@@ -1,6 +1,5 @@
 import {
   StateUpdate,
-  Checkpoint,
   IExit,
   PlasmaContractConfig
 } from '@cryptoeconomicslab/plasma'
@@ -28,11 +27,10 @@ import {
 import { Wallet } from '@cryptoeconomicslab/wallet'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import JSBI from 'jsbi'
-import UserAction, { createDepositUserAction } from './UserAction'
+import UserAction from './UserAction'
 import EventEmitter from 'event-emitter'
 import {
   StateUpdateRepository,
-  CheckpointRepository,
   DepositedRangeRepository,
   UserActionRepository
 } from './repository'
@@ -339,62 +337,6 @@ export default class LightClient {
     depositContract.subscribeDepositedRangeRemoved(async (range: Range) => {
       await depositedRangeRepository.removeRange(depositContract.address, range)
     })
-
-    depositContract.subscribeCheckpointFinalized(
-      async (checkpointId: Bytes, checkpoint: [Property]) => {
-        const stateUpdateRepository = await StateUpdateRepository.init(
-          this.witnessDb
-        )
-        const checkpointRepository = await CheckpointRepository.init(
-          this.witnessDb
-        )
-
-        const checkpointPredicate = this.deciderManager.compiledPredicateMap.get(
-          'Checkpoint'
-        )
-        if (!checkpointPredicate) {
-          throw new Error('')
-        }
-        const c = new Checkpoint(
-          checkpointPredicate.deployedAddress,
-          checkpoint[0]
-        )
-        await checkpointRepository.insertCheckpoint(depositContract.address, c)
-
-        const stateUpdate = StateUpdate.fromProperty(checkpoint[0])
-        const owner = getOwner(stateUpdate)
-        if (owner && owner.data === this.wallet.getAddress().data) {
-          await stateUpdateRepository.insertVerifiedStateUpdate(
-            depositContract.address,
-            stateUpdate
-          )
-
-          // put deposited action
-          const { range, blockNumber } = stateUpdate
-          const tokenContractAddress = this.tokenManager.getTokenContractAddress(
-            depositContract.address
-          )
-          if (!tokenContractAddress)
-            throw new Error('Token Contract Address not found')
-          const action = createDepositUserAction(
-            Address.from(tokenContractAddress),
-            range,
-            blockNumber
-          )
-          const actionRepository = await UserActionRepository.init(
-            this.witnessDb
-          )
-          await actionRepository.insertAction(blockNumber, range, action)
-
-          this.ee.emit(UserActionEvent.DEPOSIT, action)
-        }
-        this.ee.emit(
-          EmitterEvent.CHECKPOINT_FINALIZED,
-          checkpointId,
-          checkpoint
-        )
-      }
-    )
     depositContract.startWatchingEvents()
   }
 

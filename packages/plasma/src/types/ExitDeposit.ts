@@ -1,5 +1,4 @@
 import StateUpdate from './StateUpdate'
-import Checkpoint from './Checkpoint'
 import { Bytes, Address, Range, Property } from '@cryptoeconomicslab/primitives'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { Keccak256 } from '@cryptoeconomicslab/hash'
@@ -9,7 +8,7 @@ export default class ExitDeposit implements IExit {
   constructor(
     readonly exitDepositPredicateAddress: Address,
     readonly stateUpdate: StateUpdate,
-    readonly checkpoint: Checkpoint,
+    readonly checkpoint: StateUpdate,
     readonly id: Bytes
   ) {}
 
@@ -26,7 +25,7 @@ export default class ExitDeposit implements IExit {
     const stateUpdate = StateUpdate.fromProperty(
       decodeStructable(Property, coder, property.inputs[0])
     )
-    const checkpoint = Checkpoint.fromProperty(
+    const checkpoint = StateUpdate.fromProperty(
       decodeStructable(Property, coder, property.inputs[1])
     )
     const id = Keccak256.hash(coder.encode(property.toStruct()))

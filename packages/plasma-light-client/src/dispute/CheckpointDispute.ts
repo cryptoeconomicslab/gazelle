@@ -6,11 +6,19 @@ import {
 } from '@cryptoeconomicslab/primitives'
 import { ICheckpointDisputeContract } from '@cryptoeconomicslab/contract'
 import { KeyValueStore, getWitnesses, putWitness } from '@cryptoeconomicslab/db'
-import { StateUpdate, Transaction } from '@cryptoeconomicslab/plasma'
+import {
+  StateUpdate,
+  Transaction,
+  Checkpoint
+} from '@cryptoeconomicslab/plasma'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
-import { StateUpdateRepository } from '../repository'
+import {
+  StateUpdateRepository,
+  SyncRepository,
+  CheckpointRepository
+} from '../repository'
 import APIClient from '../APIClient'
 import JSBI from 'jsbi'
 import { verifyTransaction } from '../verifier/TransactionVerifier'
@@ -27,6 +35,9 @@ type CheckpointWitness = {
   inclusionProof: string | null
 }
 
+const INTERVAL = 60000
+const DISPUTE_PERIOD = 100
+
 /**
  * CheckpointDispute class used by Plasma Light Client responsible for following activities
  * - claim checkpoint when necessary
@@ -37,6 +48,9 @@ type CheckpointWitness = {
  * - polling to settle claimed checkpoint if this client claimed a checkpoint
  */
 export class CheckpointDispute {
+  private polling = false
+  private timer: ReturnType<typeof setTimeout> | undefined
+
   constructor(
     private contract: ICheckpointDisputeContract,
     private witnessDb: KeyValueStore,
@@ -131,10 +145,10 @@ export class CheckpointDispute {
 
     // evaluate the stateUpdate history validity and
     const result = await this.verifyCheckpoint(stateUpdate)
-    if (result.decision && !result.challenge) return
+    if (!result.challenge && result.decision) return
 
     // get inclusionProof of challengingStateUpdate
-    const challengingStateUpdate = result.challenge
+    const challengingStateUpdate = result.challenge as StateUpdate
     const inclusionProofBytes = await getWitnesses(
       this.witnessDb,
       Hint.createInclusionProofHint(
@@ -150,18 +164,44 @@ export class CheckpointDispute {
     )
 
     await this.challenge(stateUpdate, challengingStateUpdate, inclusionProof)
-    // TODO: Log
+    console.log('Challenge checkpoint')
   }
 
-  private handleCheckpointChallenged(
+  private async handleCheckpointChallenged(
     stateUpdate: StateUpdate,
     challenge: StateUpdate,
     inclusionProof: DoubleLayerInclusionProof
   ) {
-    // immediately call removeChallenge if your claim is challenged and you have witness to remove it
     console.log(
       'checkpoint challenged. check the validity and remove with witness'
     )
+    // TODO: OPTIMIZE check if challenged stateUpdate is which this client claimed. stored in checkpoint repository?
+    const txWitness = await getWitnesses(
+      this.witnessDb,
+      Hint.createTxHint(
+        challenge.blockNumber,
+        challenge.depositContractAddress,
+        challenge.range
+      )
+    )
+    if (txWitness.length !== 1) {
+      // do nothing
+      return
+    }
+
+    const signature = await getWitnesses(
+      this.witnessDb,
+      Hint.createSignatureHint(txWitness[0])
+    )
+    if (signature.length !== 1) {
+      // do nothing
+      return
+    }
+
+    await this.removeChallenge(stateUpdate, challenge, [
+      txWitness[0],
+      signature[0]
+    ])
   }
 
   private handleChallengeRemoved(
@@ -172,16 +212,45 @@ export class CheckpointDispute {
     console.log('checkpoint challenge removed')
   }
 
-  private handleCheckpointSettled(stateUpdate: StateUpdate) {
-    // store settled checkpoint
-    console.log('checkpoint settled')
+  private async handleCheckpointSettled(stateUpdate: StateUpdate) {
+    console.log('checkpoint settled') // TODO: log informative message
+    const repository = await CheckpointRepository.init(this.witnessDb)
+    const claimedCheckpoints = await repository.getClaimedCheckpoints(
+      stateUpdate.depositContractAddress,
+      stateUpdate.range
+    )
+    if (claimedCheckpoints.length === 1) {
+      const checkpoint = claimedCheckpoints[0]
+      await repository.removeClaimedCheckpoint(checkpoint)
+      await repository.insertSettledCheckpoint(checkpoint.stateUpdate)
+    }
   }
 
   /**
    * polling claim if there remains claims not settled, do polling
    * stop polling when no claims remains.
    */
-  private pollClaim() {}
+  private pollClaim() {
+    this.timer = setTimeout(async () => {
+      const checkpoints = await this.getAllClaimedCheckpoints()
+      const syncRepo = await SyncRepository.init(this.witnessDb)
+      const currentBlockNumber = await syncRepo.getSyncedBlockNumber()
+
+      if (checkpoints.length > 0) {
+        checkpoints.map(c => {
+          if (
+            JSBI.lessThanOrEqual(
+              JSBI.add(c.claimedBlockNumber.data, JSBI.BigInt(DISPUTE_PERIOD)),
+              currentBlockNumber.data
+            )
+          ) {
+            this.settle(c.stateUpdate)
+          }
+        })
+        this.pollClaim()
+      }
+    }, INTERVAL)
+  }
 
   /**
    * claim checkpoint.
@@ -191,7 +260,14 @@ export class CheckpointDispute {
     stateUpdate: StateUpdate,
     inclusionProof: DoubleLayerInclusionProof
   ) {
+    const syncRepo = await SyncRepository.init(this.witnessDb)
+    const claimedBlockNumber = await syncRepo.getSyncedBlockNumber()
     await this.contract.claim(stateUpdate, inclusionProof)
+
+    const checkpoint = new Checkpoint(stateUpdate, claimedBlockNumber)
+    const checkpointRepo = await CheckpointRepository.init(this.witnessDb)
+    await checkpointRepo.insertClaimedCheckpoint(checkpoint)
+    if (!this.polling) this.pollClaim()
   }
 
   /**
@@ -207,6 +283,7 @@ export class CheckpointDispute {
 
   /**
    * remove challenge by submitting witness
+   * witness: [tx, signature]
    */
   public async removeChallenge(
     stateUpdate: StateUpdate,
@@ -221,6 +298,10 @@ export class CheckpointDispute {
    */
   public async settle(stateUpdate: StateUpdate) {
     await this.contract.settle(stateUpdate)
+  }
+
+  private async getAllClaimedCheckpoints(): Promise<Checkpoint[]> {
+    return []
   }
 
   private async prepareCheckpointWitness(stateUpdate: StateUpdate) {
@@ -269,7 +350,7 @@ export class CheckpointDispute {
             Transaction.fromStruct(
               coder.decode(Transaction.getParamTypes(), txBytes)
             )
-              .toProperty(Address.default())
+              .toProperty(Address.default()) // TODO: should put tx address
               .toStruct()
           )
           await putWitness(
@@ -279,7 +360,7 @@ export class CheckpointDispute {
           )
           await putWitness(
             witnessDb,
-            Hint.createSignatureHint(txPropertyBytes),
+            Hint.createSignatureHint(txBytes),
             Bytes.fromHexString(witness.transaction.witness)
           )
         }
