@@ -4,13 +4,15 @@ import {
   Address,
   Bytes,
   Range,
-  BigNumber
+  BigNumber,
+  Property
 } from '@cryptoeconomicslab/primitives'
-import { Property } from '@cryptoeconomicslab/ovm'
 import { setupContext } from '@cryptoeconomicslab/context'
 import Coder from '@cryptoeconomicslab/coder'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
+import { DeciderManager } from '@cryptoeconomicslab/ovm'
+import APIClient from '../../src/APIClient'
 setupContext({ coder: Coder })
 
 const mockClaim = jest.fn()
@@ -45,12 +47,17 @@ describe('CheckpointDispute', () => {
   const ALICE = Address.from('0x0000000000000000000000000000000000000003')
   let checkpointDispute: CheckpointDispute
   let witnessDb: KeyValueStore
+  let deciderManager: DeciderManager
 
   beforeEach(async () => {
+    const apiClient = new APIClient('http://localhost:3000')
     witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
+    deciderManager = new DeciderManager(witnessDb, Coder)
     checkpointDispute = new CheckpointDispute(
       new MockContractWrapper(),
-      witnessDb
+      witnessDb,
+      deciderManager,
+      apiClient
     )
   })
 
@@ -71,7 +78,7 @@ describe('CheckpointDispute', () => {
     test('evaluate to true', async () => {
       const stateUpdate = SU(0, 10, 5, ALICE)
 
-      const result = await checkpointDispute.evaluate(stateUpdate)
+      const result = await checkpointDispute.verifyCheckpoint(stateUpdate)
 
       expect(result).toEqual({
         decision: true
