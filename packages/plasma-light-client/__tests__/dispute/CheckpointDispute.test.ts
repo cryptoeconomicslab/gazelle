@@ -74,8 +74,8 @@ describe('CheckpointDispute', () => {
     )
   }
 
-  describe('evaluate', () => {
-    test('evaluate to true', async () => {
+  describe('verifyCheckpoint', () => {
+    test('verifyCheckpoint returns true', async () => {
       const stateUpdate = SU(0, 10, 5, ALICE)
 
       const result = await checkpointDispute.verifyCheckpoint(stateUpdate)
@@ -84,5 +84,7 @@ describe('CheckpointDispute', () => {
         decision: true
       })
     })
+
+    test.skip('verifyCheckpoint returns false', async () => {})
   })
 })

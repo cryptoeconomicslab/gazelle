@@ -1,9 +1,4 @@
-import {
-  Address,
-  Property,
-  Bytes,
-  BigNumber
-} from '@cryptoeconomicslab/primitives'
+import { Property, Bytes, BigNumber } from '@cryptoeconomicslab/primitives'
 import { ICheckpointDisputeContract } from '@cryptoeconomicslab/contract'
 import { KeyValueStore, getWitnesses, putWitness } from '@cryptoeconomicslab/db'
 import {
@@ -17,7 +12,9 @@ import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
 import {
   StateUpdateRepository,
   SyncRepository,
-  CheckpointRepository
+  CheckpointRepository,
+  TransactionRepository,
+  InclusionProofRepository
 } from '../repository'
 import APIClient from '../APIClient'
 import JSBI from 'jsbi'
@@ -32,7 +29,7 @@ type CheckpointDecision = {
 type CheckpointWitness = {
   stateUpdate: string
   transaction: { tx: string; witness: string }
-  inclusionProof: string | null
+  inclusionProof: string
 }
 
 const INTERVAL = 60000
@@ -65,7 +62,7 @@ export class CheckpointDispute {
 
   /**
    * check if checkpoint can be created at given stateUpdate
-   * if not, returns false and challenge inputs and witness
+   * if not, returns false and returns challenge inputs and witness
    * @param stateUpdate to create checkpoint
    */
   public async verifyCheckpoint(
@@ -73,44 +70,42 @@ export class CheckpointDispute {
   ): Promise<CheckpointDecision> {
     const { coder } = ovmContext
     const { depositContractAddress, range } = stateUpdate
-    const suHint = (b: JSBI) =>
-      Hint.createStateUpdateHint(
-        BigNumber.from(b),
-        depositContractAddress,
-        range
-      )
-    const txHint = (su: StateUpdate) =>
-      Hint.createTxHint(su.blockNumber, su.depositContractAddress, su.range)
+    const suRepo = await StateUpdateRepository.init(this.witnessDb)
+    const txRepo = await TransactionRepository.init(this.witnessDb)
 
     for (
       let b = JSBI.BigInt(0);
       JSBI.lessThan(b, stateUpdate.blockNumber.data);
       b = JSBI.add(b, JSBI.BigInt(1))
     ) {
+      const blockNumber = BigNumber.from(b)
       // get stateUpdates and transaction
-      const stateUpdateWitnesses = await getWitnesses(this.witnessDb, suHint(b))
+      const stateUpdateWitnesses = await suRepo.getWitnessStateUpdates(
+        depositContractAddress,
+        blockNumber,
+        range
+      )
       await Promise.all(
-        stateUpdateWitnesses.map(async stateUpdateWitness => {
-          const su = StateUpdate.fromProperty(
-            decodeStructable(Property, coder, stateUpdateWitness)
+        stateUpdateWitnesses.map(async su => {
+          const txWitnesses = await txRepo.getTransactions(
+            depositContractAddress,
+            blockNumber,
+            range
           )
-
-          const txWitnesses = await getWitnesses(this.witnessDb, txHint(su))
           if (txWitnesses.length !== 1) {
             return { decision: false, challenge: su }
           }
-          const tx = Transaction.fromProperty(
-            decodeStructable(Property, coder, txWitnesses[0])
-          )
-
           // validate transaction
+          const tx = txWitnesses[0]
           const verified = verifyTransaction(su, tx)
           if (!verified) {
             return { decision: false, challenge: su }
           }
 
           // validate stateObject
-          const stateObject = mergeWitness(su.stateObject, txWitnesses)
+          const stateObject = mergeWitness(su.stateObject, [
+            coder.encode(tx.body)
+          ])
           const decision = await this.deciderManager.decide(stateObject)
           if (!decision.outcome) {
             return { decision: false, challenge: su }
@@ -126,11 +121,13 @@ export class CheckpointDispute {
     stateUpdate: StateUpdate,
     _inclusionProof: DoubleLayerInclusionProof
   ) {
-    const { coder } = ovmContext
-    const repository = await StateUpdateRepository.init(this.witnessDb)
+    const suRepo = await StateUpdateRepository.init(this.witnessDb)
+    const inclusionProofRepo = await InclusionProofRepository.init(
+      this.witnessDb
+    )
 
     // check if claimed stateUpdate is same range and greater blockNumber of owning stateUpdate
-    const stateUpdates = await repository.getVerifiedStateUpdates(
+    const stateUpdates = await suRepo.getVerifiedStateUpdates(
       stateUpdate.depositContractAddress,
       stateUpdate.range
     )
@@ -149,21 +146,17 @@ export class CheckpointDispute {
 
     // get inclusionProof of challengingStateUpdate
     const challengingStateUpdate = result.challenge as StateUpdate
-    const inclusionProofBytes = await getWitnesses(
-      this.witnessDb,
-      Hint.createInclusionProofHint(
-        challengingStateUpdate.blockNumber,
-        challengingStateUpdate.depositContractAddress,
-        challengingStateUpdate.range
-      )
-    )
-    const inclusionProof = decodeStructable(
-      DoubleLayerInclusionProof,
-      coder,
-      inclusionProofBytes[0]
+    const inclusionProofs = await inclusionProofRepo.getInclusionProofs(
+      challengingStateUpdate.depositContractAddress,
+      challengingStateUpdate.blockNumber,
+      challengingStateUpdate.range
     )
 
-    await this.challenge(stateUpdate, challengingStateUpdate, inclusionProof)
+    await this.challenge(
+      stateUpdate,
+      challengingStateUpdate,
+      inclusionProofs[0]
+    )
     console.log('Challenge checkpoint')
   }
 
@@ -175,33 +168,37 @@ export class CheckpointDispute {
     console.log(
       'checkpoint challenged. check the validity and remove with witness'
     )
-    // TODO: OPTIMIZE check if challenged stateUpdate is which this client claimed. stored in checkpoint repository?
-    const txWitness = await getWitnesses(
-      this.witnessDb,
-      Hint.createTxHint(
-        challenge.blockNumber,
-        challenge.depositContractAddress,
-        challenge.range
-      )
+    const { coder } = ovmContext
+
+    const checkpointRepo = await CheckpointRepository.init(this.witnessDb)
+    const claims = await checkpointRepo.getClaimedCheckpoints(
+      stateUpdate.depositContractAddress,
+      stateUpdate.range
     )
-    if (txWitness.length !== 1) {
+    if (claims.length === 0) return
+
+    const txRepo = await TransactionRepository.init(this.witnessDb)
+    const transactions = await txRepo.getTransactions(
+      challenge.depositContractAddress,
+      challenge.blockNumber,
+      challenge.range
+    )
+    if (transactions.length !== 1) {
       // do nothing
       return
     }
+    const txBytes = coder.encode(transactions[0].body)
 
     const signature = await getWitnesses(
       this.witnessDb,
-      Hint.createSignatureHint(txWitness[0])
+      Hint.createSignatureHint(txBytes)
     )
     if (signature.length !== 1) {
       // do nothing
       return
     }
 
-    await this.removeChallenge(stateUpdate, challenge, [
-      txWitness[0],
-      signature[0]
-    ])
+    await this.removeChallenge(stateUpdate, challenge, [txBytes, signature[0]])
   }
 
   private handleChallengeRemoved(
@@ -312,8 +309,13 @@ export class CheckpointDispute {
       stateUpdate.range
     )
 
-    // FIXME: use repository instead of `putWitness`
     const witnessDb = this.witnessDb
+    const suRepository = await StateUpdateRepository.init(witnessDb)
+    const txRepository = await TransactionRepository.init(witnessDb)
+    const inclusionProofRepository = await InclusionProofRepository.init(
+      witnessDb
+    )
+
     await Promise.all(
       res.data.data.map(async (witness: CheckpointWitness) => {
         const stateUpdate = StateUpdate.fromProperty(
@@ -324,46 +326,36 @@ export class CheckpointDispute {
           )
         )
         const { blockNumber, depositContractAddress, range } = stateUpdate
+        await suRepository.insertWitnessStateUpdate(stateUpdate)
+
+        const inclusionProof = decodeStructable(
+          DoubleLayerInclusionProof,
+          coder,
+          Bytes.fromHexString(witness.inclusionProof)
+        )
+        await inclusionProofRepository.insertInclusionProof(
+          depositContractAddress,
+          blockNumber,
+          range,
+          inclusionProof
+        )
+
+        const txBytes = Bytes.fromHexString(witness.transaction.tx)
+        const tx = Transaction.fromStruct(
+          coder.decode(Transaction.getParamType(), txBytes)
+        )
+        await txRepository.insertTransaction(
+          depositContractAddress,
+          blockNumber,
+          range,
+          tx
+        )
+
         await putWitness(
           witnessDb,
-          Hint.createStateUpdateHint(
-            blockNumber,
-            depositContractAddress,
-            range
-          ),
-          Bytes.fromHexString(witness.stateUpdate)
+          Hint.createSignatureHint(coder.encode(tx.body)),
+          Bytes.fromHexString(witness.transaction.witness)
         )
-        if (witness.inclusionProof) {
-          await putWitness(
-            witnessDb,
-            Hint.createInclusionProofHint(
-              blockNumber,
-              depositContractAddress,
-              range
-            ),
-            Bytes.fromHexString(witness.inclusionProof)
-          )
-        }
-        if (witness.transaction) {
-          const txBytes = Bytes.fromHexString(witness.transaction.tx)
-          const txPropertyBytes = coder.encode(
-            Transaction.fromStruct(
-              coder.decode(Transaction.getParamTypes(), txBytes)
-            )
-              .toProperty(Address.default()) // TODO: should put tx address
-              .toStruct()
-          )
-          await putWitness(
-            witnessDb,
-            Hint.createTxHint(blockNumber, depositContractAddress, range),
-            txPropertyBytes
-          )
-          await putWitness(
-            witnessDb,
-            Hint.createSignatureHint(txBytes),
-            Bytes.fromHexString(witness.transaction.witness)
-          )
-        }
       })
     )
   }
