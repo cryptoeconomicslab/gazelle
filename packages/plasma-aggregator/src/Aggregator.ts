@@ -252,7 +252,7 @@ export default class Aggregator {
       transactions.map(async d => {
         try {
           const decodedStruct = ovmContext.coder.decode(
-            Transaction.getParamTypes(),
+            Transaction.getParamType(),
             Bytes.fromHexString(d)
           )
           const tx = Transaction.fromStruct(decodedStruct)

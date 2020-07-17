@@ -128,7 +128,7 @@ export class HistoryVerifier {
             const txBytes = Bytes.fromHexString(witness.transaction.tx)
             const txPropertyBytes = coder.encode(
               Transaction.fromStruct(
-                coder.decode(Transaction.getParamTypes(), txBytes)
+                coder.decode(Transaction.getParamType(), txBytes)
               )
                 .toProperty(Address.default())
                 .toStruct()

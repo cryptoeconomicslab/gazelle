@@ -32,7 +32,7 @@ export default class Transaction {
     )
   }
 
-  public static getParamTypes(): Struct {
+  public static getParamType(): Struct {
     return new Struct([
       { key: 'depositContractAddress', value: Address.default() },
       { key: 'range', value: Range.getParamType() },

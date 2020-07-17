@@ -272,7 +272,7 @@ export default class StateManager {
     const ranges = await addrBucket.get(range.start.data, range.end.data)
     if (ranges.length == 0) return null
     return Transaction.fromStruct(
-      ovmContext.coder.decode(Transaction.getParamTypes(), ranges[0].value)
+      ovmContext.coder.decode(Transaction.getParamType(), ranges[0].value)
     )
   }
 
