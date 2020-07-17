@@ -45,6 +45,7 @@
   "gitHead": "7fc394b1b6fa00c275cf580edc8395268726be85",
   "devDependencies": {
     "@cryptoeconomicslab/context": "^0.4.1",
+    "@cryptoeconomicslab/eth-coder": "^0.4.1",
     "@cryptoeconomicslab/level-kvs": "^0.0.6",
     "@cryptoeconomicslab/primitives": "^0.4.1",
     "@cryptoeconomicslab/signature": "^0.4.1",

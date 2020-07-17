@@ -77,7 +77,6 @@ import {
   Property,
   Range
 } from '@cryptoeconomicslab/primitives'
-import { ethers } from 'ethers'
 import deciderConfig from './config.local'
 import { DeciderConfig, CompiledPredicate } from '@cryptoeconomicslab/ovm'
 import {
@@ -90,17 +89,13 @@ import {
   Checkpoint
 } from '@cryptoeconomicslab/plasma'
 import { putWitness } from '@cryptoeconomicslab/db'
-import { Balance } from '@cryptoeconomicslab/wallet'
-import {
-  Secp256k1Signer,
-  secp256k1Verifier
-} from '@cryptoeconomicslab/signature'
 import {
   DoubleLayerInclusionProof,
   IntervalTreeInclusionProof,
   AddressTreeInclusionProof
 } from '@cryptoeconomicslab/merkle-tree'
 import { createDepositUserAction } from '../src/UserAction'
+import { generateRandomWallet } from './helper/MockWallet'
 setupContext({ coder: JsonCoder })
 
 // mock APIClient
@@ -138,37 +133,13 @@ jest.mock('../src/APIClient', () => {
   })
 })
 
-// mock wallet
-const MockWallet = jest.fn().mockImplementation(() => {
-  const w = ethers.Wallet.createRandom()
-  const signingKey = new ethers.utils.SigningKey(w.privateKey)
-  const address = w.address
-
-  return {
-    getAddress: () => Address.from(address),
-    getL1Balance: async (tokenAddress?: Address) => {
-      return new Balance(BigNumber.from(0), 18, 'eth')
-    },
-    signMessage: async (message: Bytes) => {
-      const signer = new Secp256k1Signer(
-        Bytes.fromHexString(signingKey.privateKey)
-      )
-      return signer.sign(message)
-    },
-    verifyMySignature: async (message: Bytes, signature: Bytes) => {
-      const publicKey = Bytes.fromHexString(address)
-      return await secp256k1Verifier.verify(message, signature, publicKey)
-    }
-  }
-})
-
 // returns LightClient instance and witnessDb instance
 async function initialize(
   aggregatorEndpoint?: string
 ): Promise<{ lightClient: LightClient; witnessDb: KeyValueStore }> {
   const kvs = new LevelKeyValueStore(Bytes.fromString('root'))
   const witnessDb = await kvs.bucket(Bytes.fromString('witness'))
-  const wallet = new MockWallet()
+  const wallet = generateRandomWallet()
   const eventDb = await kvs.bucket(Bytes.fromString('event'))
   const adjudicationContract = new MockAdjudicationContract(
     Address.from('0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F'),

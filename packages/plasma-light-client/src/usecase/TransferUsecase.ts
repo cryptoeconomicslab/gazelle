@@ -63,9 +63,8 @@ export class TransferUsecase {
           stateObject,
           this.wallet.getAddress()
         )
-        const sig = await this.wallet.signMessage(
-          coder.encode(tx.toProperty(Address.default()).toStruct())
-        )
+        // sign transaction body
+        const sig = await this.wallet.signMessage(coder.encode(tx.body))
         tx.signature = sig
         return tx
       })

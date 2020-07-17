@@ -1,5 +1,4 @@
 import {
-  Address,
   Property,
   Bytes,
   BigNumber,
@@ -10,9 +9,13 @@ import { KeyValueStore, getWitnesses, putWitness } from '@cryptoeconomicslab/db'
 import {
   StateUpdate,
   Transaction,
-  Checkpoint
+  Checkpoint,
+  Block
 } from '@cryptoeconomicslab/plasma'
-import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
+import {
+  DoubleLayerInclusionProof,
+  DoubleLayerTreeVerifier
+} from '@cryptoeconomicslab/merkle-tree'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
 import {
@@ -80,6 +83,11 @@ export class CheckpointDispute {
     const { depositContractAddress, range } = stateUpdate
     const suRepo = await StateUpdateRepository.init(this.witnessDb)
     const txRepo = await TransactionRepository.init(this.witnessDb)
+    const inclusionProofRepo = await InclusionProofRepository.init(
+      this.witnessDb
+    )
+    const syncRepo = await SyncRepository.init(this.witnessDb)
+    const inclusionProofVerifier = new DoubleLayerTreeVerifier()
 
     for (
       let b = JSBI.BigInt(0);
@@ -93,8 +101,36 @@ export class CheckpointDispute {
         blockNumber,
         range
       )
-      await Promise.all(
+
+      const result = await Promise.all(
         stateUpdateWitnesses.map(async su => {
+          const blockRoot = await syncRepo.getBlockRoot(blockNumber)
+          if (!blockRoot)
+            throw new Error(`Merkle root at ${blockNumber.raw} is missing.`)
+
+          // check inclusion proof
+          const inclusionProof = await inclusionProofRepo.getInclusionProofs(
+            depositContractAddress,
+            su.blockNumber,
+            range
+          )
+          if (inclusionProof.length !== 1) {
+            return { decision: false, challenge: su }
+          }
+
+          if (
+            !inclusionProofVerifier.verifyInclusion(
+              Block.generateLeaf(su),
+              su.range,
+              blockRoot,
+              inclusionProof[0]
+            )
+          ) {
+            // Cannot challenge with stateUpdate not included in tree.
+            // TODO: is this okay?
+            return { decision: true }
+          }
+
           const txWitnesses = await txRepo.getTransactions(
             depositContractAddress,
             blockNumber,
@@ -114,12 +150,23 @@ export class CheckpointDispute {
           const stateObject = mergeWitness(su.stateObject, [
             coder.encode(tx.body)
           ])
-          const decision = await this.deciderManager.decide(stateObject)
-          if (!decision.outcome) {
+          try {
+            const decision = await this.deciderManager.decide(stateObject)
+            if (!decision.outcome) {
+              return { decision: false, challenge: su }
+            }
+          } catch (e) {
             return { decision: false, challenge: su }
           }
+
+          return { decision: true }
         })
       )
+
+      const challenge = result.find(r => !r.decision)
+      if (challenge) {
+        return challenge
+      }
     }
 
     return { decision: true }
