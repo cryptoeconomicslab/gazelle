@@ -1,4 +1,10 @@
-import { Property, Bytes, BigNumber } from '@cryptoeconomicslab/primitives'
+import {
+  Address,
+  Property,
+  Bytes,
+  BigNumber,
+  Range
+} from '@cryptoeconomicslab/primitives'
 import { ICheckpointDisputeContract } from '@cryptoeconomicslab/contract'
 import { KeyValueStore, getWitnesses, putWitness } from '@cryptoeconomicslab/db'
 import {
@@ -20,6 +26,7 @@ import APIClient from '../APIClient'
 import JSBI from 'jsbi'
 import { verifyTransaction } from '../verifier/TransactionVerifier'
 import { mergeWitness } from '../helper/stateObjectHelper'
+import TokenManager from '../managers/TokenManager'
 
 type CheckpointDecision = {
   decision: boolean
@@ -33,7 +40,7 @@ type CheckpointWitness = {
 }
 
 const INTERVAL = 60000
-const DISPUTE_PERIOD = 100
+const DISPUTE_PERIOD = 100 // FIXME: set correct dispute period from .env
 
 /**
  * CheckpointDispute class used by Plasma Light Client responsible for following activities
@@ -52,6 +59,7 @@ export class CheckpointDispute {
     private contract: ICheckpointDisputeContract,
     private witnessDb: KeyValueStore,
     private deciderManager: DeciderManager,
+    private tokenManager: TokenManager,
     private apiClient: APIClient
   ) {
     contract.subscribeCheckpointClaimed(this.handleCheckpointClaimed)
@@ -298,7 +306,18 @@ export class CheckpointDispute {
   }
 
   private async getAllClaimedCheckpoints(): Promise<Checkpoint[]> {
-    return []
+    const checkpointRepository = await CheckpointRepository.init(this.witnessDb)
+    const checkpoints = await Promise.all(
+      this.tokenManager.depositContractAddresses.map(async addr => {
+        return await checkpointRepository.getClaimedCheckpoints(
+          addr,
+          new Range(BigNumber.from(0), BigNumber.MAX_NUMBER)
+        )
+      })
+    )
+
+    // flatten checkpoints
+    return ([] as Checkpoint[]).concat(...checkpoints)
   }
 
   private async prepareCheckpointWitness(stateUpdate: StateUpdate) {
