@@ -8,7 +8,8 @@ import {
   AdjudicationContract,
   OwnershipPayoutContract,
   ERC20Contract,
-  EthContractConfig
+  EthContractConfig,
+  CheckpointDisputeContract
 } from '@cryptoeconomicslab/eth-contract'
 import LightClient from '@cryptoeconomicslab/plasma-light-client'
 import { DeciderConfig } from '@cryptoeconomicslab/ovm'
@@ -49,6 +50,11 @@ export default async function initialize(options: EthLightClientOptions) {
     Address.from(options.config.payoutContracts['OwnershipPayout']),
     options.wallet
   )
+  const checkpointDisputeContract = new CheckpointDisputeContract(
+    Address.from(options.config.checkpointDisputeContract),
+    eventDb,
+    options.wallet
+  )
   const client = await LightClient.initilize({
     wallet: ethWallet,
     witnessDb: options.kvs,
@@ -57,6 +63,7 @@ export default async function initialize(options: EthLightClientOptions) {
     tokenContractFactory,
     commitmentContract,
     ownershipPayoutContract,
+    checkpointDisputeContract,
     deciderConfig: options.config,
     aggregatorEndpoint: options.aggregatorEndpoint
   })

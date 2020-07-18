@@ -22,7 +22,8 @@ import {
   IDepositContract,
   IERC20DetailedContract,
   IAdjudicationContract,
-  IOwnershipPayoutContract
+  IOwnershipPayoutContract,
+  ICheckpointDisputeContract
 } from '@cryptoeconomicslab/contract'
 import { Wallet } from '@cryptoeconomicslab/wallet'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
@@ -44,6 +45,7 @@ import { executeChallenge } from './helper/challenge'
 import { UserActionEvent, EmitterEvent } from './ClientEvent'
 import { getOwner } from './helper/stateUpdateHelper'
 import { Numberish } from './types'
+import { CheckpointDispute } from './dispute/CheckpointDispute'
 
 interface LightClientOptions {
   wallet: Wallet
@@ -53,6 +55,7 @@ interface LightClientOptions {
   tokenContractFactory: (address: Address) => IERC20DetailedContract
   commitmentContract: ICommitmentContract
   ownershipPayoutContract: IOwnershipPayoutContract
+  checkpointDisputeContract: ICheckpointDisputeContract
   deciderConfig: DeciderConfig & PlasmaContractConfig
   aggregatorEndpoint?: string
 }
@@ -68,6 +71,7 @@ export default class LightClient {
   private exitUsecase: ExitUsecase
   private transferUsecase: TransferUsecase
   private pendingStateUpdatesVerifier: PendingStateUpdatesVerifier
+  private checkpointDispute: CheckpointDispute
 
   constructor(
     private wallet: Wallet,
@@ -77,6 +81,7 @@ export default class LightClient {
     private tokenContractFactory: (address: Address) => IERC20DetailedContract,
     private commitmentContract: ICommitmentContract,
     private ownershipPayoutContract: IOwnershipPayoutContract,
+    private checkpointDisputeContract: ICheckpointDisputeContract,
     private deciderConfig: DeciderConfig & PlasmaContractConfig,
     private aggregatorEndpoint: string = 'http://localhost:3000'
   ) {
@@ -88,17 +93,25 @@ export default class LightClient {
     if (ownershipPredicate === undefined) {
       throw new Error('Ownership not found')
     }
+
     this.ownershipPredicate = ownershipPredicate
     this.apiClient = new APIClient(this.aggregatorEndpoint)
     this.tokenManager = new TokenManager()
+    this.checkpointDispute = new CheckpointDispute(
+      checkpointDisputeContract,
+      witnessDb,
+      this.deciderManager,
+      this.tokenManager,
+      this.apiClient
+    )
     this.stateSyncer = new StateSyncer(
       this.ee,
       this.witnessDb,
       this.commitmentContract,
       Address.from(this.deciderConfig.commitmentContract),
       this.apiClient,
-      this.deciderManager,
-      this.tokenManager
+      this.tokenManager,
+      this.checkpointDispute
     )
     this.exitUsecase = new ExitUsecase(
       this.ee,
@@ -136,6 +149,7 @@ export default class LightClient {
       options.tokenContractFactory,
       options.commitmentContract,
       options.ownershipPayoutContract,
+      options.checkpointDisputeContract,
       options.deciderConfig,
       options.aggregatorEndpoint
     )

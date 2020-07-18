@@ -69,6 +69,27 @@ const MockOwnershipPayoutContract = jest.fn().mockImplementation(() => {
   }
 })
 
+const mockClaim = jest.fn()
+const mockChallenge = jest.fn()
+const mockRemoveChallenge = jest.fn()
+const mockSettle = jest.fn()
+const mockSubscribeCheckpointChallenged = jest.fn()
+const mockSubscribeCheckpointClaimed = jest.fn()
+const mockSubscribeCheckpointSettled = jest.fn()
+const mockSubscribeCheckpointChallengeRemoved = jest.fn()
+const MockCheckpointDisputeContract = jest.fn().mockImplementation(() => {
+  return {
+    claim: mockClaim,
+    challenge: mockChallenge,
+    removeChallenge: mockRemoveChallenge,
+    settle: mockSettle,
+    subscribeCheckpointClaimed: mockSubscribeCheckpointClaimed,
+    subscribeCheckpointChallenged: mockSubscribeCheckpointChallenged,
+    subscribeCheckpointChallengeRemoved: mockSubscribeCheckpointChallengeRemoved,
+    subscribeCheckpointSettled: mockSubscribeCheckpointSettled
+  }
+})
+
 import {
   Address,
   Bytes,
@@ -156,6 +177,7 @@ async function initialize(
     eventDb
   )
   const ownershipPayoutContract = new MockOwnershipPayoutContract()
+  const checkpointDisputeContract = new MockCheckpointDisputeContract()
 
   const lightClient = await LightClient.initilize({
     wallet,
@@ -165,6 +187,7 @@ async function initialize(
     tokenContractFactory,
     commitmentContract,
     ownershipPayoutContract,
+    checkpointDisputeContract,
     deciderConfig: deciderConfig as DeciderConfig & PlasmaContractConfig,
     aggregatorEndpoint
   })

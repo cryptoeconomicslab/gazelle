@@ -4,43 +4,37 @@ import {
   Address,
   Bytes,
   BigNumber,
-  Property
+  Property,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { StateUpdate } from '@cryptoeconomicslab/plasma'
 import { KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
 import { ICommitmentContract } from '@cryptoeconomicslab/contract'
-import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
+import { hint as Hint } from '@cryptoeconomicslab/ovm'
 import {
   SyncRepository,
   StateUpdateRepository,
   UserActionRepository
 } from '../repository'
-import { HistoryVerifier } from '../verifier'
 import { EmitterEvent, UserActionEvent } from '../ClientEvent'
 import { createReceiveUserAction } from '../UserAction'
 import APIClient from '../APIClient'
 import { getOwner } from '../helper/stateUpdateHelper'
 import { getStorageDb } from '../helper/storageDbHelper'
 import TokenManager from '../managers/TokenManager'
+import { CheckpointDispute } from '../dispute/CheckpointDispute'
 
 export class StateSyncer {
-  private historyVerifier: HistoryVerifier
   constructor(
     private ee: EventEmitter,
     private witnessDb: KeyValueStore,
     private commitmentContract: ICommitmentContract,
     private commitmentContractAddress: Address,
     private apiClient: APIClient,
-    deciderManager: DeciderManager, // will be removed when using checkpointDispute
-    private tokenManager: TokenManager
-  ) {
-    this.historyVerifier = new HistoryVerifier(
-      witnessDb,
-      apiClient,
-      deciderManager
-    )
-  }
+    private tokenManager: TokenManager,
+    private checkpointDispute: CheckpointDispute
+  ) {}
 
   /**
    * sync local state to given block number
@@ -76,8 +70,7 @@ export class StateSyncer {
     const { coder } = ovmContext
     const commitmentAddress = this.commitmentContractAddress
     const root = await this.commitmentContract.getRoot(blockNumber)
-    if (!root) {
-      // FIXME: check if root is default bytes32 value
+    if (root.equals(FixedBytes.default(32))) {
       throw new Error('Block root hash is null')
     }
     console.log(`syncing state: Block{${blockNumber.raw}}`)
@@ -100,41 +93,42 @@ export class StateSyncer {
           decodeStructable(Property, coder, Bytes.fromHexString(s))
         )
       )
-      const promises = stateUpdates.map(async su => {
-        try {
-          const verified = await this.historyVerifier.verifyStateUpdateHistory(
-            su,
-            blockNumber
+      await Promise.all(
+        stateUpdates.map(async su => {
+          try {
+            await this.checkpointDispute.prepareCheckpointWitness(su)
+            const verified = await this.checkpointDispute.verifyCheckpoint(su)
+            if (!verified) return
+          } catch (e) {
+            console.log(e)
+          }
+
+          await stateUpdateRepository.insertVerifiedStateUpdate(
+            su.depositContractAddress,
+            su
           )
-          if (!verified) return
-        } catch (e) {
-          console.log(e)
-        }
+          // store receive user action
+          const { range } = su
+          const tokenContractAddress = this.tokenManager.getTokenContractAddress(
+            su.depositContractAddress
+          )
+          if (!tokenContractAddress)
+            throw new Error('Token Contract Address not found')
 
-        await stateUpdateRepository.insertVerifiedStateUpdate(
-          su.depositContractAddress,
-          su
-        )
-        // store receive user action
-        const { range } = su
-        const tokenContractAddress = this.tokenManager.getTokenContractAddress(
-          su.depositContractAddress
-        )
-        if (!tokenContractAddress)
-          throw new Error('Token Contract Address not found')
+          const action = createReceiveUserAction(
+            Address.from(tokenContractAddress),
+            range,
+            getOwner(su), // FIXME: this is same as client's owner
+            su.blockNumber
+          )
+          const actionRepository = await UserActionRepository.init(
+            this.witnessDb
+          )
+          await actionRepository.insertAction(su.blockNumber, range, action)
 
-        const action = createReceiveUserAction(
-          Address.from(tokenContractAddress),
-          range,
-          getOwner(su), // FIXME: this is same as client's owner
-          su.blockNumber
-        )
-        const actionRepository = await UserActionRepository.init(this.witnessDb)
-        await actionRepository.insertAction(su.blockNumber, range, action)
-
-        this.ee.emit(UserActionEvent.RECIEVE, action)
-      })
-      await Promise.all(promises)
+          this.ee.emit(UserActionEvent.RECIEVE, action)
+        })
+      )
       const syncRepository = await SyncRepository.init(this.witnessDb)
       await syncRepository.updateSyncedBlockNumber(blockNumber)
       await syncRepository.insertBlockRoot(blockNumber, root)

@@ -367,7 +367,7 @@ export class CheckpointDispute {
     return ([] as Checkpoint[]).concat(...checkpoints)
   }
 
-  private async prepareCheckpointWitness(stateUpdate: StateUpdate) {
+  public async prepareCheckpointWitness(stateUpdate: StateUpdate) {
     const { coder } = ovmContext
     const res = await this.apiClient.checkpointWitness(
       stateUpdate.depositContractAddress,
