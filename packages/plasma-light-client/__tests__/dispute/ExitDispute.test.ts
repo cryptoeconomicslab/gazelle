@@ -10,7 +10,7 @@ import {
 import { StateUpdate, Transaction, Block } from '@cryptoeconomicslab/plasma'
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
-import { RangeDb, KeyValueStore } from '@cryptoeconomicslab/db'
+import { KeyValueStore } from '@cryptoeconomicslab/db'
 import {
   TransactionRepository,
   InclusionProofRepository
