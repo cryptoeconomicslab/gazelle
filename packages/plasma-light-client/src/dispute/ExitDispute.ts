@@ -3,7 +3,11 @@ import { StateUpdate, createSpentChallenge } from '@cryptoeconomicslab/plasma'
 import { DeciderManager } from '@cryptoeconomicslab/ovm'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { IExitDisputeContract } from '@cryptoeconomicslab/contract'
-import { TransactionRepository, InclusionProofRepository } from '../repository'
+import {
+  StateUpdateRepository,
+  TransactionRepository,
+  InclusionProofRepository
+} from '../repository'
 
 export class ExitDispute {
   constructor(
@@ -40,10 +44,21 @@ export class ExitDispute {
 
   /**
    * @name handleExitClaimed
-   * @description handle ExitClaimed event from ExitDispute contract
+   * @description handle ExitClaimed event from ExitDispute contract.
+   * if exiting range includes client owning stateUpdate, check if it's spent or checkpoint and
+   * claim challenge to ExitDispute contract.
    * @param stateUpdate
    */
   async handleExitClaimed(stateUpdate: StateUpdate) {
+    const suRepo = await StateUpdateRepository.init(this.witnessDb)
+
+    // check if claimed stateUpdate is same range and greater blockNumber of owning stateUpdate
+    const stateUpdates = await suRepo.getVerifiedStateUpdates(
+      stateUpdate.depositContractAddress,
+      stateUpdate.range
+    )
+    if (stateUpdates.length === 0) return
+
     const txRepo = await TransactionRepository.init(this.witnessDb)
     // challenge
     // check that a transaction is exists

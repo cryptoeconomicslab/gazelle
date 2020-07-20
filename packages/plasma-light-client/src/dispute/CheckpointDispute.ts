@@ -9,13 +9,9 @@ import { KeyValueStore, getWitnesses, putWitness } from '@cryptoeconomicslab/db'
 import {
   StateUpdate,
   Transaction,
-  Checkpoint,
-  Block
+  Checkpoint
 } from '@cryptoeconomicslab/plasma'
-import {
-  DoubleLayerInclusionProof,
-  DoubleLayerTreeVerifier
-} from '@cryptoeconomicslab/merkle-tree'
+import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
 import {
@@ -27,14 +23,8 @@ import {
 } from '../repository'
 import APIClient from '../APIClient'
 import JSBI from 'jsbi'
-import { verifyTransaction } from '../verifier/TransactionVerifier'
-import { mergeWitness } from '../helper/stateObjectHelper'
 import TokenManager from '../managers/TokenManager'
-
-type CheckpointDecision = {
-  decision: boolean
-  challenge?: StateUpdate
-}
+import { verifyCheckpoint } from '../verifier/CheckpointVerifier'
 
 type CheckpointWitness = {
   stateUpdate: string
@@ -71,107 +61,6 @@ export class CheckpointDispute {
     contract.subscribeCheckpointSettled(this.handleCheckpointSettled)
   }
 
-  /**
-   * check if checkpoint can be created at given stateUpdate
-   * if not, returns false and returns challenge inputs and witness
-   * @param stateUpdate to create checkpoint
-   */
-  public async verifyCheckpoint(
-    stateUpdate: StateUpdate
-  ): Promise<CheckpointDecision> {
-    const { coder } = ovmContext
-    const { depositContractAddress, range } = stateUpdate
-    const suRepo = await StateUpdateRepository.init(this.witnessDb)
-    const txRepo = await TransactionRepository.init(this.witnessDb)
-    const inclusionProofRepo = await InclusionProofRepository.init(
-      this.witnessDb
-    )
-    const syncRepo = await SyncRepository.init(this.witnessDb)
-    const inclusionProofVerifier = new DoubleLayerTreeVerifier()
-
-    for (
-      let b = JSBI.BigInt(0);
-      JSBI.lessThan(b, stateUpdate.blockNumber.data);
-      b = JSBI.add(b, JSBI.BigInt(1))
-    ) {
-      const blockNumber = BigNumber.from(b)
-      // get stateUpdates and transaction
-      const stateUpdateWitnesses = await suRepo.getWitnessStateUpdates(
-        depositContractAddress,
-        blockNumber,
-        range
-      )
-
-      const result = await Promise.all(
-        stateUpdateWitnesses.map(async su => {
-          const blockRoot = await syncRepo.getBlockRoot(blockNumber)
-          if (!blockRoot)
-            throw new Error(`Merkle root at ${blockNumber.raw} is missing.`)
-
-          // check inclusion proof
-          const inclusionProof = await inclusionProofRepo.getInclusionProofs(
-            depositContractAddress,
-            su.blockNumber,
-            range
-          )
-          if (inclusionProof.length !== 1) {
-            return { decision: false, challenge: su }
-          }
-
-          if (
-            !inclusionProofVerifier.verifyInclusion(
-              Block.generateLeaf(su),
-              su.range,
-              blockRoot,
-              inclusionProof[0]
-            )
-          ) {
-            // Cannot challenge with stateUpdate not included in tree.
-            // TODO: is this okay?
-            return { decision: true }
-          }
-
-          const txWitnesses = await txRepo.getTransactions(
-            depositContractAddress,
-            blockNumber,
-            range
-          )
-          if (txWitnesses.length !== 1) {
-            return { decision: false, challenge: su }
-          }
-          // validate transaction
-          const tx = txWitnesses[0]
-          const verified = verifyTransaction(su, tx)
-          if (!verified) {
-            return { decision: false, challenge: su }
-          }
-
-          // validate stateObject
-          const stateObject = mergeWitness(su.stateObject, [
-            coder.encode(tx.body)
-          ])
-          try {
-            const decision = await this.deciderManager.decide(stateObject)
-            if (!decision.outcome) {
-              return { decision: false, challenge: su }
-            }
-          } catch (e) {
-            return { decision: false, challenge: su }
-          }
-
-          return { decision: true }
-        })
-      )
-
-      const challenge = result.find(r => !r.decision)
-      if (challenge) {
-        return challenge
-      }
-    }
-
-    return { decision: true }
-  }
-
   private async handleCheckpointClaimed(
     stateUpdate: StateUpdate,
     _inclusionProof: DoubleLayerInclusionProof
@@ -196,7 +85,11 @@ export class CheckpointDispute {
     await this.prepareCheckpointWitness(stateUpdate)
 
     // evaluate the stateUpdate history validity and
-    const result = await this.verifyCheckpoint(stateUpdate)
+    const result = await verifyCheckpoint(
+      this.witnessDb,
+      this.deciderManager,
+      stateUpdate
+    )
     if (!result.challenge && result.decision) return
 
     // get inclusionProof of challengingStateUpdate

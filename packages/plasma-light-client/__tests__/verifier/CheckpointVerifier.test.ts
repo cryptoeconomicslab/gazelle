@@ -1,5 +1,4 @@
 import { StateUpdate, Transaction, Block } from '@cryptoeconomicslab/plasma'
-import { CheckpointDispute } from '../../src/dispute/CheckpointDispute'
 import {
   Address,
   Bytes,
@@ -12,8 +11,6 @@ import Coder from '@cryptoeconomicslab/eth-coder'
 import { KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import { DeciderManager, DeciderConfig } from '@cryptoeconomicslab/ovm'
-import APIClient from '../../src/APIClient'
-import TokenManager from '../../src/managers/TokenManager'
 import {
   StateUpdateRepository,
   TransactionRepository,
@@ -25,29 +22,8 @@ import deciderConfig from '../config.local'
 import { createSignatureHint } from '@cryptoeconomicslab/ovm/lib/hintString'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import { Wallet } from '@cryptoeconomicslab/wallet'
+import { verifyCheckpoint } from '../../src/verifier/CheckpointVerifier'
 setupContext({ coder: Coder })
-
-const mockClaim = jest.fn()
-const mockChallenge = jest.fn()
-const mockRemoveChallenge = jest.fn()
-const mockSettle = jest.fn()
-const mockSubscribeCheckpointClaimed = jest.fn()
-const mockSubscribeCheckpointChallenged = jest.fn()
-const mockSubscribeCheckpointChallengeRemoved = jest.fn()
-const mockSubscribeCheckpointSettled = jest.fn()
-
-const MockContractWrapper = jest.fn().mockImplementation(() => {
-  return {
-    claim: mockClaim,
-    challenge: mockChallenge,
-    removeChallenge: mockRemoveChallenge,
-    settle: mockSettle,
-    subscribeCheckpointClaimed: mockSubscribeCheckpointClaimed,
-    subscribeCheckpointChallenged: mockSubscribeCheckpointChallenged,
-    subscribeCheckpointChallengeRemoved: mockSubscribeCheckpointChallengeRemoved,
-    subscribeCheckpointSettled: mockSubscribeCheckpointSettled
-  }
-})
 
 const TOKEN_ADDRESS = Address.default()
 const SU_ADDRESS = Address.from('0x0000000000000000000000000000000000000001')
@@ -55,33 +31,20 @@ const OWNERSHIP_ADDRESS = Address.from(
   deciderConfig.deployedPredicateTable.OwnershipPredicate.deployedAddress
 )
 
-describe.skip('CheckpointDispute', () => {
+describe('CheckpointDispute', () => {
   const ALICE = generateRandomWallet()
   const BOB = generateRandomWallet()
   const CHARLIE = generateRandomWallet()
-  let checkpointDispute: CheckpointDispute
   let witnessDb: KeyValueStore
   let deciderManager: DeciderManager
 
   beforeEach(async () => {
-    const apiClient = new APIClient('http://localhost:3000')
-    const tokenManager = new TokenManager()
-
     // we only need depositContractAddresses in CheckpointDispute
-    tokenManager.depositContractAddresses.push(TOKEN_ADDRESS)
     witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
 
     deciderManager = new DeciderManager(witnessDb, Coder)
     deciderManager.loadJson(deciderConfig as DeciderConfig)
     // TODO: set constants table secp256k1
-
-    checkpointDispute = new CheckpointDispute(
-      new MockContractWrapper(),
-      witnessDb,
-      deciderManager,
-      tokenManager,
-      apiClient
-    )
   })
 
   function ownershipSO(owner: Address) {
@@ -98,7 +61,7 @@ describe.skip('CheckpointDispute', () => {
     )
   }
 
-  describe.skip('verifyCheckpoint', () => {
+  describe('verifyCheckpoint', () => {
     let suRepo: StateUpdateRepository,
       txRepo: TransactionRepository,
       inclusionProofRepo: InclusionProofRepository,
@@ -168,40 +131,40 @@ describe.skip('CheckpointDispute', () => {
       await putWitness(witnessDb, createSignatureHint(txBytes), sign)
     }
 
-    // test('verifyCheckpoint returns true', async () => {
-    //   const range = new Range(BigNumber.from(0), BigNumber.from(10))
-    //   const su1 = SU(range, BigNumber.from(1), ALICE.getAddress())
-    //   await prepareSU(su1)
-    //   await prepareTx(su1, ALICE, BOB)
+    test('verifyCheckpoint returns true', async () => {
+      const range = new Range(BigNumber.from(0), BigNumber.from(10))
+      const su1 = SU(range, BigNumber.from(1), ALICE.getAddress())
+      await prepareSU(su1)
+      await prepareTx(su1, ALICE, BOB)
 
-    //   const su2 = SU(range, BigNumber.from(2), BOB.getAddress())
-    //   await prepareSU(su2)
-    //   await prepareTx(su2, BOB, CHARLIE)
+      const su2 = SU(range, BigNumber.from(2), BOB.getAddress())
+      await prepareSU(su2)
+      await prepareTx(su2, BOB, CHARLIE)
 
-    //   const su3 = SU(range, BigNumber.from(3), CHARLIE.getAddress())
+      const su3 = SU(range, BigNumber.from(3), CHARLIE.getAddress())
 
-    //   // const result = await checkpointDispute.verifyCheckpoint(su3)
-    //   // expect(result).toEqual({
-    //   //   decision: true
-    //   // })
-    // })
+      const result = await verifyCheckpoint(witnessDb, deciderManager, su3)
+      expect(result).toEqual({
+        decision: true
+      })
+    })
 
-    // test('verifyCheckpoint returns false', async () => {
-    //   const range = new Range(BigNumber.from(0), BigNumber.from(10))
-    //   const su1 = SU(range, BigNumber.from(1), ALICE.getAddress())
-    //   await prepareSU(su1)
-    //   await prepareTx(su1, ALICE, BOB)
+    test('verifyCheckpoint returns false', async () => {
+      const range = new Range(BigNumber.from(0), BigNumber.from(10))
+      const su1 = SU(range, BigNumber.from(1), ALICE.getAddress())
+      await prepareSU(su1)
+      await prepareTx(su1, ALICE, BOB)
 
-    //   const su2 = SU(range, BigNumber.from(2), BOB.getAddress())
-    //   await prepareSU(su2)
+      const su2 = SU(range, BigNumber.from(2), BOB.getAddress())
+      await prepareSU(su2)
 
-    //   const su3 = SU(range, BigNumber.from(3), CHARLIE.getAddress())
+      const su3 = SU(range, BigNumber.from(3), CHARLIE.getAddress())
 
-    //   // const result = await checkpointDispute.verifyCheckpoint(su3)
-    //   // expect(result).toEqual({
-    //   //   decision: false,
-    //   //   challenge: su2
-    //   // })
-    // })
+      const result = await verifyCheckpoint(witnessDb, deciderManager, su3)
+      expect(result).toEqual({
+        decision: false,
+        challenge: su2
+      })
+    })
   })
 })
