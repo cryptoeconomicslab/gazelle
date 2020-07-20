@@ -1,5 +1,9 @@
 import { Property } from '@cryptoeconomicslab/primitives'
-import { StateUpdate, createSpentChallenge } from '@cryptoeconomicslab/plasma'
+import {
+  StateUpdate,
+  createSpentChallenge,
+  createCheckpointChallenge
+} from '@cryptoeconomicslab/plasma'
 import { DeciderManager } from '@cryptoeconomicslab/ovm'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { IExitDisputeContract } from '@cryptoeconomicslab/contract'
@@ -8,6 +12,7 @@ import {
   TransactionRepository,
   InclusionProofRepository
 } from '../repository'
+import { verifyCheckpoint } from '../verifier/CheckpointVerifier'
 
 export class ExitDispute {
   constructor(
@@ -78,20 +83,58 @@ export class ExitDispute {
       stateUpdate.stateObject.deciderAddress,
       stateUpdate.stateObject.inputs.concat([tx])
     )
-    const decision = await this.deciderManager.decide(stateObject, {})
-
-    // TODO: call Checkpoint.handleCheckpointClaimed(stateUpdate)
 
     // spent challenge
-    if (decision.outcome) {
+    const spentChallengeResult = await this.deciderManager.decide(
+      stateObject,
+      {}
+    )
+    if (spentChallengeResult.outcome) {
       await this.contract.challenge(
         createSpentChallenge(
           stateUpdate,
           transactions[0],
-          decision.witnesses || []
+          spentChallengeResult.witnesses || []
         )
       )
+      return
     }
+
+    // checkpoint challenge
+    // TODO: check if witness for claimed range is stored locally
+    // TODO: if not, get witness from API
+
+    const checkpointChallengeResult = await verifyCheckpoint(
+      this.witnessDb,
+      this.deciderManager,
+      stateUpdate
+    )
+    if (
+      !checkpointChallengeResult.challenge &&
+      checkpointChallengeResult.decision
+    )
+      return
+
+    const inclusionProofRepo = await InclusionProofRepository.init(
+      this.witnessDb
+    )
+    const challengingStateUpdate = checkpointChallengeResult.challenge as StateUpdate
+    const inclusionProofs = await inclusionProofRepo.getInclusionProofs(
+      challengingStateUpdate.depositContractAddress,
+      challengingStateUpdate.blockNumber,
+      challengingStateUpdate.range
+    )
+
+    // Inclusion proof does not stored locally. cannot challenge
+    if (inclusionProofs.length === 0) return
+
+    await this.contract.challenge(
+      createCheckpointChallenge(
+        stateUpdate,
+        challengingStateUpdate,
+        inclusionProofs[0]
+      )
+    )
   }
 
   async handleExitChallenged(stateUpdate: StateUpdate) {}

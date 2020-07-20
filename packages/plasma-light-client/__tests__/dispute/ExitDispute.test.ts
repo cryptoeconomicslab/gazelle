@@ -16,11 +16,11 @@ import {
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
-import {
-  TransactionRepository,
-  InclusionProofRepository
-} from '../../src/repository'
+import { InclusionProofRepository } from '../../src/repository'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
+import * as Prepare from '../helper/prepare'
+import { generateRandomWallet } from '../helper/MockWallet'
+import { Wallet } from '@cryptoeconomicslab/wallet'
 setupContext({ coder: JsonCoder })
 
 const mockClaim = jest.fn().mockImplementation(() => {})
@@ -72,10 +72,15 @@ const maxBlockNumber = BigNumber.from(10)
 const ownershipPredicateAddress = Address.from(
   '0x0000000000000000000000000000000000000002'
 )
-const owner = Address.from('0x0000000000000000000000000000000000000003')
+const owner = generateRandomWallet()
 const ownershipState = new Property(ownershipPredicateAddress, [
-  ovmContext.coder.encode(owner)
+  ovmContext.coder.encode(owner.getAddress())
 ])
+const nextOwner = generateRandomWallet()
+const nextOwnership = new Property(ownershipPredicateAddress, [
+  ovmContext.coder.encode(nextOwner.getAddress())
+])
+
 const stateUpdateDeciderAddress = Address.from(
   '0x0000000000000000000000000000000000000004'
 )
@@ -88,9 +93,17 @@ const stateUpdate = new StateUpdate(
 )
 
 describe('ExitDispute', () => {
+  let exitDispute: ExitDispute, witnessDb: KeyValueStore
+
   beforeEach(() => {
     MockContractWrapper.mockClear()
     MockDeciderManager.mockClear()
+    witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
+    exitDispute = new ExitDispute(
+      new MockContractWrapper(),
+      new MockDeciderManager(),
+      witnessDb
+    )
   })
 
   async function prepareInclusionProof(
@@ -114,67 +127,42 @@ describe('ExitDispute', () => {
     )
   }
 
-  function createTransaction(stateUpdate: StateUpdate) {
+  function createTransaction(
+    stateUpdate: StateUpdate,
+    from: Wallet,
+    to: Wallet
+  ) {
     const depositContractAddress = stateUpdate.depositContractAddress
     const range = stateUpdate.range
     const maxBlockNumber = BigNumber.from(100)
     const ownershipPredicateAddress = Address.from(
       '0x0000000000000000000000000000000000000002'
     )
-    const owner = Address.from('0x0000000000000000000000000000000000000003')
-    const ownershipState = new Property(ownershipPredicateAddress, [
-      ovmContext.coder.encode(owner)
+    const nextState = new Property(ownershipPredicateAddress, [
+      ovmContext.coder.encode(to.getAddress())
     ])
-    const from = Address.from('0x0000000000000000000000000000000000000004')
     return new Transaction(
       depositContractAddress,
       range,
       maxBlockNumber,
-      ownershipState,
-      from
-    )
-  }
-
-  async function prepareTransaction(
-    witnessDb: KeyValueStore,
-    stateUpdate: StateUpdate,
-    transaction: Transaction
-  ) {
-    const txRepo = await TransactionRepository.init(witnessDb)
-    await txRepo.insertTransaction(
-      stateUpdate.depositContractAddress,
-      stateUpdate.blockNumber,
-      stateUpdate.range,
-      transaction
+      nextState,
+      from.getAddress()
     )
   }
 
   describe('claimExit', () => {
     test('succeed', async () => {
-      const witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
       await prepareInclusionProof(witnessDb, stateUpdate)
-      const exitDispute = new ExitDispute(
-        new MockContractWrapper(),
-        new MockDeciderManager(),
-        witnessDb
-      )
       await exitDispute.claimExit(stateUpdate)
     })
 
     test('throw exception because of invalid StateUpdate range', async () => {
-      const witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
-      const exitDispute = new ExitDispute(
-        new MockContractWrapper(),
-        new MockDeciderManager(),
-        witnessDb
-      )
       await expect(exitDispute.claimExit(stateUpdate)).rejects.toThrow()
     })
 
     test('throw exception because of transaction revert', async () => {
-      const witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
       await prepareInclusionProof(witnessDb, stateUpdate)
-      const exitDispute = new ExitDispute(
+      exitDispute = new ExitDispute(
         new MockContractWrapperFailing(),
         new MockDeciderManager(),
         witnessDb
@@ -187,36 +175,48 @@ describe('ExitDispute', () => {
 
   describe('handleExitClaimed', () => {
     test('do nothing because transactions are not exists', async () => {
-      const witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
-      const exitDispute = new ExitDispute(
-        new MockContractWrapper(),
-        new MockDeciderManager(),
-        witnessDb
-      )
+      await Prepare.prepareSU(witnessDb, stateUpdate)
       await exitDispute.handleExitClaimed(stateUpdate)
     })
 
     test('do nothing because decision of StateObject is false', async () => {
-      const witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
-      const tx = createTransaction(stateUpdate)
-      await prepareTransaction(witnessDb, stateUpdate, tx)
-      const exitDispute = new ExitDispute(
-        new MockContractWrapper(),
-        new MockDeciderManager(),
-        witnessDb
-      )
+      await Prepare.prepareSU(witnessDb, stateUpdate)
+      await Prepare.prepareTx(witnessDb, stateUpdate, owner, nextOwnership)
       await exitDispute.handleExitClaimed(stateUpdate)
     })
 
-    test('challenge receiving exit', async () => {
-      const witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
-      const tx = createTransaction(stateUpdate)
-      await prepareTransaction(witnessDb, stateUpdate, tx)
-      const exitDispute = new ExitDispute(
+    test('spentChallenge', async () => {
+      await Prepare.prepareSU(witnessDb, stateUpdate)
+      exitDispute = new ExitDispute(
         new MockContractWrapper(),
         new MockDeciderManager(mockDecideTrue),
         witnessDb
       )
+
+      const tx = createTransaction(stateUpdate, owner, nextOwner)
+      await Prepare.prepareTx(witnessDb, stateUpdate, owner, nextOwnership)
+      await exitDispute.handleExitClaimed(stateUpdate)
+
+      // confirm challenge was executed
+      expect(mockChallenge).toHaveBeenCalledWith({
+        type: EXIT_CHALLENGE_TYPE.SPENT,
+        stateUpdate,
+        transaction: tx,
+        witness: []
+      })
+    })
+
+    // old state update have not been properly spent
+    test('checkpointChallenge', async () => {
+      await Prepare.prepareSU(witnessDb, stateUpdate)
+      exitDispute = new ExitDispute(
+        new MockContractWrapper(),
+        new MockDeciderManager(mockDecideTrue),
+        witnessDb
+      )
+
+      const tx = createTransaction(stateUpdate, owner, nextOwner)
+      await Prepare.prepareTx(witnessDb, stateUpdate, owner, nextOwnership)
       await exitDispute.handleExitClaimed(stateUpdate)
 
       // confirm challenge was executed

@@ -1,4 +1,4 @@
-import { StateUpdate, Transaction, Block } from '@cryptoeconomicslab/plasma'
+import { StateUpdate } from '@cryptoeconomicslab/plasma'
 import {
   Address,
   Bytes,
@@ -8,21 +8,14 @@ import {
 } from '@cryptoeconomicslab/primitives'
 import { setupContext } from '@cryptoeconomicslab/context'
 import Coder from '@cryptoeconomicslab/eth-coder'
-import { KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
+import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import { DeciderManager, DeciderConfig } from '@cryptoeconomicslab/ovm'
-import {
-  StateUpdateRepository,
-  TransactionRepository,
-  InclusionProofRepository,
-  SyncRepository
-} from '../../src/repository'
 import { generateRandomWallet } from '../helper/MockWallet'
 import deciderConfig from '../config.local'
-import { createSignatureHint } from '@cryptoeconomicslab/ovm/lib/hintString'
-import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import { Wallet } from '@cryptoeconomicslab/wallet'
 import { verifyCheckpoint } from '../../src/verifier/CheckpointVerifier'
+import * as Prepare from '../helper/prepare'
 setupContext({ coder: Coder })
 
 const TOKEN_ADDRESS = Address.default()
@@ -62,84 +55,39 @@ describe('CheckpointDispute', () => {
   }
 
   describe('verifyCheckpoint', () => {
-    let suRepo: StateUpdateRepository,
-      txRepo: TransactionRepository,
-      inclusionProofRepo: InclusionProofRepository,
-      syncRepo: SyncRepository
-
-    beforeEach(async () => {
-      suRepo = await StateUpdateRepository.init(witnessDb)
-      txRepo = await TransactionRepository.init(witnessDb)
-      inclusionProofRepo = await InclusionProofRepository.init(witnessDb)
-      syncRepo = await SyncRepository.init(witnessDb)
-    })
-
-    // prepare StateUpdate, Transaction, Signature, InclusionProof and  BlockRoot
-    async function prepareSU(su: StateUpdate) {
-      const { blockNumber, range } = su
-      await suRepo.insertWitnessStateUpdate(su)
-
-      const suList = [su]
-      const suMap = new Map<string, StateUpdate[]>()
-      suMap.set(TOKEN_ADDRESS.data, suList)
-
-      const block = new Block(blockNumber, suMap)
-      const root = block.getRoot()
-      const inclusionProof = block.getInclusionProof(
-        su
-      ) as DoubleLayerInclusionProof
-
-      await syncRepo.insertBlockRoot(blockNumber, root)
-      await inclusionProofRepo.insertInclusionProof(
-        TOKEN_ADDRESS,
-        blockNumber,
-        range,
-        inclusionProof
-      )
-
-      await inclusionProofRepo.insertInclusionProof(
-        TOKEN_ADDRESS,
-        blockNumber,
-        range,
-        inclusionProof
-      )
+    // prepare StateUpdate, InclusionProof and  BlockRoot
+    async function prepareSU(witnessDb: KeyValueStore, su: StateUpdate) {
+      await Prepare.prepareSU(witnessDb, su)
+      const block = await Prepare.prepareBlock(witnessDb, su)
+      await Prepare.prepareInclusionProof(witnessDb, su, block)
     }
 
+    // Tx, Signature
     async function prepareTx(
+      witnessDb: KeyValueStore,
       su: StateUpdate,
       wallet: Wallet,
       nextOwner: Wallet
     ) {
-      const { blockNumber, depositContractAddress, range } = su
-      const tx = new Transaction(
-        TOKEN_ADDRESS,
-        range,
-        BigNumber.from(100),
-        ownershipSO(nextOwner.getAddress()),
-        wallet.getAddress()
+      const tx = await Prepare.prepareTx(
+        witnessDb,
+        su,
+        wallet,
+        ownershipSO(nextOwner.getAddress())
       )
-      await txRepo.insertTransaction(
-        depositContractAddress,
-        blockNumber,
-        range,
-        tx
-      )
-
-      // save signature
-      const txBytes = Coder.encode(tx.body)
-      const sign = await wallet.signMessage(txBytes)
-      await putWitness(witnessDb, createSignatureHint(txBytes), sign)
+      await Prepare.prepareSignature(witnessDb, tx, wallet)
     }
 
     test('verifyCheckpoint returns true', async () => {
       const range = new Range(BigNumber.from(0), BigNumber.from(10))
+
       const su1 = SU(range, BigNumber.from(1), ALICE.getAddress())
-      await prepareSU(su1)
-      await prepareTx(su1, ALICE, BOB)
+      await prepareSU(witnessDb, su1)
+      await prepareTx(witnessDb, su1, ALICE, BOB)
 
       const su2 = SU(range, BigNumber.from(2), BOB.getAddress())
-      await prepareSU(su2)
-      await prepareTx(su2, BOB, CHARLIE)
+      await prepareSU(witnessDb, su2)
+      await prepareTx(witnessDb, su2, BOB, CHARLIE)
 
       const su3 = SU(range, BigNumber.from(3), CHARLIE.getAddress())
 
@@ -152,11 +100,11 @@ describe('CheckpointDispute', () => {
     test('verifyCheckpoint returns false', async () => {
       const range = new Range(BigNumber.from(0), BigNumber.from(10))
       const su1 = SU(range, BigNumber.from(1), ALICE.getAddress())
-      await prepareSU(su1)
-      await prepareTx(su1, ALICE, BOB)
+      await prepareSU(witnessDb, su1)
+      await prepareTx(witnessDb, su1, ALICE, BOB)
 
       const su2 = SU(range, BigNumber.from(2), BOB.getAddress())
-      await prepareSU(su2)
+      await prepareSU(witnessDb, su2)
 
       const su3 = SU(range, BigNumber.from(3), CHARLIE.getAddress())
 
