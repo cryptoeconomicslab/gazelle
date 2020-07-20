@@ -61,4 +61,8 @@ export default class Range {
       JSBI.lessThanOrEqual(range.end.data, this.end.data)
     )
   }
+
+  public toString(): string {
+    return `Range(${this.start.raw}, ${this.end.raw})`
+  }
 }

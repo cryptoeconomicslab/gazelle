@@ -1,4 +1,4 @@
-import { ExitDispte } from '../../src/disputes/ExitDispute'
+import { ExitDispte } from '../../src/dispute/ExitDispute'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import {
   Bytes,
@@ -7,10 +7,15 @@ import {
   Range,
   Property
 } from '@cryptoeconomicslab/primitives'
-import { StateUpdate, Transaction } from '@cryptoeconomicslab/plasma'
+import { StateUpdate, Transaction, Block } from '@cryptoeconomicslab/plasma'
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
 import { RangeDb, KeyValueStore } from '@cryptoeconomicslab/db'
+import {
+  TransactionRepository,
+  InclusionProofRepository
+} from '../../src/repository'
+import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 setupContext({ coder: JsonCoder })
 
 const mockClaim = jest.fn().mockImplementation(() => {})
@@ -87,17 +92,19 @@ describe('ExitDispute', () => {
     witnessDb: KeyValueStore,
     stateUpdate: StateUpdate
   ) {
-    const inclusionProofBucket = await witnessDb.bucket(
-      Bytes.fromString('inclusion_proof')
-    )
-    const blockBucket = await inclusionProofBucket.bucket(
-      Bytes.fromHexString(stateUpdate.blockNumber.toHexString())
-    )
-    const rangeDb = new RangeDb(blockBucket)
-    const inclusionProof = Bytes.fromString('inclusion proof')
-    await rangeDb.put(
-      stateUpdate.range.start.data,
-      stateUpdate.range.end.data,
+    const map = new Map()
+    map.set(stateUpdate.depositContractAddress.data, [stateUpdate])
+
+    const block = new Block(stateUpdate.blockNumber, map)
+    const repo = await InclusionProofRepository.init(witnessDb)
+    const inclusionProof = block.getInclusionProof(
+      stateUpdate
+    ) as DoubleLayerInclusionProof
+
+    await repo.insertInclusionProof(
+      stateUpdate.depositContractAddress,
+      stateUpdate.blockNumber,
+      stateUpdate.range,
       inclusionProof
     )
   }
@@ -128,16 +135,12 @@ describe('ExitDispute', () => {
     stateUpdate: StateUpdate,
     transaction: Transaction
   ) {
-    // store transaction
-    const txBucket = await witnessDb.bucket(Bytes.fromString('tx'))
-    const blockBucket = await txBucket.bucket(
-      Bytes.fromHexString(stateUpdate.blockNumber.toHexString())
-    )
-    const rangeDb = new RangeDb(blockBucket)
-    await rangeDb.put(
-      stateUpdate.range.start.data,
-      stateUpdate.range.end.data,
-      ovmContext.coder.encode(transaction.toStruct())
+    const txRepo = await TransactionRepository.init(witnessDb)
+    await txRepo.insertTransaction(
+      stateUpdate.depositContractAddress,
+      stateUpdate.blockNumber,
+      stateUpdate.range,
+      transaction
     )
   }
 
@@ -160,9 +163,7 @@ describe('ExitDispute', () => {
         new MockDeciderManager(),
         witnessDb
       )
-      await expect(exitDispute.claimExit(stateUpdate)).rejects.toThrowError(
-        'invalid stateUpdate range'
-      )
+      await expect(exitDispute.claimExit(stateUpdate)).rejects.toThrow()
     })
 
     test('throw exception because of transaction revert', async () => {
@@ -203,6 +204,7 @@ describe('ExitDispute', () => {
     })
 
     test('challenge receiving exit', async () => {
+      const { coder } = ovmContext
       const witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
       const tx = createTransaction(stateUpdate)
       await prepareTransaction(witnessDb, stateUpdate, tx)
@@ -214,9 +216,9 @@ describe('ExitDispute', () => {
       await exitDispute.handleExitClaimed(stateUpdate)
       // confirm challenge was executed
       expect(mockChallenge).toHaveBeenCalledWith(
-        [ovmContext.coder.encode(stateUpdate.property.toStruct())],
+        [coder.encode(stateUpdate.property.toStruct())],
         [],
-        [ovmContext.coder.encode(tx.toStruct())]
+        [coder.encode(tx.body)]
       )
     })
   })
