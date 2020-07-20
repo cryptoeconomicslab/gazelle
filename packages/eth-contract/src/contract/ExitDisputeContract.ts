@@ -19,7 +19,7 @@ function createChallengeInputAndWitness(challenge: ExitChallenge): Bytes[][] {
         Bytes.fromString(challenge.type).toHexString(),
         encode(challenge.transaction.body)
       ],
-      [challenge.signature]
+      challenge.witness
     ]
   } else if (challenge.type === EXIT_CHALLENGE_TYPE.CHECKPOINT) {
     return [

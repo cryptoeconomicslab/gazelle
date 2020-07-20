@@ -1,33 +1,18 @@
-import { Property, Bytes } from '@cryptoeconomicslab/primitives'
-import { StateUpdate } from '@cryptoeconomicslab/plasma'
+import { Property } from '@cryptoeconomicslab/primitives'
+import { StateUpdate, createSpentChallenge } from '@cryptoeconomicslab/plasma'
 import { DeciderManager } from '@cryptoeconomicslab/ovm'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
+import { IExitDisputeContract } from '@cryptoeconomicslab/contract'
 import { TransactionRepository, InclusionProofRepository } from '../repository'
 
-interface ExitDisputeContract {
-  claim(inputs: Bytes[], witnesses: Bytes[]): Promise<void>
-  challenge(
-    inputs: Bytes[],
-    challengeInputs: Bytes[],
-    witnesses: Bytes[]
-  ): Promise<void>
-  subscribeExitClaim(handler: (stateUpdate: StateUpdate) => Promise<void>): void
-  subscribeExitChallenged(
-    handler: (stateUpdate: StateUpdate) => Promise<void>
-  ): void
-  subscribeExitSettled(
-    handler: (stateUpdate: StateUpdate) => Promise<void>
-  ): void
-}
-
-export class ExitDispte {
+export class ExitDispute {
   constructor(
-    private contract: ExitDisputeContract,
+    private contract: IExitDisputeContract,
     private deciderManager: DeciderManager,
     private witnessDb: KeyValueStore
   ) {
     // watch exit contract to handle challenge
-    this.contract.subscribeExitClaim(this.handleExitClaimed)
+    this.contract.subscribeExitClaimed(this.handleExitClaimed)
     this.contract.subscribeExitChallenged(this.handleExitChallenged)
     this.contract.subscribeExitSettled(this.handleExitSettled)
   }
@@ -50,11 +35,7 @@ export class ExitDispte {
       )
     }
 
-    const { coder } = ovmContext
-    this.contract.claim(
-      [coder.encode(stateUpdate.property.toStruct())],
-      [coder.encode(inclusionProofs[0].toStruct())]
-    )
+    this.contract.claim(stateUpdate, inclusionProofs[0])
   }
 
   /**
@@ -85,11 +66,15 @@ export class ExitDispte {
     const decision = await this.deciderManager.decide(stateObject, {})
 
     // TODO: call Checkpoint.handleCheckpointClaimed(stateUpdate)
+
+    // spent challenge
     if (decision.outcome) {
       await this.contract.challenge(
-        [coder.encode(stateUpdate.property.toStruct())],
-        [],
-        [tx]
+        createSpentChallenge(
+          stateUpdate,
+          transactions[0],
+          decision.witnesses || []
+        )
       )
     }
   }

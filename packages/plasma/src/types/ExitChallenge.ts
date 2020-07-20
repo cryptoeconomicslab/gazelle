@@ -17,7 +17,33 @@ export type SpentChallenge = {
   type: EXIT_CHALLENGE_TYPE.SPENT
   stateUpdate: StateUpdate
   transaction: Transaction
-  signature: Bytes
+  witness: Bytes[]
 }
 
 export type ExitChallenge = CheckpointChallenge | SpentChallenge
+
+export function createSpentChallenge(
+  stateUpdate: StateUpdate,
+  transaction: Transaction,
+  witness: Bytes[]
+): SpentChallenge {
+  return {
+    type: EXIT_CHALLENGE_TYPE.SPENT,
+    stateUpdate,
+    transaction,
+    witness
+  }
+}
+
+export function createCheckpointChallenge(
+  stateUpdate: StateUpdate,
+  challengeStateUpdate: StateUpdate,
+  inclusionProof: DoubleLayerInclusionProof
+): CheckpointChallenge {
+  return {
+    type: EXIT_CHALLENGE_TYPE.CHECKPOINT,
+    stateUpdate,
+    challengeStateUpdate,
+    inclusionProof
+  }
+}

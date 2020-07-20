@@ -1,4 +1,4 @@
-import { ExitDispte } from '../../src/dispute/ExitDispute'
+import { ExitDispute } from '../../src/dispute/ExitDispute'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import {
   Bytes,
@@ -7,7 +7,12 @@ import {
   Range,
   Property
 } from '@cryptoeconomicslab/primitives'
-import { StateUpdate, Transaction, Block } from '@cryptoeconomicslab/plasma'
+import {
+  StateUpdate,
+  Transaction,
+  Block,
+  EXIT_CHALLENGE_TYPE
+} from '@cryptoeconomicslab/plasma'
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
@@ -31,7 +36,7 @@ const MockContractWrapper = jest.fn().mockImplementation(() => {
   return {
     claim: mockClaim,
     challenge: mockChallenge,
-    subscribeExitClaim: mockSubscribeExitClaim,
+    subscribeExitClaimed: mockSubscribeExitClaim,
     subscribeExitChallenged: mockSubscribeExitChallenged,
     subscribeExitSettled: mockSubscribeExitSettled
   }
@@ -41,7 +46,7 @@ const MockContractWrapperFailing = jest.fn().mockImplementation(() => {
   return {
     claim: mockClaimFailing,
     challenge: mockChallenge,
-    subscribeExitClaim: mockSubscribeExitClaim,
+    subscribeExitClaimed: mockSubscribeExitClaim,
     subscribeExitChallenged: mockSubscribeExitChallenged,
     subscribeExitSettled: mockSubscribeExitSettled
   }
@@ -148,7 +153,7 @@ describe('ExitDispute', () => {
     test('succeed', async () => {
       const witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
       await prepareInclusionProof(witnessDb, stateUpdate)
-      const exitDispute = new ExitDispte(
+      const exitDispute = new ExitDispute(
         new MockContractWrapper(),
         new MockDeciderManager(),
         witnessDb
@@ -158,7 +163,7 @@ describe('ExitDispute', () => {
 
     test('throw exception because of invalid StateUpdate range', async () => {
       const witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
-      const exitDispute = new ExitDispte(
+      const exitDispute = new ExitDispute(
         new MockContractWrapper(),
         new MockDeciderManager(),
         witnessDb
@@ -169,7 +174,7 @@ describe('ExitDispute', () => {
     test('throw exception because of transaction revert', async () => {
       const witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
       await prepareInclusionProof(witnessDb, stateUpdate)
-      const exitDispute = new ExitDispte(
+      const exitDispute = new ExitDispute(
         new MockContractWrapperFailing(),
         new MockDeciderManager(),
         witnessDb
@@ -183,7 +188,7 @@ describe('ExitDispute', () => {
   describe('handleExitClaimed', () => {
     test('do nothing because transactions are not exists', async () => {
       const witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
-      const exitDispute = new ExitDispte(
+      const exitDispute = new ExitDispute(
         new MockContractWrapper(),
         new MockDeciderManager(),
         witnessDb
@@ -195,7 +200,7 @@ describe('ExitDispute', () => {
       const witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
       const tx = createTransaction(stateUpdate)
       await prepareTransaction(witnessDb, stateUpdate, tx)
-      const exitDispute = new ExitDispte(
+      const exitDispute = new ExitDispute(
         new MockContractWrapper(),
         new MockDeciderManager(),
         witnessDb
@@ -204,22 +209,23 @@ describe('ExitDispute', () => {
     })
 
     test('challenge receiving exit', async () => {
-      const { coder } = ovmContext
       const witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
       const tx = createTransaction(stateUpdate)
       await prepareTransaction(witnessDb, stateUpdate, tx)
-      const exitDispute = new ExitDispte(
+      const exitDispute = new ExitDispute(
         new MockContractWrapper(),
         new MockDeciderManager(mockDecideTrue),
         witnessDb
       )
       await exitDispute.handleExitClaimed(stateUpdate)
+
       // confirm challenge was executed
-      expect(mockChallenge).toHaveBeenCalledWith(
-        [coder.encode(stateUpdate.property.toStruct())],
-        [],
-        [coder.encode(tx.body)]
-      )
+      expect(mockChallenge).toHaveBeenCalledWith({
+        type: EXIT_CHALLENGE_TYPE.SPENT,
+        stateUpdate,
+        transaction: tx,
+        witness: []
+      })
     })
   })
 })
