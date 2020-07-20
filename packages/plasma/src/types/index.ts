@@ -10,6 +10,7 @@ import Checkpoint from './Checkpoint'
 import Exit from './Exit'
 import ExitDeposit from './ExitDeposit'
 import IExit from './IExit'
+export * from './ExitChallenge'
 
 export {
   StateUpdate,
