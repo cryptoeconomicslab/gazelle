@@ -61,7 +61,7 @@ export class CheckpointDispute {
     contract.subscribeCheckpointSettled(this.handleCheckpointSettled)
   }
 
-  private async handleCheckpointClaimed(
+  async handleCheckpointClaimed(
     stateUpdate: StateUpdate,
     _inclusionProof: DoubleLayerInclusionProof
   ) {
@@ -108,7 +108,7 @@ export class CheckpointDispute {
     console.log('Challenge checkpoint')
   }
 
-  private async handleCheckpointChallenged(
+  async handleCheckpointChallenged(
     stateUpdate: StateUpdate,
     challenge: StateUpdate,
     inclusionProof: DoubleLayerInclusionProof
@@ -149,15 +149,12 @@ export class CheckpointDispute {
     await this.removeChallenge(stateUpdate, challenge, [txBytes, signature[0]])
   }
 
-  private handleChallengeRemoved(
-    stateUpdate: StateUpdate,
-    challenge: StateUpdate
-  ) {
+  handleChallengeRemoved(stateUpdate: StateUpdate, challenge: StateUpdate) {
     // you can do nothing. challenge is just removed
     console.log('checkpoint challenge removed')
   }
 
-  private async handleCheckpointSettled(stateUpdate: StateUpdate) {
+  async handleCheckpointSettled(stateUpdate: StateUpdate) {
     console.log('checkpoint settled') // TODO: log informative message
     const repository = await CheckpointRepository.init(this.witnessDb)
     const claimedCheckpoints = await repository.getClaimedCheckpoints(

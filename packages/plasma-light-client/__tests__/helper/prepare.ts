@@ -78,12 +78,13 @@ export async function prepareInclusionProof(
 
 export async function prepareBlock(
   witnessDb: KeyValueStore,
-  su: StateUpdate
+  su: StateUpdate,
+  otherStateUpdates: StateUpdate[] = []
 ): Promise<Block> {
   const syncRepo = await SyncRepository.init(witnessDb)
   const { blockNumber, depositContractAddress } = su
 
-  const suList = [su]
+  const suList = [su, ...otherStateUpdates]
   const suMap = new Map<string, StateUpdate[]>()
   suMap.set(depositContractAddress.data, suList)
 
@@ -100,14 +101,15 @@ export async function prepareBlock(
  */
 export async function prepareValidSU(
   witnessDb: KeyValueStore,
-  su: StateUpdate
+  su: StateUpdate,
+  otherStateUpdates: StateUpdate[] = []
 ): Promise<{
   block: Block
   stateUpdate: StateUpdate
   inclusionProof: DoubleLayerInclusionProof
 }> {
   await prepareSU(witnessDb, su)
-  const block = await prepareBlock(witnessDb, su)
+  const block = await prepareBlock(witnessDb, su, otherStateUpdates)
   const inclusionProof = await prepareInclusionProof(witnessDb, su, block)
 
   return {
