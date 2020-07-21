@@ -14,7 +14,7 @@ import TokenManager from '../managers/TokenManager'
 import {
   StateUpdateRepository,
   CheckpointRepository,
-  ExitRepository,
+  ExitRepositoryOld,
   DepositedRangeRepository,
   UserActionRepository
 } from '../repository'
@@ -128,7 +128,7 @@ export class ExitUsecase {
    * Get pending withdrawal list
    */
   public async getPendingWithdrawals(): Promise<IExit[]> {
-    const exitRepository = await ExitRepository.init(
+    const exitRepository = await ExitRepositoryOld.init(
       this.witnessDb,
       this.deciderManager.getDeciderAddress('Exit'),
       this.deciderManager.getDeciderAddress('ExitDeposit')
@@ -226,7 +226,7 @@ export class ExitUsecase {
     const { coder } = ovmContext
     const stateUpdate = exit.stateUpdate
     const propertyBytes = coder.encode(exit.property.toStruct())
-    const exitRepository = await ExitRepository.init(
+    const exitRepository = await ExitRepositoryOld.init(
       this.witnessDb,
       this.deciderManager.getDeciderAddress('Exit'),
       this.deciderManager.getDeciderAddress('ExitDeposit')

@@ -4,15 +4,20 @@ import {
   createSpentChallenge,
   createCheckpointChallenge,
   SpentChallenge,
-  CheckpointChallenge
+  CheckpointChallenge,
+  ExitChallenge,
+  EXIT_CHALLENGE_TYPE,
+  Exit
 } from '@cryptoeconomicslab/plasma'
-import { DeciderManager } from '@cryptoeconomicslab/ovm'
-import { KeyValueStore } from '@cryptoeconomicslab/db'
+import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
+import { KeyValueStore, getWitnesses } from '@cryptoeconomicslab/db'
 import { IExitDisputeContract } from '@cryptoeconomicslab/contract'
 import {
   StateUpdateRepository,
   TransactionRepository,
-  InclusionProofRepository
+  InclusionProofRepository,
+  ExitRepository,
+  SyncRepository
 } from '../repository'
 import { verifyCheckpoint } from '../verifier/CheckpointVerifier'
 
@@ -34,8 +39,11 @@ export class ExitDispute {
    * @param stateUpdate A StateUpdate to exit
    */
   async claimExit(stateUpdate: StateUpdate) {
-    const repo = await InclusionProofRepository.init(this.witnessDb)
-    const inclusionProofs = await repo.getInclusionProofs(
+    // store exiting stateUpdate in ExitRepository
+    const inclusionProofRepo = await InclusionProofRepository.init(
+      this.witnessDb
+    )
+    const inclusionProofs = await inclusionProofRepo.getInclusionProofs(
       stateUpdate.depositContractAddress,
       stateUpdate.blockNumber,
       stateUpdate.range
@@ -45,8 +53,13 @@ export class ExitDispute {
         `Inclusion proof not found for stateUpdate: ${stateUpdate.toString()}`
       )
     }
-
     this.contract.claim(stateUpdate, inclusionProofs[0])
+
+    const syncRepo = await SyncRepository.init(this.witnessDb)
+    const claimedBlockNumber = await syncRepo.getSyncedBlockNumber()
+    const exit = new Exit(stateUpdate, claimedBlockNumber)
+    const exitRepo = await ExitRepository.init(this.witnessDb)
+    await exitRepo.insertClaimedExit(exit)
   }
 
   /**
@@ -79,8 +92,62 @@ export class ExitDispute {
     }
   }
 
-  async handleExitChallenged(stateUpdate: StateUpdate) {}
-  async handleExitSettled(stateUpdate: StateUpdate) {}
+  async handleExitChallenged(
+    stateUpdate: StateUpdate,
+    challenge: ExitChallenge
+  ) {
+    if (challenge.type === EXIT_CHALLENGE_TYPE.CHECKPOINT) {
+      const { coder } = ovmContext
+
+      // do checkpoint challenged
+      const exitRepo = await ExitRepository.init(this.witnessDb)
+      const claims = await exitRepo.getClaimedExits(
+        stateUpdate.depositContractAddress,
+        stateUpdate.range
+      )
+      if (claims.length === 0) return
+
+      const txRepo = await TransactionRepository.init(this.witnessDb)
+      const transactions = await txRepo.getTransactions(
+        challenge.challengeStateUpdate.depositContractAddress,
+        challenge.challengeStateUpdate.blockNumber,
+        challenge.challengeStateUpdate.range
+      )
+      if (transactions.length !== 1) {
+        // do nothing
+        return
+      }
+      const txBytes = coder.encode(transactions[0].body)
+
+      const signature = await getWitnesses(
+        this.witnessDb,
+        Hint.createSignatureHint(txBytes)
+      )
+      if (signature.length !== 1) {
+        // do nothing
+        return
+      }
+
+      const witness = [txBytes, signature[0]]
+      this.contract.removeChallenge(challenge, witness)
+    } else if (challenge.type === EXIT_CHALLENGE_TYPE.SPENT) {
+      // nothing you can do. Just delete exiting state from stateUpdate
+    }
+  }
+
+  async handleExitSettled(stateUpdate: StateUpdate) {
+    console.log('exit settled') // TODO: log informative message
+    const repository = await ExitRepository.init(this.witnessDb)
+    const claimedExits = await repository.getClaimedExits(
+      stateUpdate.depositContractAddress,
+      stateUpdate.range
+    )
+    if (claimedExits.length === 1) {
+      const exit = claimedExits[0]
+      await repository.removeClaimedExit(exit)
+      await repository.insertSettledExit(exit.stateUpdate)
+    }
+  }
 
   //// Challenge checker
 

@@ -4,7 +4,8 @@ import {
   StateUpdate,
   Transaction,
   Block,
-  Checkpoint
+  Checkpoint,
+  Exit
 } from '@cryptoeconomicslab/plasma'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import { Wallet } from '@cryptoeconomicslab/wallet'
@@ -14,7 +15,8 @@ import {
   SyncRepository,
   InclusionProofRepository,
   TransactionRepository,
-  CheckpointRepository
+  CheckpointRepository,
+  ExitRepository
 } from '../../src/repository'
 
 // prepare StateUpdate, Transaction, Signature, InclusionProof and  BlockRoot
@@ -109,6 +111,16 @@ export async function prepareCheckpoint(
   const repo = await CheckpointRepository.init(witnessDb)
   const checkpoint = new Checkpoint(stateUpdate, claimedAt)
   await repo.insertClaimedCheckpoint(checkpoint)
+}
+
+export async function prepareExit(
+  witnessDb: KeyValueStore,
+  stateUpdate: StateUpdate,
+  claimedAt: BigNumber
+) {
+  const repo = await ExitRepository.init(witnessDb)
+  const exit = new Exit(stateUpdate, claimedAt)
+  await repo.insertClaimedExit(exit)
 }
 
 /* given stateUpdate and witnessDb,

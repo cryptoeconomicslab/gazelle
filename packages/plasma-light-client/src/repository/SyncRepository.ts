@@ -16,7 +16,7 @@ export class SyncRepository {
   public async getSyncedBlockNumber(): Promise<BigNumber> {
     const d = await this.db.get(LATEST_SYNCED_BLOCK)
 
-    if (!d) return BigNumber.from(-1)
+    if (!d) return BigNumber.from(0)
     return ovmContext.coder.decode(BigNumber.default(), d)
   }
 

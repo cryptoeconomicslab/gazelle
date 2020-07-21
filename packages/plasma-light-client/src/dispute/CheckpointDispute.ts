@@ -100,7 +100,7 @@ export class CheckpointDispute {
       challengingStateUpdate.range
     )
 
-    await this.challenge(
+    await this.contract.challenge(
       stateUpdate,
       challengingStateUpdate,
       inclusionProofs[0]
@@ -143,7 +143,10 @@ export class CheckpointDispute {
       return
     }
 
-    await this.removeChallenge(stateUpdate, challenge, [txBytes, signature[0]])
+    await this.contract.removeChallenge(stateUpdate, challenge, [
+      txBytes,
+      signature[0]
+    ])
   }
 
   handleChallengeRemoved(stateUpdate: StateUpdate, challenge: StateUpdate) {
@@ -183,7 +186,7 @@ export class CheckpointDispute {
               currentBlockNumber.data
             )
           ) {
-            this.settle(c.stateUpdate)
+            this.contract.settle(c.stateUpdate)
           }
         })
         this.pollClaim()
@@ -207,36 +210,6 @@ export class CheckpointDispute {
     const checkpointRepo = await CheckpointRepository.init(this.witnessDb)
     await checkpointRepo.insertClaimedCheckpoint(checkpoint)
     if (!this.polling) this.pollClaim()
-  }
-
-  /**
-   * challenge to checkpoint
-   */
-  public async challenge(
-    stateUpdate: StateUpdate,
-    challenge: StateUpdate,
-    inclusionProof: DoubleLayerInclusionProof
-  ) {
-    await this.contract.challenge(stateUpdate, challenge, inclusionProof)
-  }
-
-  /**
-   * remove challenge by submitting witness
-   * witness: [tx, signature]
-   */
-  public async removeChallenge(
-    stateUpdate: StateUpdate,
-    challenge: StateUpdate,
-    witness: Bytes[]
-  ) {
-    await this.contract.removeChallenge(stateUpdate, challenge, witness)
-  }
-
-  /**
-   * settle checkpoint claim
-   */
-  public async settle(stateUpdate: StateUpdate) {
-    await this.contract.settle(stateUpdate)
   }
 
   private async getAllClaimedCheckpoints(): Promise<Checkpoint[]> {

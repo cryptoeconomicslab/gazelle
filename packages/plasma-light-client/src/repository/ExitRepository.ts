@@ -1,70 +1,118 @@
-import { KeyValueStore, RangeDb, RangeStore } from '@cryptoeconomicslab/db'
-import { Address, Bytes, Property } from '@cryptoeconomicslab/primitives'
-import { IExit, Exit, ExitDeposit } from '@cryptoeconomicslab/plasma'
+import { Exit, StateUpdate } from '@cryptoeconomicslab/plasma'
+import { Address, Bytes, Range, Property } from '@cryptoeconomicslab/primitives'
+import { KeyValueStore, RangeStore, RangeDb } from '@cryptoeconomicslab/db'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
-import JSBI from 'jsbi'
 
+enum Kind {
+  SETTLED = 'SETTLED',
+  CLAIMED = 'CLAIMED'
+}
+
+/**
+ * ExitRepository
+ * stores exiting stateUpdate in SettledExit bucket
+ * store stateUpdate with claimedBlockNumber in ClaimedExit bucket
+ */
 export class ExitRepository {
   static BUCKET_KEY = Bytes.fromString('EXIT')
 
-  static async init(
-    witnessDb: KeyValueStore,
-    exitAddress: Address,
-    exitDepositAddress: Address
-  ): Promise<ExitRepository> {
+  static async init(witnessDb: KeyValueStore): Promise<ExitRepository> {
     const storage = await witnessDb.bucket(this.BUCKET_KEY)
-    const rangeStore = new RangeDb(storage)
-    return new ExitRepository(rangeStore, exitAddress, exitDepositAddress)
+    const db = new RangeDb(storage)
+    return new ExitRepository(db)
   }
 
-  private constructor(
-    private db: RangeStore,
-    private exitAddress: Address,
-    private exitDepositAddress: Address
-  ) {}
+  private constructor(private db: RangeStore) {}
 
-  private createExitFromProperty(property: Property): IExit | null {
-    if (property.deciderAddress.equals(this.exitAddress)) {
-      return Exit.fromProperty(property)
-    } else if (property.deciderAddress.equals(this.exitDepositAddress)) {
-      return ExitDeposit.fromProperty(property)
-    }
-    return null
+  private async getDB(kind: Kind, addr: Address): Promise<RangeStore> {
+    const bucket = await this.db.bucket(Bytes.fromString(kind))
+    return await bucket.bucket(ovmContext.coder.encode(addr))
   }
 
-  private async getBucket(
-    depositContractAddress: Address
-  ): Promise<RangeStore> {
-    const bucket = await this.db.bucket(
-      ovmContext.coder.encode(depositContractAddress)
+  /**
+   * @name insertExit
+   * @description insert exit to find exit with rangee
+   * @param depositContractAddress deposit contract address of exit
+   * @param exit a exit object to insert
+   */
+  public async insertSettledExit(stateUpdate: StateUpdate) {
+    const db = await this.getDB(
+      Kind.SETTLED,
+      stateUpdate.depositContractAddress
     )
-    return bucket
+    const range = stateUpdate.range
+    await db.put(
+      range.start.data,
+      range.end.data,
+      ovmContext.coder.encode(stateUpdate.property.toStruct())
+    )
   }
 
-  public async insertExit(
+  /**
+   * @name getExits
+   * @description get exit with range
+   * @param depositContractAddress deposit contract address of exit
+   * @param range a range where exit is stored
+   */
+  public async getSettledExits(
     depositContractAddress: Address,
-    exit: IExit
-  ): Promise<void> {
-    const bucket = await this.getBucket(depositContractAddress)
-    const range = exit.stateUpdate.range
-    const propertyBytes = ovmContext.coder.encode(exit.property.toStruct())
-    await bucket.put(range.start.data, range.end.data, propertyBytes)
+    range: Range
+  ): Promise<StateUpdate[]> {
+    const db = await this.getDB(Kind.SETTLED, depositContractAddress)
+    const data = await db.get(range.start.data, range.end.data)
+    return data.map(r =>
+      StateUpdate.fromProperty(
+        decodeStructable(Property, ovmContext.coder, r.value)
+      )
+    )
   }
 
-  public async getAllExits(depositContractAddress: Address): Promise<IExit[]> {
-    const bucket = await this.getBucket(depositContractAddress)
-    const iter = bucket.iter(JSBI.BigInt(0))
+  /**
+   * @name insertExit
+   * @description insert exit to find exit with rangee
+   * @param depositContractAddress deposit contract address of exit
+   * @param exit a exit object to insert
+   */
+  public async insertClaimedExit(exit: Exit) {
+    const db = await this.getDB(
+      Kind.CLAIMED,
+      exit.stateUpdate.depositContractAddress
+    )
+    const range = exit.stateUpdate.range
+    await db.put(
+      range.start.data,
+      range.end.data,
+      ovmContext.coder.encode(exit.toStruct())
+    )
+  }
 
-    let item = await iter.next()
-    const result: IExit[] = []
-    while (item !== null) {
-      const p = decodeStructable(Property, ovmContext.coder, item.value)
-      const exit = this.createExitFromProperty(p)
-      if (exit) {
-        result.push(exit)
-      }
-      item = await iter.next()
-    }
-    return result
+  /**
+   * @name getExits
+   * @description get exit with range
+   * @param depositContractAddress deposit contract address of exit
+   * @param range a range where exit is stored
+   */
+  public async getClaimedExits(
+    depositContractAddress: Address,
+    range: Range
+  ): Promise<Exit[]> {
+    const db = await this.getDB(Kind.CLAIMED, depositContractAddress)
+    const data = await db.get(range.start.data, range.end.data)
+    return data.map(r => decodeStructable(Exit, ovmContext.coder, r.value))
+  }
+
+  /**
+   * @name getExits
+   * @description get exit with range
+   * @param depositContractAddress deposit contract address of exit
+   * @param range a range where exit is stored
+   */
+  public async removeClaimedExit(exit: Exit) {
+    const db = await this.getDB(
+      Kind.CLAIMED,
+      exit.stateUpdate.depositContractAddress
+    )
+    const range = exit.stateUpdate.range
+    await db.del(range.start.data, range.end.data)
   }
 }
