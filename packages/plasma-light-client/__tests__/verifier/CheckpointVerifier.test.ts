@@ -13,9 +13,8 @@ import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import { DeciderManager, DeciderConfig } from '@cryptoeconomicslab/ovm'
 import { generateRandomWallet } from '../helper/MockWallet'
 import deciderConfig from '../config.local'
-import { Wallet } from '@cryptoeconomicslab/wallet'
 import { verifyCheckpoint } from '../../src/verifier/CheckpointVerifier'
-import * as Prepare from '../helper/prepare'
+import { prepareValidSU, prepareValidTxAndSig } from '../helper/prepare'
 setupContext({ coder: Coder })
 
 const TOKEN_ADDRESS = Address.default()
@@ -37,7 +36,6 @@ describe('CheckpointDispute', () => {
 
     deciderManager = new DeciderManager(witnessDb, Coder)
     deciderManager.loadJson(deciderConfig as DeciderConfig)
-    // TODO: set constants table secp256k1
   })
 
   function ownershipSO(owner: Address) {
@@ -55,39 +53,26 @@ describe('CheckpointDispute', () => {
   }
 
   describe('verifyCheckpoint', () => {
-    // prepare StateUpdate, InclusionProof and  BlockRoot
-    async function prepareSU(witnessDb: KeyValueStore, su: StateUpdate) {
-      await Prepare.prepareSU(witnessDb, su)
-      const block = await Prepare.prepareBlock(witnessDb, su)
-      await Prepare.prepareInclusionProof(witnessDb, su, block)
-    }
-
-    // Tx, Signature
-    async function prepareTx(
-      witnessDb: KeyValueStore,
-      su: StateUpdate,
-      wallet: Wallet,
-      nextOwner: Wallet
-    ) {
-      const tx = await Prepare.prepareTx(
-        witnessDb,
-        su,
-        wallet,
-        ownershipSO(nextOwner.getAddress())
-      )
-      await Prepare.prepareSignature(witnessDb, tx, wallet)
-    }
-
     test('verifyCheckpoint returns true', async () => {
       const range = new Range(BigNumber.from(0), BigNumber.from(10))
 
       const su1 = SU(range, BigNumber.from(1), ALICE.getAddress())
-      await prepareSU(witnessDb, su1)
-      await prepareTx(witnessDb, su1, ALICE, BOB)
+      await prepareValidSU(witnessDb, su1)
+      await prepareValidTxAndSig(
+        witnessDb,
+        su1,
+        ALICE,
+        ownershipSO(BOB.getAddress())
+      )
 
       const su2 = SU(range, BigNumber.from(2), BOB.getAddress())
-      await prepareSU(witnessDb, su2)
-      await prepareTx(witnessDb, su2, BOB, CHARLIE)
+      await prepareValidSU(witnessDb, su2)
+      await prepareValidTxAndSig(
+        witnessDb,
+        su2,
+        BOB,
+        ownershipSO(CHARLIE.getAddress())
+      )
 
       const su3 = SU(range, BigNumber.from(3), CHARLIE.getAddress())
 
@@ -100,11 +85,16 @@ describe('CheckpointDispute', () => {
     test('verifyCheckpoint returns false', async () => {
       const range = new Range(BigNumber.from(0), BigNumber.from(10))
       const su1 = SU(range, BigNumber.from(1), ALICE.getAddress())
-      await prepareSU(witnessDb, su1)
-      await prepareTx(witnessDb, su1, ALICE, BOB)
+      await prepareValidSU(witnessDb, su1)
+      await prepareValidTxAndSig(
+        witnessDb,
+        su1,
+        ALICE,
+        ownershipSO(BOB.getAddress())
+      )
 
       const su2 = SU(range, BigNumber.from(2), BOB.getAddress())
-      await prepareSU(witnessDb, su2)
+      await prepareValidSU(witnessDb, su2)
 
       const su3 = SU(range, BigNumber.from(3), CHARLIE.getAddress())
 

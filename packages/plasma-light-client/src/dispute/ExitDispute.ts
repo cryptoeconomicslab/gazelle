@@ -2,7 +2,9 @@ import { Property } from '@cryptoeconomicslab/primitives'
 import {
   StateUpdate,
   createSpentChallenge,
-  createCheckpointChallenge
+  createCheckpointChallenge,
+  SpentChallenge,
+  CheckpointChallenge
 } from '@cryptoeconomicslab/plasma'
 import { DeciderManager } from '@cryptoeconomicslab/ovm'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
@@ -64,16 +66,36 @@ export class ExitDispute {
     )
     if (stateUpdates.length === 0) return
 
+    const checkpointChallenge = await this.checkCheckpointChallenge(stateUpdate)
+    if (checkpointChallenge) {
+      await this.contract.challenge(checkpointChallenge)
+      return
+    }
+
+    const spentChallenge = await this.checkSpentChallenge(stateUpdate)
+    if (spentChallenge) {
+      await this.contract.challenge(spentChallenge)
+      return
+    }
+  }
+
+  async handleExitChallenged(stateUpdate: StateUpdate) {}
+  async handleExitSettled(stateUpdate: StateUpdate) {}
+
+  //// Challenge checker
+
+  private async checkSpentChallenge(
+    stateUpdate: StateUpdate
+  ): Promise<SpentChallenge | undefined> {
+    // spent challenge
     const txRepo = await TransactionRepository.init(this.witnessDb)
-    // challenge
-    // check that a transaction is exists
     const transactions = await txRepo.getTransactions(
       stateUpdate.depositContractAddress,
       stateUpdate.blockNumber,
       stateUpdate.range
     )
     if (transactions.length === 0) {
-      console.warn('tx not fonud')
+      // Witness transaction not found for the stateUpdate. do nothing
       return
     }
 
@@ -84,22 +106,22 @@ export class ExitDispute {
       stateUpdate.stateObject.inputs.concat([tx])
     )
 
-    // spent challenge
     const spentChallengeResult = await this.deciderManager.decide(
       stateObject,
       {}
     )
-    if (spentChallengeResult.outcome) {
-      await this.contract.challenge(
-        createSpentChallenge(
-          stateUpdate,
-          transactions[0],
-          spentChallengeResult.witnesses || []
-        )
-      )
-      return
-    }
+    if (!spentChallengeResult.outcome) return
 
+    return createSpentChallenge(
+      stateUpdate,
+      transactions[0],
+      spentChallengeResult.witnesses || []
+    )
+  }
+
+  private async checkCheckpointChallenge(
+    stateUpdate: StateUpdate
+  ): Promise<CheckpointChallenge | undefined> {
     // checkpoint challenge
     // TODO: check if witness for claimed range is stored locally
     // TODO: if not, get witness from API
@@ -128,15 +150,10 @@ export class ExitDispute {
     // Inclusion proof does not stored locally. cannot challenge
     if (inclusionProofs.length === 0) return
 
-    await this.contract.challenge(
-      createCheckpointChallenge(
-        stateUpdate,
-        challengingStateUpdate,
-        inclusionProofs[0]
-      )
+    return createCheckpointChallenge(
+      stateUpdate,
+      challengingStateUpdate,
+      inclusionProofs[0]
     )
   }
-
-  async handleExitChallenged(stateUpdate: StateUpdate) {}
-  async handleExitSettled(stateUpdate: StateUpdate) {}
 }

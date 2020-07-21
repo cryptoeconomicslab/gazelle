@@ -7,26 +7,18 @@ import {
   Range,
   Property
 } from '@cryptoeconomicslab/primitives'
-import {
-  StateUpdate,
-  Transaction,
-  Block,
-  EXIT_CHALLENGE_TYPE
-} from '@cryptoeconomicslab/plasma'
+import { StateUpdate, EXIT_CHALLENGE_TYPE } from '@cryptoeconomicslab/plasma'
 import { setupContext } from '@cryptoeconomicslab/context'
-import JsonCoder from '@cryptoeconomicslab/coder'
+import Coder from '@cryptoeconomicslab/eth-coder'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
-import { InclusionProofRepository } from '../../src/repository'
-import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import * as Prepare from '../helper/prepare'
 import { generateRandomWallet } from '../helper/MockWallet'
+import { DeciderManager, DeciderConfig } from '@cryptoeconomicslab/ovm'
 import { Wallet } from '@cryptoeconomicslab/wallet'
-setupContext({ coder: JsonCoder })
+import deciderConfig from '../config.local'
+setupContext({ coder: Coder })
 
 const mockClaim = jest.fn().mockImplementation(() => {})
-const mockClaimFailing = jest.fn().mockImplementation(() => {
-  throw new Error('revert: invalid inputs')
-})
 const mockChallenge = jest.fn().mockImplementation(() => {})
 const mockSubscribeExitClaim = jest.fn()
 const mockSubscribeExitChallenged = jest.fn()
@@ -42,159 +34,93 @@ const MockContractWrapper = jest.fn().mockImplementation(() => {
   }
 })
 
-const MockContractWrapperFailing = jest.fn().mockImplementation(() => {
-  return {
-    claim: mockClaimFailing,
-    challenge: mockChallenge,
-    subscribeExitClaimed: mockSubscribeExitClaim,
-    subscribeExitChallenged: mockSubscribeExitChallenged,
-    subscribeExitSettled: mockSubscribeExitSettled
-  }
-})
-
-const mockDecideFalse = jest.fn().mockResolvedValue({ outcome: false })
-const mockDecideTrue = jest
-  .fn()
-  .mockResolvedValue({ outcome: true, witnesses: [] })
-const MockDeciderManager = jest
-  .fn()
-  .mockImplementation((mockDecide = mockDecideFalse) => {
-    return {
-      decide: mockDecide
-    }
-  })
-
 const depositContractAddress = Address.from(
   '0x0000000000000000000000000000000000000001'
 )
 const range = new Range(BigNumber.from(0), BigNumber.from(10))
-const maxBlockNumber = BigNumber.from(10)
+const blockNumber = BigNumber.from(1)
 const ownershipPredicateAddress = Address.from(
-  '0x0000000000000000000000000000000000000002'
+  deciderConfig.deployedPredicateTable.OwnershipPredicate.deployedAddress
 )
-const owner = generateRandomWallet()
-const ownershipState = new Property(ownershipPredicateAddress, [
-  ovmContext.coder.encode(owner.getAddress())
-])
-const nextOwner = generateRandomWallet()
-const nextOwnership = new Property(ownershipPredicateAddress, [
-  ovmContext.coder.encode(nextOwner.getAddress())
-])
-
 const stateUpdateDeciderAddress = Address.from(
   '0x0000000000000000000000000000000000000004'
 )
-const stateUpdate = new StateUpdate(
-  stateUpdateDeciderAddress,
-  depositContractAddress,
-  range,
-  maxBlockNumber,
-  ownershipState
-)
 
 describe('ExitDispute', () => {
+  const ALICE = generateRandomWallet()
+  const BOB = generateRandomWallet()
+  const CHARLIE = generateRandomWallet()
+
   let exitDispute: ExitDispute, witnessDb: KeyValueStore
+  let deciderManager: DeciderManager
 
   beforeEach(() => {
     MockContractWrapper.mockClear()
-    MockDeciderManager.mockClear()
     witnessDb = new InMemoryKeyValueStore(Bytes.fromString('test'))
+    deciderManager = new DeciderManager(witnessDb)
+    deciderManager.loadJson(deciderConfig as DeciderConfig)
     exitDispute = new ExitDispute(
       new MockContractWrapper(),
-      new MockDeciderManager(),
+      deciderManager,
       witnessDb
     )
   })
 
-  async function prepareInclusionProof(
-    witnessDb: KeyValueStore,
-    stateUpdate: StateUpdate
-  ) {
-    const map = new Map()
-    map.set(stateUpdate.depositContractAddress.data, [stateUpdate])
-
-    const block = new Block(stateUpdate.blockNumber, map)
-    const repo = await InclusionProofRepository.init(witnessDb)
-    const inclusionProof = block.getInclusionProof(
-      stateUpdate
-    ) as DoubleLayerInclusionProof
-
-    await repo.insertInclusionProof(
-      stateUpdate.depositContractAddress,
-      stateUpdate.blockNumber,
-      stateUpdate.range,
-      inclusionProof
-    )
+  function ownership(owner: Wallet): Property {
+    return new Property(ownershipPredicateAddress, [
+      ovmContext.coder.encode(owner.getAddress())
+    ])
   }
 
-  function createTransaction(
-    stateUpdate: StateUpdate,
-    from: Wallet,
-    to: Wallet
-  ) {
-    const depositContractAddress = stateUpdate.depositContractAddress
-    const range = stateUpdate.range
-    const maxBlockNumber = BigNumber.from(100)
-    const ownershipPredicateAddress = Address.from(
-      '0x0000000000000000000000000000000000000002'
-    )
-    const nextState = new Property(ownershipPredicateAddress, [
-      ovmContext.coder.encode(to.getAddress())
-    ])
-    return new Transaction(
+  function SU(range: Range, blockNumber: BigNumber, owner: Wallet) {
+    return new StateUpdate(
+      stateUpdateDeciderAddress,
       depositContractAddress,
       range,
-      maxBlockNumber,
-      nextState,
-      from.getAddress()
+      blockNumber,
+      ownership(owner)
     )
   }
 
   describe('claimExit', () => {
     test('succeed', async () => {
-      await prepareInclusionProof(witnessDb, stateUpdate)
+      const stateUpdate = SU(range, blockNumber, ALICE)
+      await Prepare.prepareSU(witnessDb, stateUpdate)
+      const block = await Prepare.prepareBlock(witnessDb, stateUpdate)
+      await Prepare.prepareInclusionProof(witnessDb, stateUpdate, block)
       await exitDispute.claimExit(stateUpdate)
     })
 
     test('throw exception because of invalid StateUpdate range', async () => {
+      const stateUpdate = SU(range, blockNumber, ALICE)
       await expect(exitDispute.claimExit(stateUpdate)).rejects.toThrow()
-    })
-
-    test('throw exception because of transaction revert', async () => {
-      await prepareInclusionProof(witnessDb, stateUpdate)
-      exitDispute = new ExitDispute(
-        new MockContractWrapperFailing(),
-        new MockDeciderManager(),
-        witnessDb
-      )
-      await expect(exitDispute.claimExit(stateUpdate)).rejects.toThrowError(
-        'revert: invalid inputs'
-      )
     })
   })
 
   describe('handleExitClaimed', () => {
     test('do nothing because transactions are not exists', async () => {
+      const stateUpdate = SU(range, blockNumber, ALICE)
       await Prepare.prepareSU(witnessDb, stateUpdate)
       await exitDispute.handleExitClaimed(stateUpdate)
     })
 
     test('do nothing because decision of StateObject is false', async () => {
+      const stateUpdate = SU(range, blockNumber, ALICE)
       await Prepare.prepareSU(witnessDb, stateUpdate)
-      await Prepare.prepareTx(witnessDb, stateUpdate, owner, nextOwnership)
+      await Prepare.prepareTx(witnessDb, stateUpdate, ALICE, ownership(BOB))
       await exitDispute.handleExitClaimed(stateUpdate)
     })
 
+    // Trying to exit already spent StateUpdate
     test('spentChallenge', async () => {
-      await Prepare.prepareSU(witnessDb, stateUpdate)
-      exitDispute = new ExitDispute(
-        new MockContractWrapper(),
-        new MockDeciderManager(mockDecideTrue),
-        witnessDb
+      const stateUpdate = SU(range, blockNumber, ALICE)
+      await Prepare.prepareValidSU(witnessDb, stateUpdate)
+      const { tx, sig } = await Prepare.prepareValidTxAndSig(
+        witnessDb,
+        stateUpdate,
+        ALICE,
+        ownership(BOB)
       )
-
-      const tx = createTransaction(stateUpdate, owner, nextOwner)
-      await Prepare.prepareTx(witnessDb, stateUpdate, owner, nextOwnership)
       await exitDispute.handleExitClaimed(stateUpdate)
 
       // confirm challenge was executed
@@ -202,29 +128,29 @@ describe('ExitDispute', () => {
         type: EXIT_CHALLENGE_TYPE.SPENT,
         stateUpdate,
         transaction: tx,
-        witness: []
+        witness: [sig]
       })
     })
 
     // old state update have not been properly spent
     test('checkpointChallenge', async () => {
-      await Prepare.prepareSU(witnessDb, stateUpdate)
-      exitDispute = new ExitDispute(
-        new MockContractWrapper(),
-        new MockDeciderManager(mockDecideTrue),
-        witnessDb
-      )
+      const range = new Range(BigNumber.from(0), BigNumber.from(10))
+      const su1 = SU(range, BigNumber.from(1), ALICE)
+      await Prepare.prepareValidSU(witnessDb, su1)
+      await Prepare.prepareValidTxAndSig(witnessDb, su1, ALICE, ownership(BOB))
+      const su2 = SU(range, BigNumber.from(2), BOB)
+      const { inclusionProof } = await Prepare.prepareValidSU(witnessDb, su2)
 
-      const tx = createTransaction(stateUpdate, owner, nextOwner)
-      await Prepare.prepareTx(witnessDb, stateUpdate, owner, nextOwnership)
-      await exitDispute.handleExitClaimed(stateUpdate)
+      const su3 = SU(range, BigNumber.from(3), CHARLIE)
+      // su2 have not been spent
+      await exitDispute.handleExitClaimed(su3)
 
       // confirm challenge was executed
       expect(mockChallenge).toHaveBeenCalledWith({
-        type: EXIT_CHALLENGE_TYPE.SPENT,
-        stateUpdate,
-        transaction: tx,
-        witness: []
+        type: EXIT_CHALLENGE_TYPE.CHECKPOINT,
+        stateUpdate: su3,
+        challengeStateUpdate: su2,
+        inclusionProof
       })
     })
   })
