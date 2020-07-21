@@ -1,6 +1,11 @@
 import { Bytes, BigNumber, Property } from '@cryptoeconomicslab/primitives'
 import { KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
-import { StateUpdate, Transaction, Block } from '@cryptoeconomicslab/plasma'
+import {
+  StateUpdate,
+  Transaction,
+  Block,
+  Checkpoint
+} from '@cryptoeconomicslab/plasma'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import { Wallet } from '@cryptoeconomicslab/wallet'
 import { hint } from '@cryptoeconomicslab/ovm'
@@ -8,7 +13,8 @@ import {
   StateUpdateRepository,
   SyncRepository,
   InclusionProofRepository,
-  TransactionRepository
+  TransactionRepository,
+  CheckpointRepository
 } from '../../src/repository'
 
 // prepare StateUpdate, Transaction, Signature, InclusionProof and  BlockRoot
@@ -93,6 +99,16 @@ export async function prepareBlock(
   await syncRepo.insertBlockRoot(blockNumber, root)
 
   return block
+}
+
+export async function prepareCheckpoint(
+  witnessDb: KeyValueStore,
+  stateUpdate: StateUpdate,
+  claimedAt: BigNumber
+) {
+  const repo = await CheckpointRepository.init(witnessDb)
+  const checkpoint = new Checkpoint(stateUpdate, claimedAt)
+  await repo.insertClaimedCheckpoint(checkpoint)
 }
 
 /* given stateUpdate and witnessDb,

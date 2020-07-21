@@ -1,4 +1,4 @@
-import { StateUpdate, Transaction, Block } from '@cryptoeconomicslab/plasma'
+import { StateUpdate } from '@cryptoeconomicslab/plasma'
 import { CheckpointDispute } from '../../src/dispute/CheckpointDispute'
 import {
   Address,
@@ -21,7 +21,9 @@ import { Wallet } from '@cryptoeconomicslab/wallet'
 import {
   prepareValidSU,
   prepareValidTxAndSig,
-  prepareBlock
+  prepareBlock,
+  prepareCheckpoint,
+  prepareTx
 } from '../helper/prepare'
 setupContext({ coder: Coder })
 
@@ -176,13 +178,106 @@ describe('CheckpointDispute', () => {
     })
   })
 
-  describe.skip('handleCheckpointChallenged', () => {
-    test.skip('do nothing for irrelevant claim challenged', async () => {})
+  describe('handleCheckpointChallenged', () => {
+    test('do nothing for irrelevant claim challenged', async () => {
+      const range = new Range(BigNumber.from(0), BigNumber.from(10))
+      const bn = BigNumber.from(1)
+      const su1 = SU(range, bn, ALICE)
+      await prepareValidSU(witnessDb, su1)
 
-    test.skip('do not call if transaction does not exist for challengingStateUpdate', async () => {})
+      const bn2 = BigNumber.from(2)
+      const su2 = SU(range, bn2, BOB)
+      const block = await prepareBlock(witnessDb, su2)
+      const inclusionProof = block.getInclusionProof(
+        su2
+      ) as DoubleLayerInclusionProof
+      await checkpointDispute.handleCheckpointChallenged(
+        su2,
+        su1,
+        inclusionProof
+      )
 
-    test.skip('do not call if signature does not exist for challengingStateUpdate', async () => {})
+      expect(mockFunctions.mockRemoveChallenge).not.toHaveBeenCalled()
+    })
 
-    test.skip('call removeChallenge on contract with valid arguments', async () => {})
+    test('do not call if transaction does not exist for challengingStateUpdate', async () => {
+      const range = new Range(BigNumber.from(0), BigNumber.from(10))
+      const bn = BigNumber.from(1)
+      const su1 = SU(range, bn, ALICE)
+      const { inclusionProof: inclusionProof1 } = await prepareValidSU(
+        witnessDb,
+        su1
+      )
+
+      const bn2 = BigNumber.from(2)
+      const su2 = SU(range, bn2, BOB)
+      await prepareValidSU(witnessDb, su2)
+      await prepareCheckpoint(witnessDb, su2, BigNumber.from(3))
+
+      await checkpointDispute.handleCheckpointChallenged(
+        su2,
+        su1,
+        inclusionProof1
+      )
+
+      expect(mockFunctions.mockRemoveChallenge).not.toHaveBeenCalled()
+    })
+
+    test('do not call if signature does not exist for challengingStateUpdate', async () => {
+      const range = new Range(BigNumber.from(0), BigNumber.from(10))
+      const bn = BigNumber.from(1)
+      const su1 = SU(range, bn, ALICE)
+      const { inclusionProof: inclusionProof1 } = await prepareValidSU(
+        witnessDb,
+        su1
+      )
+      await prepareTx(witnessDb, su1, ALICE, ownership(BOB))
+
+      const bn2 = BigNumber.from(2)
+      const su2 = SU(range, bn2, BOB)
+      await prepareValidSU(witnessDb, su2)
+      await prepareCheckpoint(witnessDb, su2, BigNumber.from(3))
+
+      await checkpointDispute.handleCheckpointChallenged(
+        su2,
+        su1,
+        inclusionProof1
+      )
+
+      expect(mockFunctions.mockRemoveChallenge).not.toHaveBeenCalled()
+    })
+
+    test('call removeChallenge on contract with valid arguments', async () => {
+      const range = new Range(BigNumber.from(0), BigNumber.from(10))
+      const bn = BigNumber.from(1)
+      const su1 = SU(range, bn, ALICE)
+      const { inclusionProof: inclusionProof1 } = await prepareValidSU(
+        witnessDb,
+        su1
+      )
+      const { tx, sig } = await prepareValidTxAndSig(
+        witnessDb,
+        su1,
+        ALICE,
+        ownership(BOB)
+      )
+
+      const bn2 = BigNumber.from(2)
+      const su2 = SU(range, bn2, BOB)
+      await prepareValidSU(witnessDb, su2)
+      await prepareCheckpoint(witnessDb, su2, BigNumber.from(3))
+
+      await checkpointDispute.handleCheckpointChallenged(
+        su2,
+        su1,
+        inclusionProof1
+      )
+
+      const { coder } = ovmContext
+      expect(mockFunctions.mockRemoveChallenge).toHaveBeenCalledWith(su2, su1, [
+        coder.encode(tx.body),
+        sig
+      ])
+    })
   })
 })

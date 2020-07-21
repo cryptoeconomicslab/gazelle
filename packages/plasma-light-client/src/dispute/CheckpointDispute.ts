@@ -113,9 +113,6 @@ export class CheckpointDispute {
     challenge: StateUpdate,
     inclusionProof: DoubleLayerInclusionProof
   ) {
-    console.log(
-      'checkpoint challenged. check the validity and remove with witness'
-    )
     const { coder } = ovmContext
 
     const checkpointRepo = await CheckpointRepository.init(this.witnessDb)
