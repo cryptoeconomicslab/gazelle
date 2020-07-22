@@ -3,7 +3,8 @@ import {
   StateUpdateRepository,
   CheckpointRepository,
   DepositedRangeRepository,
-  UserActionRepository
+  UserActionRepository,
+  SyncRepository
 } from '../src/repository'
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
@@ -87,6 +88,28 @@ const MockCheckpointDisputeContract = jest.fn().mockImplementation(() => {
     subscribeCheckpointChallenged: mockSubscribeCheckpointChallenged,
     subscribeCheckpointChallengeRemoved: mockSubscribeCheckpointChallengeRemoved,
     subscribeCheckpointSettled: mockSubscribeCheckpointSettled
+  }
+})
+
+const mockExitDisputeFunctions = {
+  mockClaim: jest.fn(),
+  mockChallenge: jest.fn(),
+  mockRemoveChallenge: jest.fn(),
+  mockSettle: jest.fn(),
+  mockSubscribeExitClaim: jest.fn(),
+  mockSubscribeExitChallenged: jest.fn(),
+  mockSubscribeExitSettled: jest.fn()
+}
+
+const MockExitDisputeContract = jest.fn().mockImplementation(() => {
+  return {
+    claim: mockExitDisputeFunctions.mockClaim,
+    challenge: mockExitDisputeFunctions.mockChallenge,
+    removeChallenge: mockExitDisputeFunctions.mockRemoveChallenge,
+    subscribeExitClaimed: mockExitDisputeFunctions.mockSubscribeExitClaim,
+    subscribeExitChallenged:
+      mockExitDisputeFunctions.mockSubscribeExitChallenged,
+    subscribeExitSettled: mockExitDisputeFunctions.mockSubscribeExitSettled
   }
 })
 
@@ -178,6 +201,7 @@ async function initialize(
   )
   const ownershipPayoutContract = new MockOwnershipPayoutContract()
   const checkpointDisputeContract = new MockCheckpointDisputeContract()
+  const exitDisputeContract = new MockExitDisputeContract()
 
   const lightClient = await LightClient.initilize({
     wallet,
@@ -188,6 +212,7 @@ async function initialize(
     commitmentContract,
     ownershipPayoutContract,
     checkpointDisputeContract,
+    exitDisputeContract,
     deciderConfig: deciderConfig as DeciderConfig & PlasmaContractConfig,
     aggregatorEndpoint
   })
@@ -458,33 +483,26 @@ describe('LightClient', () => {
     })
 
     test('pendingWithdrawals', async () => {
+      const syncRepo = await SyncRepository.init(db)
+      const blockNumber = await syncRepo.getNextBlockNumber()
+
       await client.startWithdrawal(25, erc20Address)
       const pendingWithdrawals = await client.getPendingWithdrawals()
 
-      const { coder } = ovmContext
-      const exitProperty = (client['deciderManager'].compiledPredicateMap.get(
-        'Exit'
-      ) as CompiledPredicate).makeProperty([
-        coder.encode(su1.property.toStruct()),
-        coder.encode(proof.toStruct())
-      ])
       su2.update({
         range: new Range(BigNumber.from(30), BigNumber.from(35))
       })
-      const exitProperty2 = (client['deciderManager'].compiledPredicateMap.get(
-        'Exit'
-      ) as CompiledPredicate).makeProperty([
-        coder.encode(su2.property.toStruct()),
-        coder.encode(proof.toStruct())
-      ])
 
       expect(pendingWithdrawals).toEqual([
-        Exit.fromProperty(exitProperty),
-        Exit.fromProperty(exitProperty2)
+        new Exit(su1, blockNumber),
+        new Exit(su2, blockNumber)
       ])
     })
 
     test('completeWithdrawal', async () => {
+      const syncRepo = await SyncRepository.init(db)
+      const blockNumber = await syncRepo.getNextBlockNumber()
+
       // setup depositedRangeId
       const depositedRangeRepository = await DepositedRangeRepository.init(db)
       await depositedRangeRepository.extendRange(
@@ -492,25 +510,18 @@ describe('LightClient', () => {
         new Range(BigNumber.from(0), BigNumber.from(50))
       )
 
-      const { coder } = ovmContext
-      const exitProperty = (client['deciderManager'].compiledPredicateMap.get(
-        'Exit'
-      ) as CompiledPredicate).makeProperty([
-        coder.encode(su1.property.toStruct()),
-        coder.encode(proof.toStruct())
-      ])
-      const exit = Exit.fromProperty(exitProperty)
+      const exit = new Exit(su1, blockNumber)
       await client.completeWithdrawal(exit)
 
       expect(mockFinalizeExit).toHaveBeenLastCalledWith(
-        exit.stateUpdate.depositContractAddress,
-        exit.property,
-        BigNumber.from(50),
-        Address.from(client.address)
+        exit.stateUpdate.depositContractAddress
       )
     })
 
     test('completeWithdrawal with exitDeposit', async () => {
+      const syncRepo = await SyncRepository.init(db)
+      const blockNumber = await syncRepo.getNextBlockNumber()
+
       // setup depositedRangeId
       const depositedRangeRepository = await DepositedRangeRepository.init(db)
       await depositedRangeRepository.extendRange(
@@ -518,35 +529,19 @@ describe('LightClient', () => {
         new Range(BigNumber.from(0), BigNumber.from(50))
       )
 
-      const { coder } = ovmContext
-      const exitProperty = (client['deciderManager'].compiledPredicateMap.get(
-        'ExitDeposit'
-      ) as CompiledPredicate).makeProperty([
-        coder.encode(su1.property.toStruct()),
-        coder.encode(checkpoint.toStruct())
-      ])
-      const exit = ExitDeposit.fromProperty(exitProperty)
+      const exit = new Exit(su1, blockNumber)
       await client.completeWithdrawal(exit)
 
-      expect(mockFinalizeExit).toHaveBeenLastCalledWith(
-        exit.stateUpdate.depositContractAddress,
-        exit.property,
-        BigNumber.from(50),
-        Address.from(client.address)
-      )
+      expect(mockFinalizeExit).toHaveBeenLastCalledWith(exit.stateUpdate)
     })
 
     test('fail to completeWithdrawal property is not decidable', async () => {
+      const syncRepo = await SyncRepository.init(db)
+      const blockNumber = await syncRepo.getNextBlockNumber()
+
       mockIsDecided.mockResolvedValueOnce(false)
       mockIsDecidable.mockResolvedValueOnce(false)
-      const { coder } = ovmContext
-      const exitProperty = (client['deciderManager'].compiledPredicateMap.get(
-        'Exit'
-      ) as CompiledPredicate).makeProperty([
-        coder.encode(su1.property.toStruct()),
-        coder.encode(proof.toStruct())
-      ])
-      const exit = Exit.fromProperty(exitProperty)
+      const exit = new Exit(su1, blockNumber)
       await expect(client.completeWithdrawal(exit)).rejects.toEqual(
         new Error(`Exit property is not decidable`)
       )
