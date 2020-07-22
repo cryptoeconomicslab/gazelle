@@ -79,7 +79,7 @@ export class ExitUsecase {
         currentBlockNumber.data
       )
     ) {
-      throw new Error('cannot. exit dispute period have not been passed.')
+      throw new Error('Exit dispute period have not been passed')
     }
     // TODO: check claim can be settled. call `disputeManager.canSettle()`
     this.exitDispute.settle(exit) // call DepositContract (finalizeExit inside)
