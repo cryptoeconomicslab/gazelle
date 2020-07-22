@@ -17,7 +17,7 @@ describe('SyncRepository', () => {
 
   test('get and update blockNumber', async () => {
     let blockNumber = await repository.getSyncedBlockNumber()
-    expect(blockNumber).toEqual(BigNumber.from(-1))
+    expect(blockNumber).toEqual(BigNumber.from(0))
     await repository.updateSyncedBlockNumber(BigNumber.from(3))
     blockNumber = await repository.getSyncedBlockNumber()
     expect(blockNumber).toEqual(BigNumber.from(3))

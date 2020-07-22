@@ -7,4 +7,5 @@ export interface EthContractConfig {
     DepositContract: string
   }
   checkpointDisputeContract: string
+  exitDisputeContract: string
 }

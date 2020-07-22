@@ -1,4 +1,4 @@
-import { StateUpdate, Transaction, Block } from '@cryptoeconomicslab/plasma'
+import { StateUpdate } from '@cryptoeconomicslab/plasma'
 import { CheckpointDispute } from '../../src/dispute/CheckpointDispute'
 import {
   Address,
@@ -9,45 +9,54 @@ import {
 } from '@cryptoeconomicslab/primitives'
 import { setupContext } from '@cryptoeconomicslab/context'
 import Coder from '@cryptoeconomicslab/eth-coder'
-import { KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
+import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import { DeciderManager, DeciderConfig } from '@cryptoeconomicslab/ovm'
 import APIClient from '../../src/APIClient'
 import TokenManager from '../../src/managers/TokenManager'
-import {
-  StateUpdateRepository,
-  TransactionRepository,
-  InclusionProofRepository,
-  SyncRepository
-} from '../../src/repository'
 import { generateRandomWallet } from '../helper/MockWallet'
 import deciderConfig from '../config.local'
-import { createSignatureHint } from '@cryptoeconomicslab/ovm/lib/hintString'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import { Wallet } from '@cryptoeconomicslab/wallet'
+import {
+  prepareValidSU,
+  prepareValidTxAndSig,
+  prepareBlock,
+  prepareCheckpoint,
+  prepareTx
+} from '../helper/prepare'
 setupContext({ coder: Coder })
 
-const mockClaim = jest.fn()
-const mockChallenge = jest.fn()
-const mockRemoveChallenge = jest.fn()
-const mockSettle = jest.fn()
-const mockSubscribeCheckpointClaimed = jest.fn()
-const mockSubscribeCheckpointChallenged = jest.fn()
-const mockSubscribeCheckpointChallengeRemoved = jest.fn()
-const mockSubscribeCheckpointSettled = jest.fn()
+const mockFunctions = {
+  mockClaim: jest.fn(),
+  mockChallenge: jest.fn(),
+  mockRemoveChallenge: jest.fn(),
+  mockSettle: jest.fn(),
+  mockSubscribeCheckpointClaimed: jest.fn(),
+  mockSubscribeCheckpointChallenged: jest.fn(),
+  mockSubscribeCheckpointChallengeRemoved: jest.fn(),
+  mockSubscribeCheckpointSettled: jest.fn()
+}
 
 const MockContractWrapper = jest.fn().mockImplementation(() => {
   return {
-    claim: mockClaim,
-    challenge: mockChallenge,
-    removeChallenge: mockRemoveChallenge,
-    settle: mockSettle,
-    subscribeCheckpointClaimed: mockSubscribeCheckpointClaimed,
-    subscribeCheckpointChallenged: mockSubscribeCheckpointChallenged,
-    subscribeCheckpointChallengeRemoved: mockSubscribeCheckpointChallengeRemoved,
-    subscribeCheckpointSettled: mockSubscribeCheckpointSettled
+    claim: mockFunctions.mockClaim,
+    challenge: mockFunctions.mockChallenge,
+    removeChallenge: mockFunctions.mockRemoveChallenge,
+    settle: mockFunctions.mockSettle,
+    subscribeCheckpointClaimed: mockFunctions.mockSubscribeCheckpointClaimed,
+    subscribeCheckpointChallenged:
+      mockFunctions.mockSubscribeCheckpointChallenged,
+    subscribeCheckpointChallengeRemoved:
+      mockFunctions.mockSubscribeCheckpointChallengeRemoved,
+    subscribeCheckpointSettled: mockFunctions.mockSubscribeCheckpointSettled
   }
 })
+
+function clearMocks() {
+  MockContractWrapper.mockClear()
+  Object.values(mockFunctions).forEach(mock => mock.mockClear())
+}
 
 const TOKEN_ADDRESS = Address.default()
 const SU_ADDRESS = Address.from('0x0000000000000000000000000000000000000001')
@@ -64,6 +73,8 @@ describe('CheckpointDispute', () => {
   let deciderManager: DeciderManager
 
   beforeEach(async () => {
+    clearMocks()
+
     const apiClient = new APIClient('http://localhost:3000')
     const tokenManager = new TokenManager()
 
@@ -84,124 +95,189 @@ describe('CheckpointDispute', () => {
     )
   })
 
-  function ownershipSO(owner: Address) {
-    return new Property(OWNERSHIP_ADDRESS, [Coder.encode(owner)])
+  function ownership(owner: Wallet) {
+    return new Property(OWNERSHIP_ADDRESS, [Coder.encode(owner.getAddress())])
   }
 
-  function SU(range: Range, blockNumber: BigNumber, owner: Address) {
+  function SU(range: Range, blockNumber: BigNumber, owner: Wallet) {
     return new StateUpdate(
       SU_ADDRESS,
       TOKEN_ADDRESS,
       range,
       blockNumber,
-      ownershipSO(owner)
+      ownership(owner)
     )
   }
 
-  describe('verifyCheckpoint', () => {
-    let suRepo: StateUpdateRepository,
-      txRepo: TransactionRepository,
-      inclusionProofRepo: InclusionProofRepository,
-      syncRepo: SyncRepository
+  describe('handleCheckpointClaimed', () => {
+    test('do not challenge irrelevant stateUpdate', async () => {
+      const range = new Range(BigNumber.from(0), BigNumber.from(10))
+      const range2 = new Range(BigNumber.from(15), BigNumber.from(20))
 
-    beforeEach(async () => {
-      suRepo = await StateUpdateRepository.init(witnessDb)
-      txRepo = await TransactionRepository.init(witnessDb)
-      inclusionProofRepo = await InclusionProofRepository.init(witnessDb)
-      syncRepo = await SyncRepository.init(witnessDb)
-    })
+      const bn = BigNumber.from(1)
+      const su1 = SU(range, bn, ALICE)
+      const su2 = SU(range2, bn, BOB)
 
-    // prepare StateUpdate, Transaction, Signature, InclusionProof and  BlockRoot
-    async function prepareSU(su: StateUpdate) {
-      const { blockNumber, range } = su
-      await suRepo.insertWitnessStateUpdate(su)
-
-      const suList = [su]
-      const suMap = new Map<string, StateUpdate[]>()
-      suMap.set(TOKEN_ADDRESS.data, suList)
-
-      const block = new Block(blockNumber, suMap)
-      const root = block.getRoot()
+      const { block } = await prepareValidSU(witnessDb, su1)
       const inclusionProof = block.getInclusionProof(
-        su
+        su2
       ) as DoubleLayerInclusionProof
 
-      await syncRepo.insertBlockRoot(blockNumber, root)
-      await inclusionProofRepo.insertInclusionProof(
-        TOKEN_ADDRESS,
-        blockNumber,
-        range,
-        inclusionProof
-      )
-
-      await inclusionProofRepo.insertInclusionProof(
-        TOKEN_ADDRESS,
-        blockNumber,
-        range,
-        inclusionProof
-      )
-    }
-
-    async function prepareTx(
-      su: StateUpdate,
-      wallet: Wallet,
-      nextOwner: Wallet
-    ) {
-      const { blockNumber, depositContractAddress, range } = su
-      const tx = new Transaction(
-        TOKEN_ADDRESS,
-        range,
-        BigNumber.from(100),
-        ownershipSO(nextOwner.getAddress()),
-        wallet.getAddress()
-      )
-      await txRepo.insertTransaction(
-        depositContractAddress,
-        blockNumber,
-        range,
-        tx
-      )
-
-      // save signature
-      const txBytes = Coder.encode(tx.body)
-      const sign = await wallet.signMessage(txBytes)
-      await putWitness(witnessDb, createSignatureHint(txBytes), sign)
-    }
-
-    test('verifyCheckpoint returns true', async () => {
-      const range = new Range(BigNumber.from(0), BigNumber.from(10))
-      const su1 = SU(range, BigNumber.from(1), ALICE.getAddress())
-      await prepareSU(su1)
-      await prepareTx(su1, ALICE, BOB)
-
-      const su2 = SU(range, BigNumber.from(2), BOB.getAddress())
-      await prepareSU(su2)
-      await prepareTx(su2, BOB, CHARLIE)
-
-      const su3 = SU(range, BigNumber.from(3), CHARLIE.getAddress())
-
-      const result = await checkpointDispute.verifyCheckpoint(su3)
-      expect(result).toEqual({
-        decision: true
-      })
+      checkpointDispute.handleCheckpointClaimed(su2, inclusionProof)
+      expect(mockFunctions.mockChallenge).not.toHaveBeenCalled()
     })
 
-    test('verifyCheckpoint returns false', async () => {
+    test('do not challenge to relevant but older stateUpdate', async () => {
       const range = new Range(BigNumber.from(0), BigNumber.from(10))
-      const su1 = SU(range, BigNumber.from(1), ALICE.getAddress())
-      await prepareSU(su1)
-      await prepareTx(su1, ALICE, BOB)
 
-      const su2 = SU(range, BigNumber.from(2), BOB.getAddress())
-      await prepareSU(su2)
+      const bn = BigNumber.from(1)
+      const su1 = SU(range, bn, ALICE)
+      const bn2 = BigNumber.from(2)
+      const su2 = SU(range, bn2, BOB)
 
-      const su3 = SU(range, BigNumber.from(3), CHARLIE.getAddress())
+      const { block } = await prepareValidSU(witnessDb, su1)
+      await prepareValidSU(witnessDb, su2)
 
-      const result = await checkpointDispute.verifyCheckpoint(su3)
-      expect(result).toEqual({
-        decision: false,
-        challenge: su2
-      })
+      const inclusionProof = block.getInclusionProof(
+        su1
+      ) as DoubleLayerInclusionProof
+
+      checkpointDispute.handleCheckpointClaimed(su1, inclusionProof)
+      expect(mockFunctions.mockChallenge).not.toHaveBeenCalled()
+    })
+
+    test('call challenge on contract with valid arguments', async () => {
+      const range = new Range(BigNumber.from(0), BigNumber.from(10))
+
+      const bn = BigNumber.from(1)
+      const su1 = SU(range, bn, ALICE)
+      await prepareValidSU(witnessDb, su1)
+      await prepareValidTxAndSig(witnessDb, su1, ALICE, ownership(BOB))
+
+      const bn2 = BigNumber.from(3)
+      const su2 = SU(range, bn2, BOB)
+      await prepareValidSU(witnessDb, su2)
+      const block2 = await prepareBlock(witnessDb, su2)
+      const inclusionProof2 = block2.getInclusionProof(
+        su2
+      ) as DoubleLayerInclusionProof
+
+      const bn3 = BigNumber.from(4)
+      const su3 = SU(range, bn3, CHARLIE)
+      const block3 = await prepareBlock(witnessDb, su3)
+      const inclusionProof3 = block3.getInclusionProof(
+        su3
+      ) as DoubleLayerInclusionProof
+
+      await checkpointDispute.handleCheckpointClaimed(su3, inclusionProof3)
+      expect(mockFunctions.mockChallenge).toHaveBeenCalledWith(
+        su3,
+        su2,
+        inclusionProof2
+      )
+    })
+  })
+
+  describe('handleCheckpointChallenged', () => {
+    test('do nothing for irrelevant claim challenged', async () => {
+      const range = new Range(BigNumber.from(0), BigNumber.from(10))
+      const bn = BigNumber.from(1)
+      const su1 = SU(range, bn, ALICE)
+      await prepareValidSU(witnessDb, su1)
+
+      const bn2 = BigNumber.from(2)
+      const su2 = SU(range, bn2, BOB)
+      const block = await prepareBlock(witnessDb, su2)
+      const inclusionProof = block.getInclusionProof(
+        su2
+      ) as DoubleLayerInclusionProof
+      await checkpointDispute.handleCheckpointChallenged(
+        su2,
+        su1,
+        inclusionProof
+      )
+
+      expect(mockFunctions.mockRemoveChallenge).not.toHaveBeenCalled()
+    })
+
+    test('do not call if transaction does not exist for challengingStateUpdate', async () => {
+      const range = new Range(BigNumber.from(0), BigNumber.from(10))
+      const bn = BigNumber.from(1)
+      const su1 = SU(range, bn, ALICE)
+      const { inclusionProof: inclusionProof1 } = await prepareValidSU(
+        witnessDb,
+        su1
+      )
+
+      const bn2 = BigNumber.from(2)
+      const su2 = SU(range, bn2, BOB)
+      await prepareValidSU(witnessDb, su2)
+      await prepareCheckpoint(witnessDb, su2, BigNumber.from(3))
+
+      await checkpointDispute.handleCheckpointChallenged(
+        su2,
+        su1,
+        inclusionProof1
+      )
+
+      expect(mockFunctions.mockRemoveChallenge).not.toHaveBeenCalled()
+    })
+
+    test('do not call if signature does not exist for challengingStateUpdate', async () => {
+      const range = new Range(BigNumber.from(0), BigNumber.from(10))
+      const bn = BigNumber.from(1)
+      const su1 = SU(range, bn, ALICE)
+      const { inclusionProof: inclusionProof1 } = await prepareValidSU(
+        witnessDb,
+        su1
+      )
+      await prepareTx(witnessDb, su1, ALICE, ownership(BOB))
+
+      const bn2 = BigNumber.from(2)
+      const su2 = SU(range, bn2, BOB)
+      await prepareValidSU(witnessDb, su2)
+      await prepareCheckpoint(witnessDb, su2, BigNumber.from(3))
+
+      await checkpointDispute.handleCheckpointChallenged(
+        su2,
+        su1,
+        inclusionProof1
+      )
+
+      expect(mockFunctions.mockRemoveChallenge).not.toHaveBeenCalled()
+    })
+
+    test('call removeChallenge on contract with valid arguments', async () => {
+      const range = new Range(BigNumber.from(0), BigNumber.from(10))
+      const bn = BigNumber.from(1)
+      const su1 = SU(range, bn, ALICE)
+      const { inclusionProof: inclusionProof1 } = await prepareValidSU(
+        witnessDb,
+        su1
+      )
+      const { tx, sig } = await prepareValidTxAndSig(
+        witnessDb,
+        su1,
+        ALICE,
+        ownership(BOB)
+      )
+
+      const bn2 = BigNumber.from(2)
+      const su2 = SU(range, bn2, BOB)
+      await prepareValidSU(witnessDb, su2)
+      await prepareCheckpoint(witnessDb, su2, BigNumber.from(3))
+
+      await checkpointDispute.handleCheckpointChallenged(
+        su2,
+        su1,
+        inclusionProof1
+      )
+
+      const { coder } = ovmContext
+      expect(mockFunctions.mockRemoveChallenge).toHaveBeenCalledWith(su2, su1, [
+        coder.encode(tx.body),
+        sig
+      ])
     })
   })
 })

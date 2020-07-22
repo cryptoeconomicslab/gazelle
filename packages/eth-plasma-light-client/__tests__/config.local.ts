@@ -552,6 +552,7 @@ const config: DeciderConfig & EthContractConfig = {
     OwnershipPayout: '0xf204a4Ef082f5c04bB89F7D5E6568B796096735a'
   },
   checkpointDisputeContract: '0x111111111822222222293333333333744444444a',
+  exitDisputeContract: '0x111111112312312322293333333333744444444a',
   PlasmaETH: '0x13274Fe19C0178208bCbee397af8167A7be27f6f'
 }
 

@@ -113,4 +113,10 @@ export default class StateUpdate {
       this.stateObject
     )
   }
+
+  public toString(): string {
+    return `StateUpdate(depositContractAddress: ${this.depositContractAddress.toString()}, blockNumber: ${this.blockNumber.toString()}, range: ${this.range.toString()}, so: ${
+      this.stateObject.deciderAddress.data
+    })`
+  }
 }

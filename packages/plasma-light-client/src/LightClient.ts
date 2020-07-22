@@ -1,13 +1,12 @@
 import {
   StateUpdate,
-  IExit,
+  Exit,
   PlasmaContractConfig
 } from '@cryptoeconomicslab/plasma'
 import {
   CompiledPredicate,
   DeciderManager,
-  DeciderConfig,
-  Challenge
+  DeciderConfig
 } from '@cryptoeconomicslab/ovm'
 import {
   Address,
@@ -23,10 +22,10 @@ import {
   IERC20DetailedContract,
   IAdjudicationContract,
   IOwnershipPayoutContract,
-  ICheckpointDisputeContract
+  ICheckpointDisputeContract,
+  IExitDisputeContract
 } from '@cryptoeconomicslab/contract'
 import { Wallet } from '@cryptoeconomicslab/wallet'
-import { decodeStructable } from '@cryptoeconomicslab/coder'
 import JSBI from 'jsbi'
 import UserAction from './UserAction'
 import EventEmitter from 'event-emitter'
@@ -41,11 +40,10 @@ import { TransferUsecase } from './usecase/TransferUsecase'
 import { PendingStateUpdatesVerifier } from './verifier/PendingStateUpdatesVerifier'
 import APIClient from './APIClient'
 import TokenManager from './managers/TokenManager'
-import { executeChallenge } from './helper/challenge'
 import { UserActionEvent, EmitterEvent } from './ClientEvent'
-import { getOwner } from './helper/stateUpdateHelper'
 import { Numberish } from './types'
 import { CheckpointDispute } from './dispute/CheckpointDispute'
+import { ExitDispute } from './dispute/ExitDispute'
 
 interface LightClientOptions {
   wallet: Wallet
@@ -56,6 +54,7 @@ interface LightClientOptions {
   commitmentContract: ICommitmentContract
   ownershipPayoutContract: IOwnershipPayoutContract
   checkpointDisputeContract: ICheckpointDisputeContract
+  exitDisputeContract: IExitDisputeContract
   deciderConfig: DeciderConfig & PlasmaContractConfig
   aggregatorEndpoint?: string
 }
@@ -72,6 +71,7 @@ export default class LightClient {
   private transferUsecase: TransferUsecase
   private pendingStateUpdatesVerifier: PendingStateUpdatesVerifier
   private checkpointDispute: CheckpointDispute
+  private exitDispute: ExitDispute
 
   constructor(
     private wallet: Wallet,
@@ -81,7 +81,8 @@ export default class LightClient {
     private tokenContractFactory: (address: Address) => IERC20DetailedContract,
     private commitmentContract: ICommitmentContract,
     private ownershipPayoutContract: IOwnershipPayoutContract,
-    private checkpointDisputeContract: ICheckpointDisputeContract,
+    checkpointDisputeContract: ICheckpointDisputeContract,
+    exitDisputeContract: IExitDisputeContract,
     private deciderConfig: DeciderConfig & PlasmaContractConfig,
     private aggregatorEndpoint: string = 'http://localhost:3000'
   ) {
@@ -104,6 +105,11 @@ export default class LightClient {
       this.tokenManager,
       this.apiClient
     )
+    this.exitDispute = new ExitDispute(
+      exitDisputeContract,
+      witnessDb,
+      this.deciderManager
+    )
     this.stateSyncer = new StateSyncer(
       this.ee,
       this.witnessDb,
@@ -111,16 +117,14 @@ export default class LightClient {
       Address.from(this.deciderConfig.commitmentContract),
       this.apiClient,
       this.tokenManager,
+      this.deciderManager,
       this.checkpointDispute
     )
     this.exitUsecase = new ExitUsecase(
       this.ee,
       this.witnessDb,
-      this.adjudicationContract,
-      this.commitmentContract,
-      this.ownershipPayoutContract,
-      this.deciderManager,
-      this.tokenManager
+      this.tokenManager,
+      this.exitDispute
     )
     this.transferUsecase = new TransferUsecase(
       this.witnessDb,
@@ -150,6 +154,7 @@ export default class LightClient {
       options.commitmentContract,
       options.ownershipPayoutContract,
       options.checkpointDisputeContract,
+      options.exitDisputeContract,
       options.deciderConfig,
       options.aggregatorEndpoint
     )
@@ -167,10 +172,6 @@ export default class LightClient {
 
   public get syncing(): boolean {
     return this._syncing
-  }
-
-  private async getClaimDb(): Promise<KeyValueStore> {
-    return await this.witnessDb.bucket(Bytes.fromString('claimedProperty'))
   }
 
   /**
@@ -228,9 +229,7 @@ export default class LightClient {
     )
     this.commitmentContract.startWatchingEvents()
     const blockNumber = await this.commitmentContract.getCurrentBlock()
-
     await this.stateSyncer.syncUntil(blockNumber, Address.from(this.address))
-    await this.watchAdjudicationContract()
   }
 
   /**
@@ -363,100 +362,12 @@ export default class LightClient {
     await this.exitUsecase.startWithdrawal(amount, tokenContractAddress)
   }
 
-  public async completeWithdrawal(exit: IExit) {
+  public async completeWithdrawal(exit: Exit) {
     await this.exitUsecase.completeWithdrawal(exit, Address.from(this.address))
   }
 
-  public async getPendingWithdrawals(): Promise<IExit[]> {
+  public async getPendingWithdrawals(): Promise<Exit[]> {
     return await this.exitUsecase.getPendingWithdrawals()
-  }
-
-  /**
-   * FIXME: use DisputeContract.challenge method
-   * @name executeChallenge
-   * @description execute challenge procedure to game with challenge property
-   * @param gameId Id of the game to challenge
-   * @param challenge challenge data structure
-   */
-  private async executeChallenge(property: Property, challenge: Challenge) {
-    await executeChallenge(
-      this.adjudicationContract,
-      this.deciderManager,
-      property,
-      challenge
-    )
-  }
-
-  // FIXME: watch Dispute Contract
-  private async watchAdjudicationContract() {
-    this.adjudicationContract.subscribeClaimChallenged(
-      async (gameId, challengeGameId) => {
-        const db = await this.getClaimDb()
-        const propertyBytes = await db.get(gameId)
-        const challengingPropertyBytes = await db.get(challengeGameId)
-        if (propertyBytes && challengingPropertyBytes) {
-          // challenged property is the one this client claimed
-          const challengeProperty = decodeStructable(
-            Property,
-            ovmContext.coder,
-            challengingPropertyBytes
-          )
-          const decision = await this.deciderManager.decide(challengeProperty)
-          if (!decision.outcome && decision.challenge) {
-            // challenge again
-            await this.executeChallenge(challengeProperty, decision.challenge)
-          }
-        }
-      }
-    )
-
-    this.adjudicationContract.subscribeNewPropertyClaimed(
-      async (gameId, property, createdBlock) => {
-        console.log(
-          'property is claimed',
-          gameId.toHexString(),
-          property.deciderAddress.data,
-          createdBlock
-        )
-        const claimDb = await this.getClaimDb()
-        await claimDb.put(gameId, ovmContext.coder.encode(property.toStruct()))
-        const stateUpdateRepository = await StateUpdateRepository.init(
-          this.witnessDb
-        )
-
-        const exit = this.exitUsecase.createExitFromProperty(property)
-        if (exit) {
-          console.log('Exit property claimed')
-          const { range, depositContractAddress } = exit.stateUpdate
-
-          // TODO: implement general way to check if client should challenge claimed property.
-          const stateUpdates = await stateUpdateRepository.getVerifiedStateUpdates(
-            depositContractAddress,
-            range
-          )
-          if (stateUpdates.length > 0) {
-            const decision = await this.deciderManager.decide(property)
-            if (getOwner(exit.stateUpdate).data === this.address) {
-              // exit initiated with this client. save exit into db
-              await this.exitUsecase.saveExit(exit)
-            } else if (!decision.outcome && decision.challenge) {
-              // exit is others. need to challenge
-              const challenge = decision.challenge
-              await this.executeChallenge(property, challenge)
-            }
-          }
-        }
-      }
-    )
-
-    this.adjudicationContract.subscribeClaimDecided(
-      async (gameId, decision) => {
-        const db = await this.getClaimDb()
-        await db.del(gameId)
-      }
-    )
-
-    this.adjudicationContract.startWatchingEvents()
   }
 
   /**

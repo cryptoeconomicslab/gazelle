@@ -1,41 +1,32 @@
-import StateUpdate from './StateUpdate'
-import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
-import { Bytes, Address, Range, Property } from '@cryptoeconomicslab/primitives'
-import { decodeStructable } from '@cryptoeconomicslab/coder'
-import { Keccak256 } from '@cryptoeconomicslab/hash'
-import IExit from './IExit'
+import { Struct, Property, BigNumber } from '@cryptoeconomicslab/primitives'
+import { StateUpdate } from '.'
 
-export default class Exit implements IExit {
+export default class Exit {
   constructor(
-    readonly exitPredicateAddress: Address,
     readonly stateUpdate: StateUpdate,
-    readonly inclusionProof: DoubleLayerInclusionProof,
-    readonly id: Bytes
+    readonly claimedBlockNumber: BigNumber
   ) {}
 
-  public get property(): Property {
-    const { encode } = ovmContext.coder
-    return new Property(this.exitPredicateAddress, [
-      encode(this.stateUpdate.property.toStruct()),
-      encode(this.inclusionProof.toStruct())
+  public static fromStruct(struct: Struct): Exit {
+    return new Exit(
+      StateUpdate.fromProperty(
+        Property.fromStruct(struct.data[0].value as Struct)
+      ),
+      struct.data[1].value as BigNumber
+    )
+  }
+
+  public toStruct(): Struct {
+    return new Struct([
+      { key: 'stateUpdate', value: this.stateUpdate.property.toStruct() },
+      { key: 'claimedBlockNumber', value: this.claimedBlockNumber }
     ])
   }
 
-  public static fromProperty(property: Property): Exit {
-    const { coder } = ovmContext
-    const stateUpdate = StateUpdate.fromProperty(
-      decodeStructable(Property, coder, property.inputs[0])
-    )
-    const inclusionProof = decodeStructable(
-      DoubleLayerInclusionProof,
-      coder,
-      property.inputs[1]
-    )
-    const id = Keccak256.hash(coder.encode(property.toStruct()))
-    return new Exit(property.deciderAddress, stateUpdate, inclusionProof, id)
-  }
-
-  public get range(): Range {
-    return this.stateUpdate.range
+  static getParamType(): Struct {
+    return new Struct([
+      { key: 'stateUpdate', value: Property.getParamType() },
+      { key: 'claimedBlockNumber', value: BigNumber.default() }
+    ])
   }
 }

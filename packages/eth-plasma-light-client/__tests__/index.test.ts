@@ -18,7 +18,8 @@ jest.mock('@cryptoeconomicslab/eth-contract', () => {
     CommitmentContract,
     AdjudicationContract,
     OwnershipPayoutContract,
-    CheckpointDisputeContract
+    CheckpointDisputeContract,
+    ExitDisputeContract
   } = jest.requireActual('@cryptoeconomicslab/eth-contract')
   return {
     DepositContract: jest.fn().mockImplementation(address => {
@@ -40,6 +41,7 @@ jest.mock('@cryptoeconomicslab/eth-contract', () => {
     AdjudicationContract,
     OwnershipPayoutContract,
     CheckpointDisputeContract,
+    ExitDisputeContract,
     ERC20Contract: jest.fn().mockImplementation(() => {
       return {
         address: '',
