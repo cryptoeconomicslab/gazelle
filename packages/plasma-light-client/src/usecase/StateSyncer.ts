@@ -11,7 +11,7 @@ import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { StateUpdate } from '@cryptoeconomicslab/plasma'
 import { KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
 import { ICommitmentContract } from '@cryptoeconomicslab/contract'
-import { hint as Hint } from '@cryptoeconomicslab/ovm'
+import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
 import {
   SyncRepository,
   StateUpdateRepository,
@@ -24,6 +24,7 @@ import { getOwner } from '../helper/stateUpdateHelper'
 import { getStorageDb } from '../helper/storageDbHelper'
 import TokenManager from '../managers/TokenManager'
 import { CheckpointDispute } from '../dispute/CheckpointDispute'
+import { verifyCheckpoint } from '../verifier/CheckpointVerifier'
 
 export class StateSyncer {
   constructor(
@@ -33,6 +34,7 @@ export class StateSyncer {
     private commitmentContractAddress: Address,
     private apiClient: APIClient,
     private tokenManager: TokenManager,
+    private deciderManager: DeciderManager,
     private checkpointDispute: CheckpointDispute
   ) {}
 
@@ -97,8 +99,12 @@ export class StateSyncer {
         stateUpdates.map(async su => {
           try {
             await this.checkpointDispute.prepareCheckpointWitness(su)
-            const verified = await this.checkpointDispute.verifyCheckpoint(su)
-            if (!verified) return
+            const verified = await verifyCheckpoint(
+              this.witnessDb,
+              this.deciderManager,
+              su
+            )
+            if (!verified.decision) return
           } catch (e) {
             console.log(e)
           }
