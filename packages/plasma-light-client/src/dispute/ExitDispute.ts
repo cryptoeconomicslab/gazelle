@@ -24,8 +24,8 @@ import { verifyCheckpoint } from '../verifier/CheckpointVerifier'
 export class ExitDispute {
   constructor(
     private contract: IExitDisputeContract,
-    private deciderManager: DeciderManager,
-    private witnessDb: KeyValueStore
+    private witnessDb: KeyValueStore,
+    private deciderManager: DeciderManager
   ) {
     // watch exit contract to handle challenge
     this.contract.subscribeExitClaimed(this.handleExitClaimed)
@@ -38,7 +38,7 @@ export class ExitDispute {
    * @description claims "exiting a StateUpdate" to ExitDispute contract
    * @param stateUpdate A StateUpdate to exit
    */
-  async claimExit(stateUpdate: StateUpdate) {
+  public async claimExit(stateUpdate: StateUpdate) {
     // store exiting stateUpdate in ExitRepository
     const inclusionProofRepo = await InclusionProofRepository.init(
       this.witnessDb
@@ -49,6 +49,8 @@ export class ExitDispute {
       stateUpdate.range
     )
     if (inclusionProofs.length !== 1) {
+      // TODO: check if checkpoint exists for the stateUpdate. if true, ExitCheckpoint
+
       throw new Error(
         `Inclusion proof not found for stateUpdate: ${stateUpdate.toString()}`
       )
@@ -60,6 +62,17 @@ export class ExitDispute {
     const exit = new Exit(stateUpdate, claimedBlockNumber)
     const exitRepo = await ExitRepository.init(this.witnessDb)
     await exitRepo.insertClaimedExit(exit)
+  }
+
+  /**
+   * settle ClaimedExit by calling settle method
+   * @param exit Exit object to settle
+   */
+  public async settle(exit: Exit) {
+    await this.contract.settle(exit.stateUpdate)
+    const exitRepo = await ExitRepository.init(this.witnessDb)
+    await exitRepo.removeClaimedExit(exit)
+    await exitRepo.insertSettledExit(exit.stateUpdate)
   }
 
   /**

@@ -86,8 +86,8 @@ describe('ExitDispute', () => {
     deciderManager.loadJson(deciderConfig as DeciderConfig)
     exitDispute = new ExitDispute(
       new MockContractWrapper(),
-      deciderManager,
-      witnessDb
+      witnessDb,
+      deciderManager
     )
   })
 

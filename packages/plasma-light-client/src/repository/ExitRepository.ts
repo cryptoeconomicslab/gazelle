@@ -1,5 +1,11 @@
 import { Exit, StateUpdate } from '@cryptoeconomicslab/plasma'
-import { Address, Bytes, Range, Property } from '@cryptoeconomicslab/primitives'
+import {
+  Address,
+  Bytes,
+  Range,
+  Property,
+  BigNumber
+} from '@cryptoeconomicslab/primitives'
 import { KeyValueStore, RangeStore, RangeDb } from '@cryptoeconomicslab/db'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 
@@ -99,6 +105,15 @@ export class ExitRepository {
     const db = await this.getDB(Kind.CLAIMED, depositContractAddress)
     const data = await db.get(range.start.data, range.end.data)
     return data.map(r => decodeStructable(Exit, ovmContext.coder, r.value))
+  }
+
+  public async getAllClaimedExits(
+    depositContractAddress: Address
+  ): Promise<Exit[]> {
+    return this.getClaimedExits(
+      depositContractAddress,
+      new Range(BigNumber.from(0), BigNumber.MAX_NUMBER)
+    )
   }
 
   /**

@@ -212,7 +212,7 @@ export class CheckpointDispute {
     if (!this.polling) this.pollClaim()
   }
 
-  private async getAllClaimedCheckpoints(): Promise<Checkpoint[]> {
+  public async getAllClaimedCheckpoints(): Promise<Checkpoint[]> {
     const checkpointRepository = await CheckpointRepository.init(this.witnessDb)
     const checkpoints = await Promise.all(
       this.tokenManager.depositContractAddresses.map(async addr => {
@@ -225,6 +225,10 @@ export class CheckpointDispute {
 
     // flatten checkpoints
     return ([] as Checkpoint[]).concat(...checkpoints)
+  }
+
+  public async settle(stateUpdate: StateUpdate) {
+    this.contract.settle(stateUpdate)
   }
 
   // TODO: extract
