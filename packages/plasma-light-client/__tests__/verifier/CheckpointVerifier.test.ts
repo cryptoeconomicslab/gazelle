@@ -18,7 +18,6 @@ import { prepareValidSU, prepareValidTxAndSig } from '../helper/prepare'
 setupContext({ coder: Coder })
 
 const TOKEN_ADDRESS = Address.default()
-const SU_ADDRESS = Address.from('0x0000000000000000000000000000000000000001')
 const OWNERSHIP_ADDRESS = Address.from(
   deciderConfig.deployedPredicateTable.OwnershipPredicate.deployedAddress
 )
@@ -44,7 +43,6 @@ describe('CheckpointDispute', () => {
 
   function SU(range: Range, blockNumber: BigNumber, owner: Address) {
     return new StateUpdate(
-      SU_ADDRESS,
       TOKEN_ADDRESS,
       range,
       blockNumber,

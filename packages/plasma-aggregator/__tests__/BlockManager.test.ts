@@ -16,19 +16,16 @@ setupContext({
   coder: Coder
 })
 
-const su = (start: number, end: number) => {
-  return new Property(
+const su = (start: number, end: number): StateUpdate => {
+  return new StateUpdate(
     Address.default(),
-    [
-      Address.default(),
-      new Range(BigNumber.from(start), BigNumber.from(end)).toStruct(),
-      BigNumber.from(1),
-      new Property(Address.default(), [Bytes.fromHexString('0x01')]).toStruct()
-    ].map(Coder.encode)
+    new Range(BigNumber.from(start), BigNumber.from(end)),
+    BigNumber.from(1),
+    new Property(Address.default(), [Bytes.fromHexString('0x01')])
   )
 }
 
-const stateUpdateProperty = su(0, 10)
+const stateUpdate = su(0, 10)
 
 describe('BlockManager', () => {
   let blockManager: BlockManager, kvs: InMemoryKeyValueStore
@@ -42,12 +39,10 @@ describe('BlockManager', () => {
   test('get and put block', async () => {
     const map = new Map()
     map.set('0x0001100000000000000000000000000100110011', [
-      StateUpdate.fromProperty(stateUpdateProperty),
-      StateUpdate.fromProperty(stateUpdateProperty)
+      stateUpdate,
+      stateUpdate
     ])
-    map.set('0x0001100110011001100110011001101100110011', [
-      StateUpdate.fromProperty(stateUpdateProperty)
-    ])
+    map.set('0x0001100110011001100110011001101100110011', [stateUpdate])
     const timestamp = DateUtils.getCurrentDate()
     const block1 = new Block(
       BigNumber.from(1),
@@ -55,6 +50,7 @@ describe('BlockManager', () => {
       BigNumber.from(0),
       Integer.from(timestamp)
     )
+    console.log(block1, block1.toStruct())
     await blockManager.putBlock(block1)
     const res = await blockManager.getBlock(BigNumber.from(1))
     expect(res).toEqual(block1)
@@ -66,9 +62,7 @@ describe('BlockManager', () => {
   })
 
   test('generateBlock increment block number', async () => {
-    await blockManager.enqueuePendingStateUpdate(
-      StateUpdate.fromProperty(stateUpdateProperty)
-    )
+    await blockManager.enqueuePendingStateUpdate(stateUpdate)
     let currentBlockNumber = await blockManager.getCurrentBlockNumber()
     expect(currentBlockNumber).toEqual(BigNumber.from(0))
     await blockManager.generateNextBlock()
@@ -77,14 +71,10 @@ describe('BlockManager', () => {
   })
 
   test('generateBlock', async () => {
-    await blockManager.enqueuePendingStateUpdate(
-      StateUpdate.fromProperty(stateUpdateProperty)
-    )
+    await blockManager.enqueuePendingStateUpdate(stateUpdate)
     const block = await blockManager.generateNextBlock()
     const map = new Map<string, StateUpdate[]>()
-    map.set(Address.default().data, [
-      StateUpdate.fromProperty(stateUpdateProperty)
-    ])
+    map.set(Address.default().data, [stateUpdate])
     const expected = new Block(
       BigNumber.from(1),
       map,

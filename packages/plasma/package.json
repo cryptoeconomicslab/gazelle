@@ -45,6 +45,7 @@
   "devDependencies": {
     "@cryptoeconomicslab/coder": "^0.4.1",
     "@cryptoeconomicslab/context": "^0.4.1",
+    "@cryptoeconomicslab/eth-coder": "^0.4.1",
     "@cryptoeconomicslab/primitives": "^0.4.1",
     "@cryptoeconomicslab/utils": "^0.4.1"
   },

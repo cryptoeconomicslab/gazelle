@@ -69,9 +69,6 @@ describe('StateManager', () => {
     blockNumber: BigNumber
   ) {
     return new StateUpdate(
-      (deciderManager.compiledPredicateMap.get(
-        'StateUpdate'
-      ) as CompiledPredicate).deployedAddress,
       DEPOSIT_ADDRESS,
       range,
       blockNumber,
@@ -81,7 +78,7 @@ describe('StateManager', () => {
 
   function depositTx(address: Address, range: Range, blockNumber: BigNumber) {
     const stateUpdate = ownershipStateUpdate(address, range, blockNumber)
-    return new DepositTransaction(DEPOSIT_ADDRESS, stateUpdate.property)
+    return new DepositTransaction(DEPOSIT_ADDRESS, stateUpdate)
   }
 
   beforeEach(async () => {
@@ -189,9 +186,7 @@ describe('StateManager', () => {
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
         ALIS_ADDRESS
       )
-      const sig = await ALIS_WALLET.signMessage(
-        Coder.encode(tx.toProperty(Address.default()).toStruct())
-      )
+      const sig = await ALIS_WALLET.signMessage(Coder.encode(tx.body))
       tx.signature = sig
       expect(
         await stateManager.executeStateTransition(
@@ -216,9 +211,7 @@ describe('StateManager', () => {
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
         ALIS_ADDRESS
       )
-      const sig = await ALIS_WALLET.signMessage(
-        Coder.encode(tx.toProperty(Address.default()).toStruct())
-      )
+      const sig = await ALIS_WALLET.signMessage(Coder.encode(tx.body))
       tx.signature = sig
       expect(
         await stateManager.executeStateTransition(
@@ -243,9 +236,7 @@ describe('StateManager', () => {
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
         ALIS_ADDRESS
       )
-      const sig = await ALIS_WALLET.signMessage(
-        Coder.encode(tx.toProperty(Address.default()).toStruct())
-      )
+      const sig = await ALIS_WALLET.signMessage(Coder.encode(tx.body))
       tx.signature = sig
       expect(
         await stateManager.executeStateTransition(
@@ -270,9 +261,7 @@ describe('StateManager', () => {
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
         ALIS_ADDRESS
       )
-      const sig = await ALIS_WALLET.signMessage(
-        Coder.encode(tx.toProperty(Address.default()).toStruct())
-      )
+      const sig = await ALIS_WALLET.signMessage(Coder.encode(tx.body))
       tx.signature = sig
       expect(
         await stateManager.executeStateTransition(
@@ -333,9 +322,7 @@ describe('StateManager', () => {
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
         ALIS_ADDRESS
       )
-      const sig = await ALIS_WALLET.signMessage(
-        Coder.encode(tx.toProperty(Address.default()).toStruct())
-      )
+      const sig = await ALIS_WALLET.signMessage(Coder.encode(tx.body))
       tx.signature = sig
 
       await expect(

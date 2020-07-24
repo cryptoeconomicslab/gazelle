@@ -34,4 +34,9 @@ export default class Property {
       (_struct.data[1].value as List<Bytes>).data
     )
   }
+
+  // append elements to tail of inputs
+  public appendInput(inputs: Bytes[]): Property {
+    return new Property(this.deciderAddress, this.inputs.concat(inputs))
+  }
 }

@@ -17,7 +17,7 @@ class APIClient {
       `${
         this.endpoint
       }/inclusion_proof?blockNumber=${su.blockNumber.data.toString()}&stateUpdate=${ovmContext.coder
-        .encode(su.property.toStruct())
+        .encode(su.toStruct())
         .toHexString()}`
     )
   }

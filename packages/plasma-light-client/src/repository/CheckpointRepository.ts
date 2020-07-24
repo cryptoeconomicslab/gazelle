@@ -44,7 +44,7 @@ export class CheckpointRepository {
     await db.put(
       range.start.data,
       range.end.data,
-      ovmContext.coder.encode(stateUpdate.property.toStruct())
+      ovmContext.coder.encode(stateUpdate.toStruct())
     )
   }
 
@@ -61,9 +61,7 @@ export class CheckpointRepository {
     const db = await this.getDB(Kind.SETTLED, depositContractAddress)
     const data = await db.get(range.start.data, range.end.data)
     return data.map(r =>
-      StateUpdate.fromProperty(
-        decodeStructable(Property, ovmContext.coder, r.value)
-      )
+      decodeStructable(StateUpdate, ovmContext.coder, r.value)
     )
   }
 

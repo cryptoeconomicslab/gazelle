@@ -3,7 +3,8 @@ import {
   Bytes,
   BigNumber,
   Range,
-  Property
+  Property,
+  Struct
 } from '@cryptoeconomicslab/primitives'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { RangeRecord } from '@cryptoeconomicslab/db'
@@ -18,7 +19,6 @@ import JSBI from 'jsbi'
  */
 export default class StateUpdate {
   constructor(
-    public deciderAddress: Address,
     public depositContractAddress: Address,
     public range: Range,
     public blockNumber: BigNumber,
@@ -27,20 +27,6 @@ export default class StateUpdate {
 
   public get amount(): JSBI {
     return JSBI.subtract(this.range.end.data, this.range.start.data)
-  }
-
-  public get predicateAddress(): Address {
-    return this.property.deciderAddress
-  }
-
-  public get property(): Property {
-    const { coder } = ovmContext
-    return new Property(this.deciderAddress, [
-      coder.encode(this.depositContractAddress),
-      coder.encode(this.range.toStruct()),
-      coder.encode(this.blockNumber),
-      coder.encode(this.stateObject.toStruct())
-    ])
   }
 
   public update({
@@ -68,16 +54,6 @@ export default class StateUpdate {
     }
   }
 
-  public static fromProperty(property: Property) {
-    return new StateUpdate(
-      property.deciderAddress,
-      ovmContext.coder.decode(Address.default(), property.inputs[0]),
-      decodeStructable(Range, ovmContext.coder, property.inputs[1]),
-      ovmContext.coder.decode(BigNumber.default(), property.inputs[2]),
-      decodeStructable(Property, ovmContext.coder, property.inputs[3])
-    )
-  }
-
   public static fromRangeRecord(r: RangeRecord): StateUpdate {
     return StateUpdate.fromRecord(
       decodeStructable(StateUpdateRecord, ovmContext.coder, r.value),
@@ -89,25 +65,20 @@ export default class StateUpdate {
     record: StateUpdateRecord,
     range: Range
   ): StateUpdate {
-    const inputs: Bytes[] = [
+    return new StateUpdate(
       record.depositContractAddress,
-      range.toStruct(),
+      range,
       record.blockNumber,
-      record.stateObject.toStruct()
-    ].map(ovmContext.coder.encode)
-
-    const property = new Property(record.predicateAddress, inputs)
-
-    return StateUpdate.fromProperty(property)
+      record.stateObject
+    )
   }
 
   public get hash(): Bytes {
-    return Keccak256.hash(ovmContext.coder.encode(this.property.toStruct()))
+    return Keccak256.hash(ovmContext.coder.encode(this.toStruct()))
   }
 
   public toRecord(): StateUpdateRecord {
     return new StateUpdateRecord(
-      this.deciderAddress,
       this.depositContractAddress,
       this.blockNumber,
       this.stateObject
@@ -118,5 +89,37 @@ export default class StateUpdate {
     return `StateUpdate(depositContractAddress: ${this.depositContractAddress.toString()}, blockNumber: ${this.blockNumber.toString()}, range: ${this.range.toString()}, so: ${
       this.stateObject.deciderAddress.data
     })`
+  }
+
+  public static getParamType(): Struct {
+    return new Struct([
+      { key: 'depositContractAddress', value: Address.default() },
+      { key: 'range', value: Range.getParamType() },
+      { key: 'blockNumber', value: BigNumber.default() },
+      { key: 'stateObject', value: Property.getParamType() }
+    ])
+  }
+
+  public static fromStruct(struct: Struct): StateUpdate {
+    const depositContractAddress = struct.data[0].value as Address
+    const range = struct.data[1].value as Struct
+    const blockNumber = struct.data[2].value as BigNumber
+    const stateObject = struct.data[3].value as Struct
+
+    return new StateUpdate(
+      depositContractAddress,
+      Range.fromStruct(range),
+      blockNumber,
+      Property.fromStruct(stateObject)
+    )
+  }
+
+  public toStruct(): Struct {
+    return new Struct([
+      { key: 'depositContractAddress', value: this.depositContractAddress },
+      { key: 'range', value: this.range.toStruct() },
+      { key: 'blockNumber', value: this.blockNumber },
+      { key: 'stateObject', value: this.stateObject.toStruct() }
+    ])
   }
 }

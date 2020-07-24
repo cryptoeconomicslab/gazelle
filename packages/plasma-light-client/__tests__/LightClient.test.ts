@@ -296,10 +296,6 @@ describe('LightClient', () => {
     beforeAll(() => {
       mockSendTransaction.mockClear()
       su = new StateUpdate(
-        Address.from(
-          deciderConfig.deployedPredicateTable.StateUpdatePredicate
-            .deployedAddress
-        ),
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(20)),
         BigNumber.from(0),
@@ -340,20 +336,12 @@ describe('LightClient', () => {
 
     beforeAll(() => {
       su1 = new StateUpdate(
-        Address.from(
-          deciderConfig.deployedPredicateTable.StateUpdatePredicate
-            .deployedAddress
-        ),
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(20)),
         BigNumber.from(0),
         client.ownershipProperty(Address.from(client.address))
       )
       su2 = new StateUpdate(
-        Address.from(
-          deciderConfig.deployedPredicateTable.StateUpdatePredicate
-            .deployedAddress
-        ),
         Address.from(depositContractAddress),
         new Range(BigNumber.from(30), BigNumber.from(40)),
         BigNumber.from(1),
@@ -497,10 +485,6 @@ describe('LightClient', () => {
   test('getOwner', () => {
     const owner = getOwner(
       new StateUpdate(
-        Address.from(
-          deciderConfig.deployedPredicateTable.StateUpdatePredicate
-            .deployedAddress
-        ),
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(20)),
         BigNumber.from(0),

@@ -27,7 +27,6 @@ describe('TypedDataVerifier', () => {
   const invalidPredicateAddress = Address.from(
     '0x13274fe19c0178208bcbee397af8167a7be27f0a'
   )
-  const txAddress = Address.default()
 
   function createTransaction(stateObject: Property): Bytes {
     const tx = new Transaction(
@@ -37,7 +36,7 @@ describe('TypedDataVerifier', () => {
       stateObject,
       Address.default()
     )
-    return ovmContext.coder.encode(tx.toProperty(txAddress).toStruct())
+    return ovmContext.coder.encode(tx.toStruct())
   }
 
   test('createTypedParams returns typed params', async () => {

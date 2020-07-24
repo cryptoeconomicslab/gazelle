@@ -4,8 +4,7 @@ import {
   Struct,
   List,
   FixedBytes,
-  Integer,
-  Property
+  Integer
 } from '@cryptoeconomicslab/primitives'
 import { Keccak256 } from '@cryptoeconomicslab/hash'
 import {
@@ -121,7 +120,7 @@ export default class Block {
       map.set(
         key,
         stateUpdatesList.data[i].data.map((s: Struct) =>
-          this.StateUpdate.fromProperty(Property.fromStruct(s))
+          StateUpdate.fromStruct(s)
         )
       )
     })
@@ -135,10 +134,10 @@ export default class Block {
 
     const stateUpdatesList = addrs.map(addr => {
       const stateUpdates = this.stateUpdatesMap.get(addr) || []
-      const list = stateUpdates.map(s => s.property.toStruct())
+      const list = stateUpdates.map(s => s.toStruct())
       return List.from(
         {
-          default: Property.getParamType
+          default: StateUpdate.getParamType
         },
         list
       )
@@ -160,9 +159,9 @@ export default class Block {
             default: () =>
               List.default(
                 {
-                  default: Property.getParamType
+                  default: StateUpdate.getParamType
                 },
-                Property.getParamType()
+                StateUpdate.getParamType()
               )
           },
           stateUpdatesList
@@ -193,12 +192,12 @@ export default class Block {
             default: () =>
               List.default(
                 {
-                  default: Property.getParamType
+                  default: StateUpdate.getParamType
                 },
-                Property.getParamType()
+                StateUpdate.getParamType()
               )
           },
-          List.from({ default: Property.getParamType }, [])
+          List.from({ default: StateUpdate.getParamType }, [])
         )
       },
       {

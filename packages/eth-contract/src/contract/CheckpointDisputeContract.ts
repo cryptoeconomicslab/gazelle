@@ -60,7 +60,7 @@ export class CheckpointDisputeContract implements ICheckpointDisputeContract {
     inclusionProof: DoubleLayerInclusionProof
   ) {
     await this.connection.claim(
-      [encode(stateUpdate.property.toStruct())],
+      [encode(stateUpdate.toStruct())],
       [encode(inclusionProof.toStruct())]
     )
   }
@@ -71,8 +71,8 @@ export class CheckpointDisputeContract implements ICheckpointDisputeContract {
     inclusionProof: DoubleLayerInclusionProof
   ) {
     await this.connection.challenge(
-      [encode(stateUpdate.property.toStruct())],
-      [encode(challenge.property.toStruct())],
+      [encode(stateUpdate.toStruct())],
+      [encode(challenge.toStruct())],
       [encode(inclusionProof.toStruct())]
     )
   }
@@ -83,14 +83,14 @@ export class CheckpointDisputeContract implements ICheckpointDisputeContract {
     witness: Bytes[]
   ) {
     await this.connection.removeChallenge(
-      [encode(stateUpdate.property.toStruct())],
-      [encode(challenge.property.toStruct())],
+      [encode(stateUpdate.toStruct())],
+      [encode(challenge.toStruct())],
       witness.map(b => b.toHexString())
     )
   }
 
   async settle(stateUpdate: StateUpdate) {
-    await this.connection.settle([encode(stateUpdate.property.toStruct())])
+    await this.connection.settle([encode(stateUpdate.toStruct())])
   }
 
   subscribeCheckpointClaimed(

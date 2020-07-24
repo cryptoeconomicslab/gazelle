@@ -20,16 +20,12 @@ setupContext({
 })
 
 function su(start: JSBI, end: JSBI): StateUpdate {
-  const property = new Property(
+  return new StateUpdate(
     Address.default(),
-    [
-      Address.default(),
-      new Range(BigNumber.from(start), BigNumber.from(end)).toStruct(),
-      BigNumber.from(1),
-      new Property(Address.default(), [Bytes.fromHexString('0x01')]).toStruct()
-    ].map(ovmContext.coder.encode)
+    new Range(BigNumber.from(start), BigNumber.from(end)),
+    BigNumber.from(1),
+    new Property(Address.default(), [Bytes.fromHexString('0x01')])
   )
-  return StateUpdate.fromProperty(property)
 }
 
 describe('StateUpdateRepository', () => {

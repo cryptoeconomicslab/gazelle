@@ -25,7 +25,7 @@ function createChallengeInputAndWitness(challenge: ExitChallenge): Bytes[][] {
     return [
       [
         Bytes.fromString(challenge.type).toHexString(),
-        encode(challenge.stateUpdate.property.toStruct())
+        encode(challenge.stateUpdate.toStruct())
       ],
       [encode(challenge.inclusionProof.toStruct())]
     ]
@@ -87,7 +87,7 @@ export class ExitDisputeContract implements IExitDisputeContract {
     inclusionProof: DoubleLayerInclusionProof
   ): Promise<void> {
     await this.connection.claim(
-      [encode(stateUpdate.property.toStruct())],
+      [encode(stateUpdate.toStruct())],
       [encode(inclusionProof.toStruct())]
     )
   }
@@ -95,7 +95,7 @@ export class ExitDisputeContract implements IExitDisputeContract {
   public async challenge(challenge: ExitChallenge): Promise<void> {
     // tODO: conditional call for challenge type
     await this.connection.challenge(
-      [encode(challenge.stateUpdate.property.toStruct())],
+      [encode(challenge.stateUpdate.toStruct())],
       ...createChallengeInputAndWitness(challenge)
     )
   }
@@ -106,15 +106,15 @@ export class ExitDisputeContract implements IExitDisputeContract {
   ): Promise<void> {
     if (challenge.type === EXIT_CHALLENGE_TYPE.CHECKPOINT) {
       await this.connection.removeChallenge(
-        [encode(challenge.stateUpdate.property.toStruct())],
-        [encode(challenge.challengeStateUpdate.property.toStruct())],
+        [encode(challenge.stateUpdate.toStruct())],
+        [encode(challenge.challengeStateUpdate.toStruct())],
         witness.map(b => b.toHexString())
       )
     }
   }
 
   public async settle(stateUpdate: StateUpdate): Promise<void> {
-    await this.connection.settle([encode(stateUpdate.property.toStruct())])
+    await this.connection.settle([encode(stateUpdate.toStruct())])
   }
 
   public subscribeExitClaimed(

@@ -1,9 +1,4 @@
-import {
-  Property,
-  Bytes,
-  BigNumber,
-  Range
-} from '@cryptoeconomicslab/primitives'
+import { Bytes, BigNumber, Range } from '@cryptoeconomicslab/primitives'
 import { ICheckpointDisputeContract } from '@cryptoeconomicslab/contract'
 import { KeyValueStore, getWitnesses, putWitness } from '@cryptoeconomicslab/db'
 import {
@@ -249,12 +244,10 @@ export class CheckpointDispute {
 
     await Promise.all(
       res.data.data.map(async (witness: CheckpointWitness) => {
-        const stateUpdate = StateUpdate.fromProperty(
-          decodeStructable(
-            Property,
-            coder,
-            Bytes.fromHexString(witness.stateUpdate)
-          )
+        const stateUpdate = decodeStructable(
+          StateUpdate,
+          coder,
+          Bytes.fromHexString(witness.stateUpdate)
         )
         const { blockNumber, depositContractAddress, range } = stateUpdate
         await suRepository.insertWitnessStateUpdate(stateUpdate)
