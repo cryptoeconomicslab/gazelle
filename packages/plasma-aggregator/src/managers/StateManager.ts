@@ -1,7 +1,8 @@
 import {
   StateUpdate,
   Transaction,
-  DepositTransaction
+  DepositTransaction,
+  verifyTransaction
 } from '@cryptoeconomicslab/plasma'
 import { DeciderManager, hint } from '@cryptoeconomicslab/ovm'
 import {
@@ -10,8 +11,14 @@ import {
   BigNumber,
   Range
 } from '@cryptoeconomicslab/primitives'
-import { RangeStore, KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
+import {
+  RangeStore,
+  KeyValueStore,
+  putWitness,
+  getWitnesses
+} from '@cryptoeconomicslab/db'
 import JSBI from 'jsbi'
+import { createSignatureHint } from '@cryptoeconomicslab/ovm/lib/hintString'
 
 /**
  * StateManager stores the latest states
@@ -135,17 +142,15 @@ export default class StateManager {
     )
 
     // TODO: fix decision
-    // const decisions = await Promise.all(
-    //   prevStates.map(async state => {
-    //     return await deciderManager.decide(state.property)
-    //   })
-    // )
+    const decisions = await Promise.all(
+      prevStates.map(async su =>
+        this.verifyStateTransition(su, tx, deciderManager)
+      )
+    )
 
-    // decisions.map(d => console.log(d.traceInfo?.toJson()))
-
-    // if (decisions.some(d => !d.outcome)) {
-    //   throw new Error('InvalidTransaction')
-    // }
+    if (decisions.some(d => !d.outcome)) {
+      throw new Error('InvalidTransaction')
+    }
 
     const nextStateUpdate = new StateUpdate(
       tx.depositContractAddress,
@@ -163,6 +168,27 @@ export default class StateManager {
     await this.putStateUpdate(nextStateUpdate)
     await this.putStateUpdateAtBlock(nextStateUpdate, nextBlockNumber)
     return nextStateUpdate
+  }
+
+  private async verifyStateTransition(
+    su: StateUpdate,
+    tx: Transaction,
+    deciderManager: DeciderManager
+  ): Promise<{ outcome: boolean }> {
+    const txVerified = verifyTransaction(su, tx) // use verifyTransaction same as lightClient
+    if (!txVerified) {
+      return { outcome: false }
+    }
+    const message = ovmContext.coder.encode(tx.body)
+    const sig = await getWitnesses(
+      deciderManager.witnessDb,
+      createSignatureHint(message)
+    )
+    const result = await deciderManager.decide(
+      su.stateObject.appendInput([message, ...sig])
+    )
+
+    return { outcome: result.outcome }
   }
 
   /**
@@ -225,7 +251,7 @@ export default class StateManager {
     prevStateRanges: Range[]
   ) {
     for await (const [index, prevBlockNumber] of prevBlockNumbers.entries()) {
-      const message = ovmContext.coder.encode(tx.toStruct())
+      const message = ovmContext.coder.encode(tx.body)
       await putWitness(
         witnessDb,
         hint.createSignatureHint(message),

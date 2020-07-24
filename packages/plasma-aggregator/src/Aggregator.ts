@@ -463,7 +463,7 @@ export default class Aggregator {
               const txBytes = coder.encode(tx.toStruct())
               const witness = await getWitnesses(
                 this.decider.witnessDb,
-                createSignatureHint(coder.encode(tx.toStruct()))
+                createSignatureHint(coder.encode(tx.body))
               )
               if (!witness[0]) throw new Error('Signature not found')
 

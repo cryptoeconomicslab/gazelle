@@ -1,6 +1,10 @@
 import { BigNumber } from '@cryptoeconomicslab/primitives'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
-import { StateUpdate, Block } from '@cryptoeconomicslab/plasma'
+import {
+  StateUpdate,
+  Block,
+  verifyTransaction
+} from '@cryptoeconomicslab/plasma'
 import { DoubleLayerTreeVerifier } from '@cryptoeconomicslab/merkle-tree'
 import { DeciderManager } from '@cryptoeconomicslab/ovm'
 import {
@@ -10,8 +14,6 @@ import {
   InclusionProofRepository
 } from '../repository'
 import JSBI from 'jsbi'
-import { verifyTransaction } from '../verifier/TransactionVerifier'
-import { mergeWitness } from '../helper/stateObjectHelper'
 
 type CheckpointDecision = {
   decision: boolean
@@ -94,9 +96,7 @@ export async function verifyCheckpoint(
         }
 
         // validate stateObject
-        const stateObject = mergeWitness(su.stateObject, [
-          coder.encode(tx.body)
-        ])
+        const stateObject = su.stateObject.appendInput([coder.encode(tx.body)])
         try {
           const decision = await deciderManager.decide(stateObject)
           if (!decision.outcome) {

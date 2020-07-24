@@ -1,4 +1,4 @@
-import { StateUpdate, Transaction } from '@cryptoeconomicslab/plasma'
+import { StateUpdate, Transaction } from '../types'
 import JSBI from 'jsbi'
 
 /**
