@@ -1,4 +1,4 @@
-import { Struct, Property, BigNumber } from '@cryptoeconomicslab/primitives'
+import { Struct, BigNumber } from '@cryptoeconomicslab/primitives'
 import { StateUpdate } from '.'
 
 export default class Checkpoint {
@@ -9,23 +9,21 @@ export default class Checkpoint {
 
   public static fromStruct(struct: Struct): Checkpoint {
     return new Checkpoint(
-      StateUpdate.fromProperty(
-        Property.fromStruct(struct.data[0].value as Struct)
-      ),
+      StateUpdate.fromStruct(struct.data[0].value as Struct),
       struct.data[1].value as BigNumber
     )
   }
 
   public toStruct(): Struct {
     return new Struct([
-      { key: 'stateUpdate', value: this.stateUpdate.property.toStruct() },
+      { key: 'stateUpdate', value: this.stateUpdate.toStruct() },
       { key: 'claimedBlockNumber', value: this.claimedBlockNumber }
     ])
   }
 
   static getParamType(): Struct {
     return new Struct([
-      { key: 'stateUpdate', value: Property.getParamType() },
+      { key: 'stateUpdate', value: StateUpdate.getParamType() },
       { key: 'claimedBlockNumber', value: BigNumber.default() }
     ])
   }

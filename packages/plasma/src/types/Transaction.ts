@@ -61,31 +61,6 @@ export default class Transaction {
     )
   }
 
-  public static fromProperty(property: Property): Transaction {
-    const depositContractAddress = ovmContext.coder.decode(
-      Address.default(),
-      property.inputs[0]
-    )
-    const range = Range.fromStruct(
-      ovmContext.coder.decode(Range.getParamType(), property.inputs[1])
-    )
-    const maxBlockNumber = ovmContext.coder.decode(
-      BigNumber.default(),
-      property.inputs[2]
-    )
-    const stateObject = Property.fromStruct(
-      ovmContext.coder.decode(Property.getParamType(), property.inputs[3])
-    )
-    return new Transaction(
-      depositContractAddress,
-      range,
-      maxBlockNumber,
-      stateObject,
-      Address.default(),
-      Bytes.default()
-    )
-  }
-
   public toStruct(): Struct {
     return new Struct([
       { key: 'depositContractAddress', value: this.depositContractAddress },
@@ -109,14 +84,5 @@ export default class Transaction {
 
   public getHash(): Bytes {
     return Keccak256.hash(ovmContext.coder.encode(this.body))
-  }
-
-  public toProperty(deciderAddress: Address): Property {
-    return new Property(deciderAddress, [
-      ovmContext.coder.encode(this.depositContractAddress),
-      ovmContext.coder.encode(this.range.toStruct()),
-      ovmContext.coder.encode(this.maxBlockNumber),
-      ovmContext.coder.encode(this.stateObject.toStruct())
-    ])
   }
 }

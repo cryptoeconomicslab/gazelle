@@ -21,7 +21,6 @@ const testAddr = '0x0000000000000000000000000000000000000001'
 const su = (bn: number, start: number, end: number) => {
   return new StateUpdate(
     Address.default(),
-    Address.default(),
     new Range(BigNumber.from(start), BigNumber.from(end)),
     BigNumber.from(bn),
     new Property(Address.default(), [Bytes.fromHexString(testAddr)])

@@ -91,9 +91,7 @@ export class StateSyncer {
     try {
       const res = await this.apiClient.syncState(address.data, blockNumber)
       const stateUpdates: StateUpdate[] = res.data.map((s: string) =>
-        StateUpdate.fromProperty(
-          decodeStructable(Property, coder, Bytes.fromHexString(s))
-        )
+        decodeStructable(StateUpdate, coder, Bytes.fromHexString(s))
       )
       await Promise.all(
         stateUpdates.map(async su => {

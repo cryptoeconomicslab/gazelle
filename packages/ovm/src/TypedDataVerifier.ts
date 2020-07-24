@@ -9,6 +9,7 @@ import {
   Address
 } from '@cryptoeconomicslab/primitives'
 import { DeciderConfig } from './load'
+import { decodeStructable } from '@cryptoeconomicslab/coder'
 
 /**
  * EIP712TypedData
@@ -104,10 +105,11 @@ export function createTypedParams(
   config: DeciderConfig,
   transactionMessage: Bytes
 ): EIP712TypedData[] {
-  const property = Property.fromStruct(
-    ovmContext.coder.decode(Property.getParamType(), transactionMessage)
+  const transaction = decodeStructable(
+    Transaction,
+    ovmContext.coder,
+    transactionMessage
   )
-  const transaction = Transaction.fromProperty(property)
   const compiledPredicate = getPredicate(
     transaction.stateObject.deciderAddress,
     config

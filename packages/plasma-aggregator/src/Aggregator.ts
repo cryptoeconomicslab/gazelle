@@ -325,7 +325,7 @@ export default class Aggregator {
       res
         .send(
           stateUpdates.map(s =>
-            ovmContext.coder.encode(s.property.toStruct()).toHexString()
+            ovmContext.coder.encode(s.toStruct()).toHexString()
           )
         )
         .status(200)
@@ -360,9 +360,12 @@ export default class Aggregator {
     try {
       const blockNumber = BigNumber.from(req.query.blockNumber)
       const stateUpdateByte = Bytes.fromHexString(req.query.stateUpdate)
-      const stateUpdate = StateUpdate.fromProperty(
-        decodeStructable(Property, ovmContext.coder, stateUpdateByte)
+      const stateUpdate = decodeStructable(
+        StateUpdate,
+        ovmContext.coder,
+        stateUpdateByte
       )
+
       this.blockManager.getBlock(blockNumber).then(block => {
         if (!block) {
           res.status(404)
@@ -450,9 +453,7 @@ export default class Aggregator {
               )
               if (!tx) {
                 return {
-                  stateUpdate: coder
-                    .encode(su.property.toStruct())
-                    .toHexString(),
+                  stateUpdate: coder.encode(su.toStruct()).toHexString(),
                   inclusionProof: inclusionProof
                     ? coder.encode(inclusionProof.toStruct()).toHexString()
                     : null,
@@ -462,9 +463,7 @@ export default class Aggregator {
               const txBytes = coder.encode(tx.toStruct())
               const witness = await getWitnesses(
                 this.decider.witnessDb,
-                createSignatureHint(
-                  coder.encode(tx.toProperty(Address.default()).toStruct())
-                )
+                createSignatureHint(coder.encode(tx.toStruct()))
               )
               if (!witness[0]) throw new Error('Signature not found')
 
@@ -474,7 +473,7 @@ export default class Aggregator {
               }
 
               return {
-                stateUpdate: coder.encode(su.property.toStruct()).toHexString(),
+                stateUpdate: coder.encode(su.toStruct()).toHexString(),
                 inclusionProof: inclusionProof
                   ? coder.encode(inclusionProof.toStruct()).toHexString()
                   : null,
@@ -584,8 +583,8 @@ export default class Aggregator {
    */
   private depositHandlerFactory(
     depositContractAddress: Address
-  ): (checkpointId: Bytes, checkpoint: [Property]) => Promise<void> {
-    return async (checkpointId: Bytes, checkpoint: [Property]) => {
+  ): (checkpointId: Bytes, checkpoint: [StateUpdate]) => Promise<void> {
+    return async (checkpointId: Bytes, checkpoint: [StateUpdate]) => {
       const blockNumber = await this.blockManager.getCurrentBlockNumber()
       const stateUpdate = checkpoint[0]
       const tx = new DepositTransaction(depositContractAddress, stateUpdate)
@@ -602,9 +601,11 @@ export default class Aggregator {
     this.blockManager.registerToken(tokenAddress)
     const depositContract = this.depositContractFactory(tokenAddress)
     this.depositContracts.push(depositContract)
-    depositContract.subscribeCheckpointFinalized(
-      this.depositHandlerFactory(depositContract.address)
-    )
+
+    // TODO: handle deposit contract
+    // depositContract.subscribeCheckpointFinalized(
+    //   this.depositHandlerFactory(depositContract.address)
+    // )
     depositContract.startWatchingEvents()
   }
 }

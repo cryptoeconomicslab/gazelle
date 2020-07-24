@@ -179,9 +179,7 @@ describe('light client', () => {
     }
     const exitProperty = new Property(
       Address.from(config.deployedPredicateTable.ExitPredicate.deployedAddress),
-      [stateUpdate.property.toStruct(), inclusionProof.toStruct()].map(
-        EthCoder.encode
-      )
+      [stateUpdate.toStruct(), inclusionProof.toStruct()].map(EthCoder.encode)
     )
     await client['adjudicationContract'].claimProperty(exitProperty)
   }

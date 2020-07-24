@@ -3,16 +3,11 @@ import {
   Transaction,
   DepositTransaction
 } from '@cryptoeconomicslab/plasma'
-import {
-  DeciderManager,
-  CompiledPredicate,
-  hint
-} from '@cryptoeconomicslab/ovm'
+import { DeciderManager, hint } from '@cryptoeconomicslab/ovm'
 import {
   Bytes,
   Address,
   BigNumber,
-  Property,
   Range
 } from '@cryptoeconomicslab/primitives'
 import { RangeStore, KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
@@ -76,6 +71,7 @@ export default class StateManager {
   }
 
   /**
+   * TODO: Fix implementation
    * given transaction, execute state transition on
    * existing state updates with gaiven range and returns new state update.
    * if transaction is invalid, throws.
@@ -138,33 +134,24 @@ export default class StateManager {
       prevStates.map(s => s.range)
     )
 
-    const decisions = await Promise.all(
-      prevStates.map(async state => {
-        return await deciderManager.decide(state.property)
-      })
-    )
+    // TODO: fix decision
+    // const decisions = await Promise.all(
+    //   prevStates.map(async state => {
+    //     return await deciderManager.decide(state.property)
+    //   })
+    // )
 
-    decisions.map(d => console.log(d.traceInfo?.toJson()))
+    // decisions.map(d => console.log(d.traceInfo?.toJson()))
 
-    if (decisions.some(d => !d.outcome)) {
-      throw new Error('InvalidTransaction')
-    }
+    // if (decisions.some(d => !d.outcome)) {
+    //   throw new Error('InvalidTransaction')
+    // }
 
-    const inputs: Bytes[] = [
+    const nextStateUpdate = new StateUpdate(
       tx.depositContractAddress,
-      tx.range.toStruct(),
+      tx.range,
       nextBlockNumber,
-      tx.stateObject.toStruct(),
-      tx.range.toStruct()
-    ].map(coder.encode)
-
-    const nextStateUpdate = StateUpdate.fromProperty(
-      new Property(
-        (deciderManager.compiledPredicateMap.get(
-          'StateUpdate'
-        ) as CompiledPredicate).deployedAddress,
-        inputs
-      )
+      tx.stateObject
     )
 
     // store data in db
@@ -188,7 +175,7 @@ export default class StateManager {
     blockNumber: BigNumber
   ) {
     console.log('insertDepositRange: ', tx)
-    const stateUpdate = StateUpdate.fromProperty(tx.stateUpdate)
+    const stateUpdate = tx.stateUpdate
     stateUpdate.update({ blockNumber })
     await this.putStateUpdate(stateUpdate)
     await this.putStateUpdateAtBlock(stateUpdate, blockNumber)
@@ -238,9 +225,7 @@ export default class StateManager {
     prevStateRanges: Range[]
   ) {
     for await (const [index, prevBlockNumber] of prevBlockNumbers.entries()) {
-      const message = ovmContext.coder.encode(
-        tx.toProperty(Address.default()).toStruct()
-      )
+      const message = ovmContext.coder.encode(tx.toStruct())
       await putWitness(
         witnessDb,
         hint.createSignatureHint(message),

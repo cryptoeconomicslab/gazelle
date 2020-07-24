@@ -67,9 +67,6 @@ const blockNumber = BigNumber.from(1)
 const ownershipPredicateAddress = Address.from(
   deciderConfig.deployedPredicateTable.OwnershipPredicate.deployedAddress
 )
-const stateUpdateDeciderAddress = Address.from(
-  '0x0000000000000000000000000000000000000004'
-)
 
 describe('ExitDispute', () => {
   const ALICE = generateRandomWallet()
@@ -99,7 +96,6 @@ describe('ExitDispute', () => {
 
   function SU(range: Range, blockNumber: BigNumber, owner: Wallet) {
     return new StateUpdate(
-      stateUpdateDeciderAddress,
       depositContractAddress,
       range,
       blockNumber,
