@@ -30,7 +30,6 @@ export class StateSyncer {
     private ee: EventEmitter,
     private witnessDb: KeyValueStore,
     private commitmentContract: ICommitmentContract,
-    private commitmentContractAddress: Address,
     private commitmentVerifierAddress: Address,
     private apiClient: APIClient,
     deciderManager: DeciderManager, // will be removed when using checkpointDispute
@@ -75,7 +74,6 @@ export class StateSyncer {
    */
   public async sync(blockNumber: BigNumber, address: Address) {
     const { coder } = ovmContext
-    const commitmentAddress = this.commitmentContractAddress
     const root = await this.commitmentContract.getRoot(blockNumber)
     if (!root) {
       // FIXME: check if root is default bytes32 value

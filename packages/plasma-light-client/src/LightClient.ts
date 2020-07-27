@@ -103,7 +103,6 @@ export default class LightClient {
       this.ee,
       this.witnessDb,
       this.commitmentContract,
-      Address.from(this.deciderConfig.commitment),
       commitmentVerifierAddress,
       this.apiClient,
       this.deciderManager,
