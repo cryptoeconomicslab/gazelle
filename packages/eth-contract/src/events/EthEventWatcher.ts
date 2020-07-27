@@ -103,8 +103,8 @@ export default class EventWatcher implements IEventWatcher {
     const approval = !this.options.approval ? 0 : this.options.approval
     const events = await this.httpProvider.getLogs({
       address: this.contractAddress,
-      fromBlock: fromBlockNumber,
-      toBlock: blockNumber - approval
+      fromBlock: Math.max(fromBlockNumber - approval, 0),
+      toBlock: blockNumber
     })
     for (const event of events) {
       if (!event.blockNumber) {
@@ -142,7 +142,7 @@ export default class EventWatcher implements IEventWatcher {
     }
     await this.eventDb.setLastLoggedBlock(
       Bytes.fromString(this.contractAddress),
-      blockNumber - approval
+      blockNumber
     )
     completedHandler()
   }
