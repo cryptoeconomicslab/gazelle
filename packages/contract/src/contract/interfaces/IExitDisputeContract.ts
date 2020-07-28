@@ -1,7 +1,7 @@
 import { Bytes } from '@cryptoeconomicslab/primitives'
 import { StateUpdate } from '@cryptoeconomicslab/plasma'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
-import { ExitChallenge } from '@cryptoeconomicslab/plasma'
+import { ExitChallenge, EXIT_CHALLENGE_TYPE } from '@cryptoeconomicslab/plasma'
 
 /**
  * ExitDispute contract interface
@@ -14,7 +14,11 @@ export interface IExitDisputeContract {
 
   challenge(challenge: ExitChallenge): Promise<void>
 
-  removeChallenge(challenge: ExitChallenge, witness: Bytes[]): Promise<void>
+  removeChallenge(
+    stateUpdate: StateUpdate,
+    challenge: StateUpdate,
+    witness: Bytes[]
+  ): Promise<void>
 
   settle(stateUpdate: StateUpdate): Promise<void>
 
@@ -25,10 +29,17 @@ export interface IExitDisputeContract {
     ) => void
   ): void
   subscribeExitChallenged(
-    handler: (stateUpdate: StateUpdate, challenge: ExitChallenge) => void
+    handler: (
+      challengeType: EXIT_CHALLENGE_TYPE,
+      stateUpdate: StateUpdate,
+      challengeStateUpdate?: StateUpdate
+    ) => void
   ): void
   subscribeExitChallengeRemoved(
-    handler: (stateUpdate: StateUpdate, challenge: ExitChallenge) => void
+    handler: (
+      stateUpdate: StateUpdate,
+      challengeStateUpdate: StateUpdate
+    ) => void
   ): void
   subscribeExitSettled(handler: (stateUpdate: StateUpdate) => void): void
 }

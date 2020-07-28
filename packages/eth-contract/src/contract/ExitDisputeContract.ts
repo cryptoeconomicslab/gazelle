@@ -7,6 +7,8 @@ import { StateUpdate } from '@cryptoeconomicslab/plasma'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import { IExitDisputeContract } from '@cryptoeconomicslab/contract'
 import { ExitChallenge, EXIT_CHALLENGE_TYPE } from '@cryptoeconomicslab/plasma'
+import { logToStateUpdate, logToInclusionProof } from '../helper'
+import ABI from '../abi'
 
 function encode(v: Codable) {
   return ovmContext.coder.encode(v).toHexString()
@@ -34,13 +36,6 @@ function createChallengeInputAndWitness(challenge: ExitChallenge): Bytes[][] {
   }
 }
 
-const ABI = {
-  STATE_UPDATE:
-    'tuple(address, tuple(uint256, uint256), uint256, tuple(address, bytes[]))',
-  INCLUSION_PROOF:
-    'tuple(tuple(address, uint256, tuple(bytes32, address)[]), tuple(uint256, uint256, tuple(bytes32, uint256)[]))'
-}
-
 /**
  * ExitDispute contract interface
  */
@@ -52,8 +47,8 @@ export class ExitDisputeContract implements IExitDisputeContract {
   public static abi = [
     // Events
     `event ExitClaimed(${ABI.STATE_UPDATE} stateUpdate)`,
-    `event ExitChallenged(${ABI.STATE_UPDATE} stateUpdate, bytes challengeType)`,
-    // TODO: implmemnt in contract
+    `event ExitSpentChallenged(${ABI.STATE_UPDATE} stateUpdate)`,
+    `event ExitCheckpointChallenged(${ABI.STATE_UPDATE} stateUpdate, ${ABI.STATE_UPDATE} challengingStateUpdate)`,
     `event ChallengeRemoved(${ABI.STATE_UPDATE} stateUpdate, ${ABI.STATE_UPDATE} challengingStateUpdate)`,
     `event ExitSettled(${ABI.STATE_UPDATE})`,
 
@@ -101,16 +96,15 @@ export class ExitDisputeContract implements IExitDisputeContract {
   }
 
   public async removeChallenge(
-    challenge: ExitChallenge,
+    stateUpdate: StateUpdate,
+    challengeStateUpdate: StateUpdate,
     witness: Bytes[]
   ): Promise<void> {
-    if (challenge.type === EXIT_CHALLENGE_TYPE.CHECKPOINT) {
-      await this.connection.removeChallenge(
-        [encode(challenge.stateUpdate.toStruct())],
-        [encode(challenge.challengeStateUpdate.toStruct())],
-        witness.map(b => b.toHexString())
-      )
-    }
+    await this.connection.removeChallenge(
+      [encode(stateUpdate.toStruct())],
+      [encode(challengeStateUpdate.toStruct())],
+      witness.map(b => b.toHexString())
+    )
   }
 
   public async settle(stateUpdate: StateUpdate): Promise<void> {
@@ -124,29 +118,40 @@ export class ExitDisputeContract implements IExitDisputeContract {
     ) => void
   ): void {
     this.eventWatcher.subscribe('ExitClaimed', (log: EventLog) => {
-      console.log('ExitClaimed: ', log.values)
-      console.log('NOT IMPLEMENTED')
-      // TODO: implement
+      handler(
+        logToStateUpdate(log.values[0]),
+        logToInclusionProof(log.values[1])
+      )
     })
   }
 
   public subscribeExitChallenged(
-    handler: (stateUpdate: StateUpdate, challenge: ExitChallenge) => void
+    handler: (
+      challengeType: EXIT_CHALLENGE_TYPE,
+      stateUpdate: StateUpdate,
+      challengeStateUpdate?: StateUpdate
+    ) => void
   ): void {
-    this.eventWatcher.subscribe('ExitChallenged', (log: EventLog) => {
-      console.log('ExitChallenged: ', log.values)
-      console.log('NOT IMPLEMENTED')
-      // TODO: implement
+    this.eventWatcher.subscribe('ExitSpentChallenged', (log: EventLog) => {
+      handler(EXIT_CHALLENGE_TYPE.SPENT, logToStateUpdate(log.values[0]))
+    })
+    this.eventWatcher.subscribe('ExitCheckpointChallenged', (log: EventLog) => {
+      handler(
+        EXIT_CHALLENGE_TYPE.CHECKPOINT,
+        logToStateUpdate(log.values[0]),
+        logToStateUpdate(log.values[1])
+      )
     })
   }
 
   public subscribeExitChallengeRemoved(
-    handler: (stateUpdate: StateUpdate, challenge: ExitChallenge) => void
+    handler: (
+      stateUpdate: StateUpdate,
+      challengeStateUpdate: StateUpdate
+    ) => void
   ): void {
     this.eventWatcher.subscribe('ExitChallengeRemoved', (log: EventLog) => {
-      console.log('ExitChallengeRemoved: ', log.values)
-      console.log('NOT IMPLEMENTED')
-      // TODO: implmement
+      handler(logToStateUpdate(log.values[0]), logToStateUpdate(log.values[1]))
     })
   }
 
@@ -154,9 +159,7 @@ export class ExitDisputeContract implements IExitDisputeContract {
     handler: (stateUpdate: StateUpdate) => void
   ): void {
     this.eventWatcher.subscribe('ExitSettled', (log: EventLog) => {
-      console.log('ExitSettled: ', log.values)
-      console.log('NOT IMPLEMENTED')
-      // TODO: implmement
+      handler(logToStateUpdate(log.values[0]))
     })
   }
 }

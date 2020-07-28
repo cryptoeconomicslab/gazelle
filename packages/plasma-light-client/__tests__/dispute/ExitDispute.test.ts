@@ -10,7 +10,6 @@ import {
 import {
   StateUpdate,
   EXIT_CHALLENGE_TYPE,
-  createSpentChallenge,
   createCheckpointChallenge
 } from '@cryptoeconomicslab/plasma'
 import { setupContext } from '@cryptoeconomicslab/context'
@@ -29,7 +28,6 @@ import {
 import { generateRandomWallet } from '../helper/MockWallet'
 import { DeciderManager, DeciderConfig } from '@cryptoeconomicslab/ovm'
 import { Wallet } from '@cryptoeconomicslab/wallet'
-import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import deciderConfig from '../config.local'
 setupContext({ coder: Coder })
 
@@ -180,14 +178,9 @@ describe('ExitDispute', () => {
     test('do nothing for SPENT challenge', async () => {
       const range = new Range(BigNumber.from(0), BigNumber.from(10))
       const su = SU(range, BigNumber.from(1), ALICE)
-      const { tx, sig } = await prepareValidTxAndSig(
-        witnessDb,
-        su,
-        ALICE,
-        ownership(BOB)
-      )
+      await prepareValidTxAndSig(witnessDb, su, ALICE, ownership(BOB))
 
-      exitDispute.handleExitChallenged(su, createSpentChallenge(su, tx, [sig]))
+      exitDispute.handleExitChallenged(EXIT_CHALLENGE_TYPE.SPENT, su)
       expect(mockFunctions.mockChallenge).not.toHaveBeenCalled()
     })
 
@@ -200,13 +193,10 @@ describe('ExitDispute', () => {
 
         const bn2 = BigNumber.from(2)
         const su2 = SU(range, bn2, BOB)
-        const block = await prepareBlock(witnessDb, su2)
-        const inclusionProof = block.getInclusionProof(
-          su2
-        ) as DoubleLayerInclusionProof
         await exitDispute.handleExitChallenged(
+          EXIT_CHALLENGE_TYPE.CHECKPOINT,
           su2,
-          createCheckpointChallenge(su2, su1, inclusionProof)
+          su1
         )
 
         expect(mockFunctions.mockRemoveChallenge).not.toHaveBeenCalled()
@@ -216,10 +206,7 @@ describe('ExitDispute', () => {
         const range = new Range(BigNumber.from(0), BigNumber.from(10))
         const bn = BigNumber.from(1)
         const su1 = SU(range, bn, ALICE)
-        const { inclusionProof: inclusionProof1 } = await prepareValidSU(
-          witnessDb,
-          su1
-        )
+        await prepareValidSU(witnessDb, su1)
 
         const bn2 = BigNumber.from(2)
         const su2 = SU(range, bn2, BOB)
@@ -227,8 +214,9 @@ describe('ExitDispute', () => {
         await prepareCheckpoint(witnessDb, su2, BigNumber.from(3))
 
         await exitDispute.handleExitChallenged(
+          EXIT_CHALLENGE_TYPE.CHECKPOINT,
           su2,
-          createCheckpointChallenge(su2, su1, inclusionProof1)
+          su1
         )
 
         expect(mockFunctions.mockRemoveChallenge).not.toHaveBeenCalled()
@@ -238,10 +226,7 @@ describe('ExitDispute', () => {
         const range = new Range(BigNumber.from(0), BigNumber.from(10))
         const bn = BigNumber.from(1)
         const su1 = SU(range, bn, ALICE)
-        const { inclusionProof: inclusionProof1 } = await prepareValidSU(
-          witnessDb,
-          su1
-        )
+        await prepareValidSU(witnessDb, su1)
         await prepareTx(witnessDb, su1, ALICE, ownership(BOB))
 
         const bn2 = BigNumber.from(2)
@@ -250,8 +235,9 @@ describe('ExitDispute', () => {
         await prepareCheckpoint(witnessDb, su2, BigNumber.from(3))
 
         await exitDispute.handleExitChallenged(
+          EXIT_CHALLENGE_TYPE.CHECKPOINT,
           su2,
-          createCheckpointChallenge(su2, su1, inclusionProof1)
+          su1
         )
 
         expect(mockFunctions.mockRemoveChallenge).not.toHaveBeenCalled()
@@ -278,15 +264,15 @@ describe('ExitDispute', () => {
         await prepareExit(witnessDb, su2, BigNumber.from(3))
 
         await exitDispute.handleExitChallenged(
+          EXIT_CHALLENGE_TYPE.CHECKPOINT,
           su2,
-          createCheckpointChallenge(su2, su1, inclusionProof1)
+          su1
         )
 
         const { coder } = ovmContext
-        expect(
-          mockFunctions.mockRemoveChallenge
-        ).toHaveBeenCalledWith(
-          createCheckpointChallenge(su2, su1, inclusionProof1),
+        expect(mockFunctions.mockRemoveChallenge).toHaveBeenCalledWith(
+          su2,
+          su1,
           [coder.encode(tx.body), sig]
         )
       })

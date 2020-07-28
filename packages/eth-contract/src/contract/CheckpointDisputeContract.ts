@@ -6,13 +6,8 @@ import EthEventWatcher from '../events'
 import { StateUpdate } from '@cryptoeconomicslab/plasma'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import { ICheckpointDisputeContract } from '@cryptoeconomicslab/contract'
-
-const ABI = {
-  STATE_UPDATE:
-    'tuple(address, tuple(uint256, uint256), uint256, tuple(address, bytes[]))',
-  INCLUSION_PROOF:
-    'tuple(tuple(address, uint256, tuple(bytes32, address)[]), tuple(uint256, uint256, tuple(bytes32, uint256)[]))'
-}
+import { logToStateUpdate, logToInclusionProof } from '../helper'
+import ABI from '../abi'
 
 function encode(v: Codable) {
   return ovmContext.coder.encode(v).toHexString()
@@ -100,14 +95,10 @@ export class CheckpointDisputeContract implements ICheckpointDisputeContract {
     ) => void
   ) {
     this.eventWatcher.subscribe('CheckpointClaimed', (log: EventLog) => {
-      console.log('CheckpointClaimed')
-      console.log('stateUpdate: ', log.values[0])
-      console.log('inclusionProof: ', log.values[1])
-
-      // TODO: call handler
-      // const stateUpdate = new StateUpdate()
-      // const inclusionProof = new DoubleLayerInclusionProof()
-      // handler(stateUpdate, inclusionProof)
+      handler(
+        logToStateUpdate(log.values[0]),
+        logToInclusionProof(log.values[1])
+      )
     })
   }
 
@@ -119,16 +110,11 @@ export class CheckpointDisputeContract implements ICheckpointDisputeContract {
     ) => void
   ) {
     this.eventWatcher.subscribe('CheckpointChallenged', (log: EventLog) => {
-      console.log('CheckpointChallenged')
-      console.log('stateUpdate: ', log.values[0])
-      console.log('challenge: ', log.values[1])
-      console.log('inclusionProof: ', log.values[2])
-
-      // TODO: call handler
-      // const stateUpdate = new StateUpdate()
-      // const challenge = new StateUpdate()
-      // const inclusionProof = new DoubleLayerInclusionProof()
-      // handler(stateUpdate, challenge, inclusionProof)
+      handler(
+        logToStateUpdate(log.values[0]),
+        logToStateUpdate(log.values[1]),
+        logToInclusionProof(log.values[2])
+      )
     })
   }
 
@@ -136,25 +122,13 @@ export class CheckpointDisputeContract implements ICheckpointDisputeContract {
     handler: (stateUpdate: StateUpdate, challenge: StateUpdate) => void
   ) {
     this.eventWatcher.subscribe('ChallengeRemoved', (log: EventLog) => {
-      console.log('ChallengeRemoved')
-      console.log('stateUpdate: ', log.values[0])
-      console.log('challenge: ', log.values[1])
-
-      // TODO: call handler
-      // const stateUpdate = new StateUpdate()
-      // const challenge = new StateUpdate()
-      // handler(stateUpdate, challenge)
+      handler(logToStateUpdate(log.values[0]), logToStateUpdate(log.values[1]))
     })
   }
 
   subscribeCheckpointSettled(handler: (stateUpdate: StateUpdate) => void) {
     this.eventWatcher.subscribe('CheckpointSettled', (log: EventLog) => {
-      console.log('CheckpointSettled')
-      console.log('stateUpdate: ', log.values[0])
-
-      // TODO: call handler
-      // const stateUpdate = new StateUpdate()
-      // handler(stateUpdate)
+      handler(logToStateUpdate(log.values[0]))
     })
   }
 }
