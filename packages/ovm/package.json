@@ -1,6 +1,6 @@
 {
   "name": "@cryptoeconomicslab/ovm",
-  "version": "0.4.2-alpha.0",
+  "version": "0.4.2-alpha.1",
   "description": "ovm",
   "author": {
     "name": "Cryptoeconomics Lab",
@@ -35,7 +35,7 @@
     "@cryptoeconomicslab/merkle-tree": "^0.4.1",
     "@cryptoeconomicslab/ovm-parser": "^0.4.1",
     "@cryptoeconomicslab/ovm-transpiler": "^0.4.1",
-    "@cryptoeconomicslab/plasma": "^0.4.1",
+    "@cryptoeconomicslab/plasma": "^0.4.2-alpha.1",
     "@cryptoeconomicslab/primitives": "^0.4.1",
     "@cryptoeconomicslab/signature": "^0.4.1",
     "@cryptoeconomicslab/utils": "^0.4.1",
