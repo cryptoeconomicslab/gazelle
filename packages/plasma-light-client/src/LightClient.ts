@@ -93,11 +93,17 @@ export default class LightClient {
     this.ownershipPredicate = ownershipPredicate
     this.apiClient = new APIClient(this.aggregatorEndpoint)
     this.tokenManager = new TokenManager()
+    const commitmentVerifierAddress = ovmContext.coder.decode(
+      Address.default(),
+      Bytes.fromHexString(
+        this.deciderConfig.constantVariableTable.commitmentContract
+      )
+    )
     this.stateSyncer = new StateSyncer(
       this.ee,
       this.witnessDb,
       this.commitmentContract,
-      Address.from(this.deciderConfig.commitmentContract),
+      commitmentVerifierAddress,
       this.apiClient,
       this.deciderManager,
       this.tokenManager

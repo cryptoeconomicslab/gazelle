@@ -77,7 +77,7 @@ export default class Aggregator {
     }
     this.decider = new DeciderManager(witnessDb, ovmContext.coder)
     this.commitmentContract = commitmentContractFactory(
-      Address.from(config.commitmentContract)
+      Address.from(config.commitment)
     )
     this.decider.loadJson(config)
     const ownershipPredicate = this.decider.compiledPredicateMap.get(

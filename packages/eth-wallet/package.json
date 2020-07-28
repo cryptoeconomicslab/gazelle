@@ -29,13 +29,18 @@
     "clean": "rm -rf lib docs"
   },
   "dependencies": {
+    "@cryptoeconomicslab/ovm": "^0.4.2-alpha.0",
     "@cryptoeconomicslab/signature": "^0.4.1",
     "@cryptoeconomicslab/wallet": "^0.4.1",
     "bignumber.js": "^9.0.0",
+    "eth-sig-util": "^2.5.3",
     "jsbi": "^3.1.2"
   },
   "devDependencies": {
+    "@cryptoeconomicslab/coder": "^0.4.1",
+    "@cryptoeconomicslab/context": "^0.4.1",
     "@cryptoeconomicslab/level-kvs": "0.0.6",
+    "@cryptoeconomicslab/plasma": "^0.4.1",
     "@cryptoeconomicslab/primitives": "^0.4.1",
     "ethers": "4.0.47"
   },

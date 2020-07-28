@@ -28,7 +28,7 @@ interface EthLightClientOptions {
 
 export default async function initialize(options: EthLightClientOptions) {
   const eventDb = await options.kvs.bucket(Bytes.fromString('event'))
-  const ethWallet = new EthWallet(options.wallet)
+  const ethWallet = new EthWallet(options.wallet, options.config)
   const adjudicationContract = new AdjudicationContract(
     Address.from(options.config.adjudicationContract),
     eventDb,
@@ -41,7 +41,7 @@ export default async function initialize(options: EthLightClientOptions) {
     return new ERC20Contract(address, options.wallet)
   }
   const commitmentContract = new CommitmentContract(
-    Address.from(options.config.commitmentContract),
+    Address.from(options.config.commitment),
     eventDb,
     options.wallet
   )

@@ -571,7 +571,7 @@ describe('light client', () => {
     const submitInvalidBlock = async (blockNumber: BigNumber, block: Block) => {
       const abi = ['function submitRoot(uint64 blkNumber, bytes32 _root)']
       const connection = new ethers.Contract(
-        config.commitmentContract,
+        config.commitment,
         abi,
         operatorWallet
       )

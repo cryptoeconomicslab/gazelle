@@ -1,8 +1,38 @@
 jest.unmock('ethers')
 const { EthWallet } = require('../src/EthWallet')
 const ethers = require('ethers')
-const { Address, Bytes } = require('@cryptoeconomicslab/primitives')
-const { InMemoryKeyValueStore } = require('@cryptoeconomicslab/level-kvs')
+const { Transaction } = require('@cryptoeconomicslab/plasma')
+const {
+  Address,
+  BigNumber,
+  Bytes,
+  Property,
+  Range
+} = require('@cryptoeconomicslab/primitives')
+const { setupContext } = require('@cryptoeconomicslab/context')
+const JsonCoder = require('@cryptoeconomicslab/coder')
+setupContext({ coder: JsonCoder.default })
+
+let config = {
+  deployedPredicateTable: {
+    OwnershipPredicate: {
+      deployedAddress: '0x13274fe19c0178208bcbee397af8167a7be27f6f',
+      source: [
+        {
+          type: 'CompiledPredicate',
+          name: 'Ownership',
+          inputDefs: [
+            { name: 'owner', type: 'Address' },
+            { name: 'tx', type: 'Property' }
+          ],
+          contracts: [],
+          entryPoint: 'OwnershipT',
+          constants: [{ varType: 'bytes', name: 'verifierType' }]
+        }
+      ]
+    }
+  }
+}
 
 const mockWallet = jest.fn().mockImplementation(privateKey => {
   return {
@@ -35,6 +65,33 @@ ethers.Contract = mockContract
 
 describe('EthWallet', () => {
   let wallet
+  const depositContractAddress = Address.from(
+    '0x4e71920b7330515faf5ea0c690f1ad06a85fb60c'
+  )
+  const range = new Range(
+    BigNumber.fromString('0'),
+    BigNumber.fromString('100000000000000000')
+  )
+  const toAddress = Address.from('0xf17f52151ebef6c7334fad080c5704d77216b732')
+  const predicateAddress = Address.from(
+    '0x13274fe19c0178208bcbee397af8167a7be27f6f'
+  )
+  const txAddress = Address.default()
+
+  function createTransaction(stateObject) {
+    const tx = new Transaction(
+      depositContractAddress,
+      range,
+      BigNumber.from(0),
+      stateObject,
+      Address.default()
+    )
+    return ovmContext.coder.encode(tx.toProperty(txAddress).toStruct())
+  }
+  const message = createTransaction(
+    new Property(predicateAddress, [ovmContext.coder.encode(toAddress)])
+  )
+
   beforeEach(async () => {
     mockContract.mockClear()
     mockWallet.mockClear()
@@ -42,19 +99,17 @@ describe('EthWallet', () => {
       new ethers.Wallet(
         '0xc87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3'
       ),
-      new InMemoryKeyValueStore(Bytes.fromString('test'))
+      config
     )
   })
   describe('signMessage', () => {
     it('succeed to sign hex string', async () => {
-      const message = Bytes.fromHexString('0x00123456')
       const signature = await wallet.signMessage(message)
       expect(signature).toBeTruthy()
     })
   })
   describe('verifyMySignature', () => {
     it('succeed to verify signature', async () => {
-      const message = Bytes.fromHexString('0x00123456')
       const signatureDigest = await wallet.signMessage(message)
       const verify = await wallet.verifyMySignature(message, signatureDigest)
       expect(verify).toBeTruthy()
@@ -63,9 +118,9 @@ describe('EthWallet', () => {
       const bobWallet = new EthWallet(
         new ethers.Wallet(
           '0x17d08f5fe8c77af811caa0c9a187e668ce3b74a99acc3f6d976f075fa8e0be55'
-        )
+        ),
+        config
       )
-      const message = Bytes.fromHexString('0x00123456')
       const bobSignatureDigest = await bobWallet.signMessage(message)
       const verify = await wallet.verifyMySignature(
         message,
