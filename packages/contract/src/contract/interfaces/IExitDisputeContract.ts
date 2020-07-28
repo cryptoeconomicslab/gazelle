@@ -14,7 +14,11 @@ export interface IExitDisputeContract {
 
   challenge(challenge: ExitChallenge): Promise<void>
 
-  removeChallenge(challenge: ExitChallenge, witness: Bytes[]): Promise<void>
+  removeChallenge(
+    stateUpdate: StateUpdate,
+    challenge: StateUpdate,
+    witness: Bytes[]
+  ): Promise<void>
 
   settle(stateUpdate: StateUpdate): Promise<void>
 

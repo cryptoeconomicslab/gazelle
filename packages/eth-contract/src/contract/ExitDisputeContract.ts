@@ -8,6 +8,7 @@ import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import { IExitDisputeContract } from '@cryptoeconomicslab/contract'
 import { ExitChallenge, EXIT_CHALLENGE_TYPE } from '@cryptoeconomicslab/plasma'
 import { logToStateUpdate, logToInclusionProof } from '../helper'
+import ABI from '../abi'
 
 function encode(v: Codable) {
   return ovmContext.coder.encode(v).toHexString()
@@ -35,13 +36,6 @@ function createChallengeInputAndWitness(challenge: ExitChallenge): Bytes[][] {
   }
 }
 
-const ABI = {
-  STATE_UPDATE:
-    'tuple(address, tuple(uint256, uint256), uint256, tuple(address, bytes[]))',
-  INCLUSION_PROOF:
-    'tuple(tuple(address, uint256, tuple(bytes32, address)[]), tuple(uint256, uint256, tuple(bytes32, uint256)[]))'
-}
-
 /**
  * ExitDispute contract interface
  */
@@ -53,8 +47,8 @@ export class ExitDisputeContract implements IExitDisputeContract {
   public static abi = [
     // Events
     `event ExitClaimed(${ABI.STATE_UPDATE} stateUpdate)`,
-    `event ExitChallenged(${ABI.STATE_UPDATE} stateUpdate, bytes challengeType)`,
-    // TODO: implmemnt in contract
+    `event ExitSpentChallenged(${ABI.STATE_UPDATE} stateUpdate)`,
+    `event ExitCheckpointChallenged(${ABI.STATE_UPDATE} stateUpdate, ${ABI.STATE_UPDATE} challengingStateUpdate)`,
     `event ChallengeRemoved(${ABI.STATE_UPDATE} stateUpdate, ${ABI.STATE_UPDATE} challengingStateUpdate)`,
     `event ExitSettled(${ABI.STATE_UPDATE})`,
 
@@ -102,16 +96,15 @@ export class ExitDisputeContract implements IExitDisputeContract {
   }
 
   public async removeChallenge(
-    challenge: ExitChallenge,
+    stateUpdate: StateUpdate,
+    challengeStateUpdate: StateUpdate,
     witness: Bytes[]
   ): Promise<void> {
-    if (challenge.type === EXIT_CHALLENGE_TYPE.CHECKPOINT) {
-      await this.connection.removeChallenge(
-        [encode(challenge.stateUpdate.toStruct())],
-        [encode(challenge.challengeStateUpdate.toStruct())],
-        witness.map(b => b.toHexString())
-      )
-    }
+    await this.connection.removeChallenge(
+      [encode(stateUpdate.toStruct())],
+      [encode(challengeStateUpdate.toStruct())],
+      witness.map(b => b.toHexString())
+    )
   }
 
   public async settle(stateUpdate: StateUpdate): Promise<void> {

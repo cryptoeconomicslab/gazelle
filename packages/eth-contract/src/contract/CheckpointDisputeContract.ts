@@ -7,13 +7,7 @@ import { StateUpdate } from '@cryptoeconomicslab/plasma'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import { ICheckpointDisputeContract } from '@cryptoeconomicslab/contract'
 import { logToStateUpdate, logToInclusionProof } from '../helper'
-
-const ABI = {
-  STATE_UPDATE:
-    'tuple(address, tuple(uint256, uint256), uint256, tuple(address, bytes[]))',
-  INCLUSION_PROOF:
-    'tuple(tuple(address, uint256, tuple(bytes32, address)[]), tuple(uint256, uint256, tuple(bytes32, uint256)[]))'
-}
+import ABI from '../abi'
 
 function encode(v: Codable) {
   return ovmContext.coder.encode(v).toHexString()

@@ -1,3 +1,4 @@
+import * as ethers from 'ethers'
 import {
   Address,
   Range,
@@ -20,6 +21,13 @@ import {
   IntervalTreeNode
 } from '@cryptoeconomicslab/merkle-tree'
 
+export function logToRange(value: any): Range {
+  return new Range(
+    BigNumber.fromString(value[0].toString()),
+    BigNumber.fromString(value[1].toString())
+  )
+}
+
 export function logToStateUpdate(value: any): StateUpdate {
   const stateObject = new Property(
     Address.from(value[3][0]),
@@ -28,10 +36,7 @@ export function logToStateUpdate(value: any): StateUpdate {
 
   return new StateUpdate(
     Address.from(value[0]),
-    new Range(
-      BigNumber.fromString(value[1][0].toString()),
-      BigNumber.fromString(value[1][1].toString())
-    ),
+    logToRange(value[1]),
     BigNumber.fromString(value[2].toString()),
     stateObject
   )
@@ -45,10 +50,7 @@ export function logToTransaction(value: any): Transaction {
 
   return new Transaction(
     Address.from(value[0]),
-    new Range(
-      BigNumber.fromString(value[1][0].toString()),
-      BigNumber.fromString(value[1][1].toString())
-    ),
+    logToRange(value[1]),
     BigNumber.fromString(value[2].toString()),
     stateObject,
     Address.from(value[5])
@@ -90,4 +92,27 @@ export function logToExitChallenge(log: any): ExitChallenge {
     transaction: logToTransaction(log[1]),
     witness: []
   }
+}
+
+export function propertyToLog(property: Property) {
+  return [
+    property.deciderAddress.data,
+    property.inputs.map(i => i.toHexString())
+  ]
+}
+
+export function rangeToLog(range: Range) {
+  return [
+    ethers.utils.bigNumberify(range.start.raw),
+    ethers.utils.bigNumberify(range.end.raw)
+  ]
+}
+
+export function stateUpdateToLog(stateUpdate: StateUpdate) {
+  return [
+    stateUpdate.depositContractAddress.data,
+    rangeToLog(stateUpdate.range),
+    ethers.utils.bigNumberify(stateUpdate.blockNumber.raw),
+    propertyToLog(stateUpdate.stateObject)
+  ]
 }

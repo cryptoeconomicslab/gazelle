@@ -5,7 +5,6 @@ import {
   createCheckpointChallenge,
   SpentChallenge,
   CheckpointChallenge,
-  ExitChallenge,
   EXIT_CHALLENGE_TYPE,
   Exit
 } from '@cryptoeconomicslab/plasma'
@@ -106,10 +105,14 @@ export class ExitDispute {
   }
 
   async handleExitChallenged(
+    challengeType: EXIT_CHALLENGE_TYPE,
     stateUpdate: StateUpdate,
-    challenge: ExitChallenge
+    challengeStateUpdate?: StateUpdate
   ) {
-    if (challenge.type === EXIT_CHALLENGE_TYPE.CHECKPOINT) {
+    if (challengeType === EXIT_CHALLENGE_TYPE.CHECKPOINT) {
+      // This never happens
+      if (!challengeStateUpdate) return
+
       const { coder } = ovmContext
 
       // do checkpoint challenged
@@ -122,9 +125,9 @@ export class ExitDispute {
 
       const txRepo = await TransactionRepository.init(this.witnessDb)
       const transactions = await txRepo.getTransactions(
-        challenge.challengeStateUpdate.depositContractAddress,
-        challenge.challengeStateUpdate.blockNumber,
-        challenge.challengeStateUpdate.range
+        challengeStateUpdate.depositContractAddress,
+        challengeStateUpdate.blockNumber,
+        challengeStateUpdate.range
       )
       if (transactions.length !== 1) {
         // do nothing
@@ -142,8 +145,8 @@ export class ExitDispute {
       }
 
       const witness = [txBytes, signature[0]]
-      this.contract.removeChallenge(challenge, witness)
-    } else if (challenge.type === EXIT_CHALLENGE_TYPE.SPENT) {
+      this.contract.removeChallenge(stateUpdate, challengeStateUpdate, witness)
+    } else if (challengeType === EXIT_CHALLENGE_TYPE.SPENT) {
       // nothing you can do. Just delete exiting state from stateUpdate
     }
   }
