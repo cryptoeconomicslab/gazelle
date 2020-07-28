@@ -109,7 +109,6 @@ describe('IsValidSignatureDecider', () => {
     ])
 
     const decision = await deciderManager.decide(property)
-    console.log(decision)
     expect(decision.outcome).toBeTruthy()
   })
 })

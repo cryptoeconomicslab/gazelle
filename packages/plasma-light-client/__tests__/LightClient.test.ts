@@ -6,7 +6,7 @@ import {
   UserActionRepository
 } from '../src/repository'
 import { setupContext } from '@cryptoeconomicslab/context'
-import JsonCoder from '@cryptoeconomicslab/coder'
+import EthCoder from '@cryptoeconomicslab/eth-coder'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { LevelKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import { hint } from '@cryptoeconomicslab/ovm'
@@ -101,7 +101,7 @@ import {
   AddressTreeInclusionProof
 } from '@cryptoeconomicslab/merkle-tree'
 import { createDepositUserAction } from '../src/UserAction'
-setupContext({ coder: JsonCoder })
+setupContext({ coder: EthCoder })
 
 // mock APIClient
 const mockSendTransaction = jest

@@ -9,8 +9,8 @@ import {
   OwnershipPayoutContract
 } from '@cryptoeconomicslab/eth-contract'
 import { setupContext } from '@cryptoeconomicslab/context'
-import JsonCoder from '@cryptoeconomicslab/coder'
-setupContext({ coder: JsonCoder })
+import EthCoder from '@cryptoeconomicslab/eth-coder'
+setupContext({ coder: EthCoder })
 
 // mock
 jest.mock('@cryptoeconomicslab/eth-contract', () => {
