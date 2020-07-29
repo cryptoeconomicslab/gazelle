@@ -85,4 +85,14 @@ export default class Transaction {
   public getHash(): Bytes {
     return Keccak256.hash(ovmContext.coder.encode(this.body))
   }
+
+  public toString(): string {
+    return `Transaction(depositContractAddress: ${
+      this.depositContractAddress.raw
+    }, maxBlockNumber: ${
+      this.maxBlockNumber.raw
+    }, range: ${this.range.toString()}, so: ${
+      this.stateObject.deciderAddress.data
+    }, from: ${this.from.raw})`
+  }
 }

@@ -8,7 +8,6 @@ import {
   AdjudicationContract,
   OwnershipPayoutContract,
   ERC20Contract,
-  EthContractConfig,
   CheckpointDisputeContract,
   ExitDisputeContract
 } from '@cryptoeconomicslab/eth-contract'
@@ -16,6 +15,11 @@ import LightClient from '@cryptoeconomicslab/plasma-light-client'
 import { DeciderConfig } from '@cryptoeconomicslab/ovm'
 import { EthCoder } from '@cryptoeconomicslab/eth-coder'
 import { setupContext } from '@cryptoeconomicslab/context'
+import { PlasmaContractConfig } from '@cryptoeconomicslab/plasma'
+
+type EthContractConfig = {
+  PlasmaETH: string
+}
 
 setupContext({
   coder: EthCoder
@@ -24,7 +28,7 @@ setupContext({
 interface EthLightClientOptions {
   wallet: ethers.Wallet
   kvs: KeyValueStore
-  config: DeciderConfig & EthContractConfig
+  config: DeciderConfig & PlasmaContractConfig & EthContractConfig
   aggregatorEndpoint?: string
 }
 
@@ -43,7 +47,7 @@ export default async function initialize(options: EthLightClientOptions) {
     return new ERC20Contract(address, options.wallet)
   }
   const commitmentContract = new CommitmentContract(
-    Address.from(options.config.commitmentContract),
+    Address.from(options.config.commitment),
     eventDb,
     options.wallet
   )
@@ -52,12 +56,12 @@ export default async function initialize(options: EthLightClientOptions) {
     options.wallet
   )
   const checkpointDisputeContract = new CheckpointDisputeContract(
-    Address.from(options.config.checkpointDisputeContract),
+    Address.from(options.config.checkpointDispute),
     eventDb,
     options.wallet
   )
   const exitDisputeContract = new ExitDisputeContract(
-    Address.from(options.config.exitDisputeContract),
+    Address.from(options.config.exitDispute),
     eventDb,
     options.wallet
   )

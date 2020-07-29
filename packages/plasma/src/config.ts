@@ -1,6 +1,9 @@
 export interface PlasmaContractConfig {
   adjudicationContract: string
-  commitmentContract: string
+  disputeManager: string
+  checkpointDispute: string
+  exitDispute: string
+  commitment: string
   payoutContracts: {
     OwnershipPayout: string
     DepositContract: string

@@ -1,7 +1,6 @@
 import LightClient from '../src/LightClient'
 import {
   StateUpdateRepository,
-  DepositedRangeRepository,
   UserActionRepository,
   SyncRepository,
   InclusionProofRepository,

@@ -1,7 +1,11 @@
-import { EthContractConfig } from '@cryptoeconomicslab/eth-contract'
 import { DeciderConfig } from '@cryptoeconomicslab/ovm'
+import { PlasmaContractConfig } from '@cryptoeconomicslab/plasma'
 
-const config: DeciderConfig & EthContractConfig = {
+type EthContractConfig = {
+  PlasmaETH: string
+}
+
+const config: DeciderConfig & PlasmaContractConfig & EthContractConfig = {
   logicalConnectiveAddressTable: {
     Not: '0x9FBDa871d559710256a2502A2517b794B482Db40',
     And: '0x2C2B9C9a4a25e24B174f26114e8926a9f2128FE4',
@@ -545,14 +549,15 @@ const config: DeciderConfig & EthContractConfig = {
     txAddress:
       '0x0000000000000000000000000000000000000000000000000000000000000000'
   },
-  commitmentContract: '0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0',
+  commitment: '0x8CdaF0CD259887258Bc13a92C0a6dA92698644C0',
+  disputeManager: '0xB529f14AA8096f943177c09Ca294Ad66d2E08b1f',
+  checkpointDispute: '0x3d49d1eF2adE060a33c6E6Aa213513A7EE9a6241',
+  exitDispute: '0x2a504B5e7eC284ACa5b6f49716611237239F0b97',
   adjudicationContract: '0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F',
   payoutContracts: {
     DepositContract: '0xA4392264a2d8c998901D10C154C91725b1BF0158',
     OwnershipPayout: '0xf204a4Ef082f5c04bB89F7D5E6568B796096735a'
   },
-  checkpointDisputeContract: '0x111111111822222222293333333333744444444a',
-  exitDisputeContract: '0x111111112312312322293333333333744444444a',
   PlasmaETH: '0x13274Fe19C0178208bCbee397af8167A7be27f6f'
 }
 

@@ -8,7 +8,6 @@ import {
   Address,
   Bytes,
   BigNumber,
-  Property,
   Range
 } from '@cryptoeconomicslab/primitives'
 import {
@@ -77,7 +76,7 @@ export default class Aggregator {
     }
     this.decider = new DeciderManager(witnessDb, ovmContext.coder)
     this.commitmentContract = commitmentContractFactory(
-      Address.from(config.commitmentContract)
+      Address.from(config.commitment)
     )
     this.decider.loadJson(config)
     const ownershipPredicate = this.decider.compiledPredicateMap.get(
@@ -244,6 +243,7 @@ export default class Aggregator {
   // TODO: what if part of the transactions are invalid?
   // respond 201 if more than one transactions are valid, otherwise respond 422.
   private async handleSendTransaction(req: Request, res: Response) {
+    const { coder } = ovmContext
     const { data } = req.body
     const transactions: string[] = Array.isArray(data) ? data : [data]
     const nextBlockNumber = await this.blockManager.getNextBlockNumber()
@@ -251,11 +251,11 @@ export default class Aggregator {
     Promise.all(
       transactions.map(async d => {
         try {
-          const decodedStruct = ovmContext.coder.decode(
-            Transaction.getParamType(),
+          const tx = decodeStructable(
+            Transaction,
+            coder,
             Bytes.fromHexString(d)
           )
-          const tx = Transaction.fromStruct(decodedStruct)
           const receipt = await this.ingestTransaction(tx)
           return receipt
         } catch (e) {
@@ -540,7 +540,7 @@ export default class Aggregator {
   private async ingestTransaction(
     tx: Transaction
   ): Promise<TransactionReceipt> {
-    console.log('transaction received: ', tx.range, tx.depositContractAddress)
+    console.log('transaction received: ', tx.toString())
     const nextBlockNumber = await this.blockManager.getNextBlockNumber()
     const stateUpdates = await this.stateManager.resolveStateUpdates(
       tx.depositContractAddress,
@@ -583,11 +583,10 @@ export default class Aggregator {
    */
   private depositHandlerFactory(
     depositContractAddress: Address
-  ): (checkpointId: Bytes, checkpoint: [StateUpdate]) => Promise<void> {
-    return async (checkpointId: Bytes, checkpoint: [StateUpdate]) => {
+  ): (checkpointId: Bytes, checkpoint: StateUpdate) => Promise<void> {
+    return async (checkpointId: Bytes, checkpoint: StateUpdate) => {
       const blockNumber = await this.blockManager.getCurrentBlockNumber()
-      const stateUpdate = checkpoint[0]
-      const tx = new DepositTransaction(depositContractAddress, stateUpdate)
+      const tx = new DepositTransaction(depositContractAddress, checkpoint)
       this.stateManager.insertDepositRange(tx, blockNumber)
     }
   }
@@ -602,10 +601,9 @@ export default class Aggregator {
     const depositContract = this.depositContractFactory(tokenAddress)
     this.depositContracts.push(depositContract)
 
-    // TODO: handle deposit contract
-    // depositContract.subscribeCheckpointFinalized(
-    //   this.depositHandlerFactory(depositContract.address)
-    // )
+    depositContract.subscribeCheckpointFinalized(
+      this.depositHandlerFactory(depositContract.address)
+    )
     depositContract.startWatchingEvents()
   }
 }

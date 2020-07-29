@@ -91,8 +91,6 @@ export default class StateManager {
     nextBlockNumber: BigNumber,
     deciderManager: DeciderManager
   ): Promise<StateUpdate> {
-    console.log('execute state transition', tx.range)
-    const { coder } = ovmContext
     const range = tx.range
     const prevStates = await this.resolveStateUpdates(
       tx.depositContractAddress,
@@ -200,7 +198,7 @@ export default class StateManager {
     tx: DepositTransaction,
     blockNumber: BigNumber
   ) {
-    console.log('insertDepositRange: ', tx)
+    console.log('Deposited: ', tx.stateUpdate.toString())
     const stateUpdate = tx.stateUpdate
     stateUpdate.update({ blockNumber })
     await this.putStateUpdate(stateUpdate)
