@@ -4,7 +4,9 @@ import {
   Address,
   Bytes,
   BigNumber,
-  Property
+  Property,
+  FixedBytes,
+  Range
 } from '@cryptoeconomicslab/primitives'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { StateUpdate } from '@cryptoeconomicslab/plasma'
@@ -14,7 +16,8 @@ import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
 import {
   SyncRepository,
   StateUpdateRepository,
-  UserActionRepository
+  UserActionRepository,
+  CheckpointRepository
 } from '../repository'
 import { HistoryVerifier } from '../verifier'
 import { EmitterEvent, UserActionEvent } from '../ClientEvent'
@@ -43,6 +46,94 @@ export class StateSyncer {
   }
 
   /**
+   * sync latest state
+   * @param blockNum
+   * @param address
+   */
+  public async syncLatest(blockNumber: BigNumber, address: Address) {
+    const { coder } = ovmContext
+    const root = await this.commitmentContract.getRoot(blockNumber)
+    if (!root) {
+      // FIXME: check if root is default bytes32 value
+      throw new Error('Block root hash is null')
+    }
+    console.log(`syncing latest state: Block{${blockNumber.raw}}`)
+    this.ee.emit(EmitterEvent.SYNC_STARTED, blockNumber)
+    const stateUpdateRepository = await StateUpdateRepository.init(
+      this.witnessDb
+    )
+    await this.storeRoot(blockNumber, root)
+
+    try {
+      const res = await this.apiClient.syncState(address.data)
+      const stateUpdates: StateUpdate[] = res.data.map((s: string) =>
+        StateUpdate.fromProperty(
+          decodeStructable(Property, coder, Bytes.fromHexString(s))
+        )
+      )
+      for (const addr of this.tokenManager.depositContractAddresses) {
+        await stateUpdateRepository.removeVerifiedStateUpdate(
+          addr,
+          new Range(BigNumber.from(0), BigNumber.MAX_NUMBER)
+        )
+      }
+
+      const promises = stateUpdates.map(async su => {
+        try {
+          await this.syncRootUntil(blockNumber)
+          // if su is checkpoint
+          const checkpointRepository = await CheckpointRepository.init(
+            this.witnessDb
+          )
+          const checkpoints = await checkpointRepository.getCheckpoints(
+            su.depositContractAddress,
+            su.range
+          )
+          if (checkpoints.length > 0) {
+            const checkpointStateUpdate = StateUpdate.fromProperty(
+              checkpoints[0].stateUpdate
+            )
+            if (
+              (JSBI.greaterThanOrEqual(
+                su.range.start.data,
+                checkpointStateUpdate.range.start.data
+              ),
+              JSBI.lessThanOrEqual(
+                su.range.end.data,
+                checkpointStateUpdate.range.end.data
+              ))
+            ) {
+            } else {
+              return
+            }
+          } else {
+            const verified = await this.historyVerifier.verifyStateUpdateHistory(
+              su,
+              blockNumber
+            )
+            if (!verified) return
+          }
+        } catch (e) {
+          console.log(e)
+        }
+
+        await stateUpdateRepository.insertVerifiedStateUpdate(
+          su.depositContractAddress,
+          su
+        )
+      })
+      await Promise.all(promises)
+      const syncRepository = await SyncRepository.init(this.witnessDb)
+      await syncRepository.updateSyncedBlockNumber(blockNumber)
+      await syncRepository.insertBlockRoot(blockNumber, root)
+
+      this.ee.emit(EmitterEvent.SYNC_FINISHED, blockNumber)
+    } catch (e) {
+      console.error(`Failed syncing state: Block{${blockNumber.raw}}`, e)
+    }
+  }
+
+  /**
    * sync local state to given block number
    * @param blockNum block number to which client should sync
    * @param address Wallet address to sync
@@ -66,6 +157,40 @@ export class StateSyncer {
     }
   }
 
+  public async syncRootUntil(blockNumber: BigNumber) {
+    const { coder } = ovmContext
+    let synced = blockNumber
+    while (JSBI.greaterThan(synced.data, JSBI.BigInt(0))) {
+      const next = BigNumber.from(JSBI.subtract(synced.data, JSBI.BigInt(1)))
+      const storageDb = await getStorageDb(this.witnessDb)
+      const bucket = await storageDb.bucket(
+        coder.encode(this.commitmentVerifierAddress)
+      )
+      const encodedRoot = await bucket.get(coder.encode(blockNumber))
+      if (encodedRoot === null) {
+        const root = await this.commitmentContract.getRoot(blockNumber)
+        await this.storeRoot(blockNumber, root)
+      } else {
+        break
+      }
+      synced = next
+    }
+  }
+
+  public async storeRoot(blockNumber: BigNumber, root: FixedBytes) {
+    const { coder } = ovmContext
+    const rootHint = Hint.createRootHint(
+      blockNumber,
+      this.commitmentVerifierAddress
+    )
+    await putWitness(this.witnessDb, rootHint, coder.encode(root))
+    const storageDb = await getStorageDb(this.witnessDb)
+    const bucket = await storageDb.bucket(
+      coder.encode(this.commitmentVerifierAddress)
+    )
+    await bucket.put(coder.encode(blockNumber), coder.encode(root))
+  }
+
   /**
    * fetch latest state from aggregator
    * update local database with new state updates.
@@ -84,18 +209,7 @@ export class StateSyncer {
     const stateUpdateRepository = await StateUpdateRepository.init(
       this.witnessDb
     )
-
-    const rootHint = Hint.createRootHint(
-      blockNumber,
-      this.commitmentVerifierAddress
-    )
-    await putWitness(this.witnessDb, rootHint, coder.encode(root))
-
-    const storageDb = await getStorageDb(this.witnessDb)
-    const bucket = await storageDb.bucket(
-      coder.encode(this.commitmentVerifierAddress)
-    )
-    await bucket.put(coder.encode(blockNumber), coder.encode(root))
+    //await this.storeRoot(blockNumber, root)
 
     try {
       const res = await this.apiClient.syncState(address.data, blockNumber)
@@ -104,6 +218,7 @@ export class StateSyncer {
           decodeStructable(Property, coder, Bytes.fromHexString(s))
         )
       )
+
       const promises = stateUpdates.map(async su => {
         try {
           const verified = await this.historyVerifier.verifyStateUpdateHistory(

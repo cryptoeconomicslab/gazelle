@@ -471,6 +471,8 @@ describe('light client', () => {
 
   test('sync state', async () => {
     console.log('start test of "sync state"')
+    console.log(aliceLightClient.address)
+    console.log(bobLightClient.address)
     await depositPETH(aliceLightClient, senderWallet, '0.5')
     await sleep(10000)
     expect(await getBalance(aliceLightClient)).toEqual('0.5')
@@ -485,7 +487,7 @@ describe('light client', () => {
       config.PlasmaETH,
       bobLightClient.address
     )
-    await sleep(10000)
+    await sleep(12000)
 
     await aliceLightClient.transfer(
       parseUnitsToJsbi('0.01'),

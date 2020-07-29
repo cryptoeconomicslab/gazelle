@@ -70,7 +70,8 @@ export class HistoryVerifier {
     const address = stateUpdate.depositContractAddress
 
     const hint = Hint.createInclusionProofHint(
-      blockNumber,
+      stateUpdate.blockNumber,
+      //      blockNumber,
       address,
       stateUpdate.range
     )

@@ -216,14 +216,14 @@ export default class LightClient {
     this.commitmentContract.subscribeBlockSubmitted(
       async (blockNumber, root, mainchainBlockNumber, mainchainTimestamp) => {
         console.log('new block submitted event:', root.toHexString())
+        await this.stateSyncer.storeRoot(blockNumber, root)
         await this.stateSyncer.sync(blockNumber, Address.from(this.address))
         await this.pendingStateUpdatesVerifier.verify(blockNumber)
       }
     )
     this.commitmentContract.startWatchingEvents()
     const blockNumber = await this.commitmentContract.getCurrentBlock()
-
-    await this.stateSyncer.syncUntil(blockNumber, Address.from(this.address))
+    await this.stateSyncer.syncLatest(blockNumber, Address.from(this.address))
     await this.watchAdjudicationContract()
   }
 
@@ -486,7 +486,7 @@ export default class LightClient {
           )
           if (stateUpdates.length > 0) {
             const decision = await this.deciderManager.decide(property)
-            if (getOwner(exit.stateUpdate).data === this.address) {
+            if (getOwner(exit.stateUpdate).equals(Address.from(this.address))) {
               // exit initiated with this client. save exit into db
               await this.exitUsecase.saveExit(exit)
             } else if (!decision.outcome && decision.challenge) {
