@@ -16,6 +16,15 @@ class APIClient {
       return axios.get(`${this.endpoint}/sync_state?address=${address}`)
     }
   }
+  spentProof(tokenAddress: Address, blockNumber: BigNumber, range: Range) {
+    return axios.get(
+      `${this.endpoint}/spent_proof?tokenAddress=${
+        tokenAddress.data
+      }&blockNumber=${blockNumber.data.toString()}&range=${range
+        .toBytes()
+        .toHexString()}`
+    )
+  }
   inclusionProof(su: StateUpdate) {
     return axios.get(
       `${

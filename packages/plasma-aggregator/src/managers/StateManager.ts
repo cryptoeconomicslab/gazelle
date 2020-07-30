@@ -258,11 +258,11 @@ export default class StateManager {
     }
   }
 
-  public async getTx(
+  public async getTxs(
     depositContractAddress: Address,
     blockNumber: BigNumber,
     range: Range
-  ) {
+  ): Promise<Transaction[]> {
     const { coder } = ovmContext
     const txBucket = await this.db.bucket(Bytes.fromString('TX'))
     const blockBucket = await txBucket.bucket(coder.encode(blockNumber))
@@ -270,9 +270,10 @@ export default class StateManager {
       Bytes.fromHexString(depositContractAddress.data)
     )
     const ranges = await addrBucket.get(range.start.data, range.end.data)
-    if (ranges.length == 0) return null
-    return Transaction.fromStruct(
-      ovmContext.coder.decode(Transaction.getParamTypes(), ranges[0].value)
+    return ranges.map(r =>
+      Transaction.fromStruct(
+        ovmContext.coder.decode(Transaction.getParamTypes(), r.value)
+      )
     )
   }
 

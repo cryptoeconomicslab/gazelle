@@ -90,7 +90,7 @@ export class HistoryVerifier {
 
       type CheckpointWitness = {
         stateUpdate: string
-        transaction: { tx: string; witness: string }
+        txs: string[]
         inclusionProof: string | null
       }
 
@@ -125,8 +125,8 @@ export class HistoryVerifier {
               Bytes.fromHexString(witness.inclusionProof)
             )
           }
-          if (witness.transaction) {
-            const txBytes = Bytes.fromHexString(witness.transaction.tx)
+          witness.txs.map(async tx => {
+            const txBytes = Bytes.fromHexString(tx)
             const txPropertyBytes = coder.encode(
               Transaction.fromStruct(
                 coder.decode(Transaction.getParamTypes(), txBytes)
@@ -142,9 +142,9 @@ export class HistoryVerifier {
             await putWitness(
               witnessDb,
               Hint.createSignatureHint(txPropertyBytes),
-              Bytes.fromHexString(witness.transaction.witness)
+              Bytes.fromHexString(tx)
             )
-          }
+          })
         })
       )
     } catch (e) {

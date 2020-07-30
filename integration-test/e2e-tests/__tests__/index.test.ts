@@ -474,8 +474,10 @@ describe('light client', () => {
     console.log(aliceLightClient.address)
     console.log(bobLightClient.address)
     await depositPETH(aliceLightClient, senderWallet, '0.5')
+    await depositPETH(aliceLightClient, senderWallet, '0.1')
+    await depositPETH(aliceLightClient, senderWallet, '0.1')
     await sleep(10000)
-    expect(await getBalance(aliceLightClient)).toEqual('0.5')
+    expect(await getBalance(aliceLightClient)).toEqual('0.7')
 
     await aliceLightClient.startWithdrawal(
       parseUnitsToJsbi('0.2'),
@@ -487,7 +489,7 @@ describe('light client', () => {
       config.PlasmaETH,
       bobLightClient.address
     )
-    await sleep(12000)
+    await sleep(20000)
 
     await aliceLightClient.transfer(
       parseUnitsToJsbi('0.01'),
@@ -496,7 +498,7 @@ describe('light client', () => {
     )
     await sleep(20000)
 
-    expect(await getBalance(aliceLightClient)).toEqual('0.28')
+    expect(await getBalance(aliceLightClient)).toEqual('0.48')
     expect(await getBalance(bobLightClient)).toEqual('0.02')
 
     const aliceSyncLightClient = await createClientFromPrivateKey(
@@ -505,8 +507,9 @@ describe('light client', () => {
     const bobSyncLightClient = await createClientFromPrivateKey(
       bobLightClient['wallet']['ethersWallet'].privateKey
     )
-    await sleep(10000)
-    expect(await getBalance(aliceSyncLightClient)).toEqual('0.28')
+
+    await sleep(20000)
+    expect(await getBalance(aliceSyncLightClient)).toEqual('0.48')
     expect(await getBalance(bobSyncLightClient)).toEqual('0.02')
     aliceSyncLightClient.stop()
     bobSyncLightClient.stop()

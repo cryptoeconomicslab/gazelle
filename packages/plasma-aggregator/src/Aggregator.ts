@@ -119,6 +119,7 @@ export default class Aggregator {
     this.httpServer.post('/send_tx', this.handleSendTransaction.bind(this))
     this.httpServer.get('/sync_state', this.handleGetSyncState.bind(this))
     this.httpServer.get('/block', this.handleGetBlock.bind(this))
+    this.httpServer.get('/spent_proof', this.handleGetSpentProof.bind(this))
     this.httpServer.get(
       '/inclusion_proof',
       this.handleGetInclusionProof.bind(this)
@@ -356,6 +357,29 @@ export default class Aggregator {
     }
   }
 
+  private async handleGetSpentProof(req: Request, res: Response) {
+    try {
+      const tokenAddress = Address.from(req.query.tokenAddress)
+      const blockNumber = BigNumber.from(req.query.blockNumber)
+      const rangeBytes = Bytes.fromHexString(req.query.range)
+      const range = Range.fromBytes(rangeBytes)
+      const txs = await this.stateManager.getTxs(
+        tokenAddress,
+        blockNumber,
+        range
+      )
+      res.send({
+        data: txs.map(tx =>
+          ovmContext.coder.encode(tx.toStruct()).toHexString()
+        )
+      })
+      res.status(200).end()
+    } catch (e) {
+      console.log(e)
+      res.status(404).end()
+    }
+  }
+
   private handleGetInclusionProof(req: Request, res: Response) {
     try {
       const blockNumber = BigNumber.from(req.query.blockNumber)
@@ -412,7 +436,7 @@ export default class Aggregator {
     // get inclusionProofs
     let witnesses: Array<{
       stateUpdate: string
-      transaction: { tx: string; witness: string } | null
+      txs: string[]
       inclusionProof: string | null
     }> = []
     for (
@@ -443,42 +467,17 @@ export default class Aggregator {
           await Promise.all(
             sus.map(async su => {
               const inclusionProof = block.getInclusionProof(su)
-              const tx = await this.stateManager.getTx(
+              const txs = await this.stateManager.getTxs(
                 address,
                 BigNumber.from(b),
                 su.range
               )
-              if (!tx) {
-                return {
-                  stateUpdate: coder
-                    .encode(su.property.toStruct())
-                    .toHexString(),
-                  inclusionProof: inclusionProof
-                    ? coder.encode(inclusionProof.toStruct()).toHexString()
-                    : null,
-                  transaction: null
-                }
-              }
-              const txBytes = coder.encode(tx.toStruct())
-              const witness = await getWitnesses(
-                this.decider.witnessDb,
-                createSignatureHint(
-                  coder.encode(tx.toProperty(Address.default()).toStruct())
-                )
-              )
-              if (!witness[0]) throw new Error('Signature not found')
-
-              const transaction = {
-                tx: txBytes.toHexString(),
-                witness: witness[0].toHexString()
-              }
-
               return {
                 stateUpdate: coder.encode(su.property.toStruct()).toHexString(),
                 inclusionProof: inclusionProof
                   ? coder.encode(inclusionProof.toStruct()).toHexString()
                   : null,
-                transaction
+                txs: txs.map(tx => coder.encode(tx.toStruct()).toHexString())
               }
             })
           )

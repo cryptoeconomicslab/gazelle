@@ -9,7 +9,7 @@ import {
   Range
 } from '@cryptoeconomicslab/primitives'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
-import { StateUpdate } from '@cryptoeconomicslab/plasma'
+import { StateUpdate, Transaction } from '@cryptoeconomicslab/plasma'
 import { KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
 import { ICommitmentContract } from '@cryptoeconomicslab/contract'
 import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
@@ -26,6 +26,7 @@ import APIClient from '../APIClient'
 import { getOwner } from '../helper/stateUpdateHelper'
 import { getStorageDb } from '../helper/storageDbHelper'
 import TokenManager from '../managers/TokenManager'
+import { sleep } from '../utils'
 
 export class StateSyncer {
   private historyVerifier: HistoryVerifier
@@ -36,13 +37,41 @@ export class StateSyncer {
     private commitmentVerifierAddress: Address,
     private apiClient: APIClient,
     deciderManager: DeciderManager, // will be removed when using checkpointDispute
-    private tokenManager: TokenManager
+    private tokenManager: TokenManager,
+    private retryInterval: number = 5000
   ) {
     this.historyVerifier = new HistoryVerifier(
       witnessDb,
       apiClient,
       deciderManager
     )
+  }
+
+  private async isStateUpdateWithinCheckpoint(
+    su: StateUpdate
+  ): Promise<boolean> {
+    const checkpointRepository = await CheckpointRepository.init(this.witnessDb)
+    const checkpoints = await checkpointRepository.getCheckpoints(
+      su.depositContractAddress,
+      su.range
+    )
+    if (checkpoints.length > 0) {
+      const checkpointStateUpdate = StateUpdate.fromProperty(
+        checkpoints[0].stateUpdate
+      )
+      return (
+        JSBI.greaterThanOrEqual(
+          su.range.start.data,
+          checkpointStateUpdate.range.start.data
+        ) &&
+        JSBI.lessThanOrEqual(
+          su.range.end.data,
+          checkpointStateUpdate.range.end.data
+        ) &&
+        checkpointStateUpdate.blockNumber.equals(su.blockNumber)
+      )
+    }
+    return false
   }
 
   /**
@@ -71,57 +100,62 @@ export class StateSyncer {
           decodeStructable(Property, coder, Bytes.fromHexString(s))
         )
       )
+      // if aggregator latest state doesn't have client state, client should check spending proof
+      // clear verified state updates
       for (const addr of this.tokenManager.depositContractAddresses) {
-        await stateUpdateRepository.removeVerifiedStateUpdate(
+        const sus = await stateUpdateRepository.getVerifiedStateUpdates(
           addr,
           new Range(BigNumber.from(0), BigNumber.MAX_NUMBER)
         )
+        sus.map(async su => {
+          const res = await this.apiClient.spentProof(
+            su.depositContractAddress,
+            su.blockNumber,
+            su.range
+          )
+          const transactions: Transaction[] = res.data.data.map((tx: string) =>
+            Transaction.fromStruct(
+              coder.decode(Transaction.getParamTypes(), Bytes.fromHexString(tx))
+            )
+          )
+          // check spent
+          transactions.map(async tx => {
+            await stateUpdateRepository.removeVerifiedStateUpdate(
+              addr,
+              tx.range
+            )
+          })
+        })
       }
 
-      const promises = stateUpdates.map(async su => {
+      const verifyStateUpdate = async (su: StateUpdate, retryTimes = 5) => {
         try {
           await this.syncRootUntil(blockNumber)
           // if su is checkpoint
-          const checkpointRepository = await CheckpointRepository.init(
-            this.witnessDb
-          )
-          const checkpoints = await checkpointRepository.getCheckpoints(
-            su.depositContractAddress,
-            su.range
-          )
-          if (checkpoints.length > 0) {
-            const checkpointStateUpdate = StateUpdate.fromProperty(
-              checkpoints[0].stateUpdate
-            )
-            if (
-              (JSBI.greaterThanOrEqual(
-                su.range.start.data,
-                checkpointStateUpdate.range.start.data
-              ),
-              JSBI.lessThanOrEqual(
-                su.range.end.data,
-                checkpointStateUpdate.range.end.data
-              ))
-            ) {
-            } else {
-              return
-            }
-          } else {
+          const isCheckpoint = await this.isStateUpdateWithinCheckpoint(su)
+          if (!isCheckpoint) {
             const verified = await this.historyVerifier.verifyStateUpdateHistory(
               su,
               blockNumber
             )
-            if (!verified) return
+            if (!verified) {
+              // retry verification
+              if (retryTimes > 0) {
+                await sleep(this.retryInterval)
+                await verifyStateUpdate(su, retryTimes - 1)
+              }
+              return
+            }
           }
         } catch (e) {
           console.log(e)
         }
-
         await stateUpdateRepository.insertVerifiedStateUpdate(
           su.depositContractAddress,
           su
         )
-      })
+      }
+      const promises = stateUpdates.map(async su => verifyStateUpdate(su))
       await Promise.all(promises)
       const syncRepository = await SyncRepository.init(this.witnessDb)
       await syncRepository.updateSyncedBlockNumber(blockNumber)
@@ -130,30 +164,6 @@ export class StateSyncer {
       this.ee.emit(EmitterEvent.SYNC_FINISHED, blockNumber)
     } catch (e) {
       console.error(`Failed syncing state: Block{${blockNumber.raw}}`, e)
-    }
-  }
-
-  /**
-   * sync local state to given block number
-   * @param blockNum block number to which client should sync
-   * @param address Wallet address to sync
-   */
-  public async syncUntil(blockNum: BigNumber, address: Address) {
-    const syncRepository = await SyncRepository.init(this.witnessDb)
-    let synced = await syncRepository.getSyncedBlockNumber()
-    console.log(
-      `Start syncing state: Block{${synced.raw}} to Block{${blockNum.raw}}`
-    )
-
-    if (JSBI.greaterThan(synced.data, blockNum.data)) {
-      throw new Error('Synced state is greater than latest block')
-    }
-
-    while (JSBI.notEqual(synced.data, blockNum.data)) {
-      const next = BigNumber.from(JSBI.add(synced.data, JSBI.BigInt(1)))
-      await this.sync(next, address)
-
-      synced = next
     }
   }
 
@@ -197,19 +207,18 @@ export class StateSyncer {
    * @param blockNumber block number to sync state
    * @param address Wallet address to sync
    */
-  public async sync(blockNumber: BigNumber, address: Address) {
+  public async sync(
+    blockNumber: BigNumber,
+    root: FixedBytes,
+    address: Address
+  ) {
     const { coder } = ovmContext
-    const root = await this.commitmentContract.getRoot(blockNumber)
-    if (!root) {
-      // FIXME: check if root is default bytes32 value
-      throw new Error('Block root hash is null')
-    }
     console.log(`syncing state: Block{${blockNumber.raw}}`)
     this.ee.emit(EmitterEvent.SYNC_STARTED, blockNumber)
     const stateUpdateRepository = await StateUpdateRepository.init(
       this.witnessDb
     )
-    //await this.storeRoot(blockNumber, root)
+    await this.storeRoot(blockNumber, root)
 
     try {
       const res = await this.apiClient.syncState(address.data, blockNumber)
