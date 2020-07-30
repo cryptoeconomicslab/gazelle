@@ -15,6 +15,7 @@ function encode(v: Codable) {
 }
 
 function createChallengeInputAndWitness(challenge: ExitChallenge): Bytes[][] {
+  const { coder } = ovmContext
   if (challenge.type === EXIT_CHALLENGE_TYPE.SPENT) {
     return [
       [Bytes.fromString(challenge.type), challenge.transaction.message],
@@ -24,9 +25,9 @@ function createChallengeInputAndWitness(challenge: ExitChallenge): Bytes[][] {
     return [
       [
         Bytes.fromString(challenge.type),
-        encode(challenge.stateUpdate.toStruct())
+        coder.encode(challenge.stateUpdate.toStruct())
       ],
-      [encode(challenge.inclusionProof.toStruct())]
+      [coder.encode(challenge.inclusionProof.toStruct())]
     ]
   } else {
     throw new Error('Invalid Exit challenge type')
