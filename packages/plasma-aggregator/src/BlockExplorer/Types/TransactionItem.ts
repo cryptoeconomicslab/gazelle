@@ -1,4 +1,5 @@
 import { Block, StateUpdate } from '@cryptoeconomicslab/plasma'
+import { Address } from '@cryptoeconomicslab/primitives'
 
 interface StateObject {
   address: string
@@ -7,7 +8,7 @@ interface StateObject {
 
 export interface TransactionItem {
   hash: string
-  //   from: string
+  from: string
   blockNumber: string
   mainchainBlockNumber: string
   timestamp: number
@@ -26,7 +27,8 @@ export function transformTransactionItemFrom(
   }
   return {
     hash: su.hash.toHexString(),
-    //    from: transaction.from.toString(),
+    from: ovmContext.coder.decode(Address.default(), su.stateObject.inputs[0])
+      .raw,
     blockNumber: block.blockNumber.raw,
     mainchainBlockNumber: block.mainchainBlockNumber.raw,
     timestamp: block.timestamp.data,

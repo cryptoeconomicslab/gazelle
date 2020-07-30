@@ -2,7 +2,6 @@ import BlockExplorerController from '../../src/BlockExplorer/controller'
 import { Block, StateUpdate } from '@cryptoeconomicslab/plasma'
 import {
   Address,
-  Bytes,
   BigNumber,
   Integer,
   Property,
@@ -24,7 +23,9 @@ const su = (bn: number, start: number, end: number) => {
     Address.default(),
     new Range(BigNumber.from(start), BigNumber.from(end)),
     BigNumber.from(bn),
-    new Property(Address.default(), [Bytes.fromHexString(testAddr)])
+    new Property(Address.default(), [
+      ovmContext.coder.encode(Address.from(testAddr))
+    ])
   )
 }
 const TIME_STAMP = DateUtils.getCurrentDate()
@@ -324,13 +325,16 @@ describe('BlockExplorerController', () => {
       expect(transactions).toEqual(
         stateUpdates.map(su => ({
           hash: su.hash.toHexString(),
+          from: testAddr,
           timestamp: TIME_STAMP,
           mainchainBlockNumber: '10',
           blockNumber: '1',
           depositContractAddress: su.depositContractAddress.data,
           stateObject: {
             address: su.stateObject.deciderAddress.data,
-            parameter: [testAddr]
+            parameter: [
+              '0x0000000000000000000000000000000000000000000000000000000000000001'
+            ]
           },
           range: {
             start: su.range.start.raw,
@@ -367,13 +371,16 @@ describe('BlockExplorerController', () => {
       )
       expect(tx).toEqual({
         hash: s.hash.toHexString(),
+        from: testAddr,
         timestamp: TIME_STAMP,
         mainchainBlockNumber: '10',
         blockNumber: '1',
         depositContractAddress: s.depositContractAddress.data,
         stateObject: {
           address: s.stateObject.deciderAddress.data,
-          parameter: [testAddr]
+          parameter: [
+            '0x0000000000000000000000000000000000000000000000000000000000000001'
+          ]
         },
         range: {
           start: s.range.start.raw,
