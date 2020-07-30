@@ -62,6 +62,12 @@ describe('light client', () => {
     return client
   }
 
+  const createClientFromPrivateKey = async (privateKey: string) => {
+    const provider = new ethers.providers.JsonRpcProvider(nodeEndpoint)
+    const wallet = new ethers.Wallet(privateKey, provider)
+    return await createClient(wallet)
+  }
+
   async function increaseBlock() {
     for (let i = 0; i < 10; i++) {
       await operatorWallet.sendTransaction({
@@ -272,11 +278,6 @@ describe('light client', () => {
    * Alice exit 0.05 ETH
    */
   test('user attempts exit depositted asset', async () => {
-    const createClientFromPrivateKey = async (privateKey: string) => {
-      const provider = new ethers.providers.JsonRpcProvider(nodeEndpoint)
-      const wallet = new ethers.Wallet(privateKey, provider)
-      return await createClient(wallet)
-    }
     await depositPETH(aliceLightClient, senderWallet, '0.1')
     await sleep(10000)
 
@@ -366,6 +367,15 @@ describe('light client', () => {
     await finalizeExit(bobLightClient)
     expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.4')
     expect(await getL1PETHBalance(bobLightClient)).toEqual('0.6')
+
+    const aliceSyncLightClient = await createClientFromPrivateKey(
+      aliceLightClient['wallet']['ethersWallet'].privateKey
+    )
+    const bobSyncLightClient = await createClientFromPrivateKey(
+      bobLightClient['wallet']['ethersWallet'].privateKey
+    )
+    expect(await getL1PETHBalance(aliceSyncLightClient)).toEqual('0.4')
+    expect(await getL1PETHBalance(bobSyncLightClient)).toEqual('0.6')
   })
 
   /**
