@@ -24,7 +24,7 @@ export type EthEventWatcherArgType = {
   options?: EventWatcherOptions
 }
 
-const DEFAULT_INTERVAL = 3000
+export const DEFAULT_INTERVAL = 3000
 
 export default class EventWatcher implements IEventWatcher {
   public httpProvider: Provider

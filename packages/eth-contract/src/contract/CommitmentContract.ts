@@ -7,8 +7,8 @@ import {
 } from '@cryptoeconomicslab/primitives'
 import { EventLog, ICommitmentContract } from '@cryptoeconomicslab/contract'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
-import EthEventWatcher from '../events'
 import JSBI from 'jsbi'
+import EthEventWatcher, { EventWatcherOptions } from '../events'
 
 export class CommitmentContract implements ICommitmentContract {
   private connection: ethers.Contract
@@ -20,7 +20,12 @@ export class CommitmentContract implements ICommitmentContract {
     'function currentBlock() view returns (uint256)',
     'event BlockSubmitted(uint64 blockNumber, bytes32 root)'
   ]
-  constructor(address: Address, eventDb: KeyValueStore, signer: ethers.Signer) {
+  constructor(
+    address: Address,
+    eventDb: KeyValueStore,
+    signer: ethers.Signer,
+    eventWatcherOptions?: EventWatcherOptions
+  ) {
     this.connection = new ethers.Contract(
       address.data,
       CommitmentContract.abi,
@@ -30,7 +35,8 @@ export class CommitmentContract implements ICommitmentContract {
       provider: this.connection.provider,
       kvs: eventDb,
       contractAddress: address.data,
-      contractInterface: this.connection.interface
+      contractInterface: this.connection.interface,
+      options: eventWatcherOptions
     })
     this.gasLimit = 400000
   }

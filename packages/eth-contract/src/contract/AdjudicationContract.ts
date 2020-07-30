@@ -10,7 +10,7 @@ import {
 import { ChallengeGame } from '@cryptoeconomicslab/ovm'
 import { EventLog, IAdjudicationContract } from '@cryptoeconomicslab/contract'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
-import EthEventWatcher from '../events'
+import EthEventWatcher, { EventWatcherOptions } from '../events'
 
 export class AdjudicationContract implements IAdjudicationContract {
   private connection: ethers.Contract
@@ -34,7 +34,12 @@ export class AdjudicationContract implements IAdjudicationContract {
     'function setPredicateDecision(bytes32 gameId, bool decision)',
     'function challenge(tuple(address, bytes[]) property, bytes[] challengeInputs, tuple(address, bytes[]) challengingProperty)'
   ]
-  constructor(address: Address, eventDb: KeyValueStore, signer: ethers.Signer) {
+  constructor(
+    address: Address,
+    eventDb: KeyValueStore,
+    signer: ethers.Signer,
+    eventWatcherOptions?: EventWatcherOptions
+  ) {
     this.connection = new ethers.Contract(
       address.data,
       AdjudicationContract.abi,
@@ -44,7 +49,8 @@ export class AdjudicationContract implements IAdjudicationContract {
       provider: this.connection.provider,
       kvs: eventDb,
       contractAddress: address.data,
-      contractInterface: this.connection.interface
+      contractInterface: this.connection.interface,
+      options: eventWatcherOptions
     })
     this.gasLimit = 1500000
   }
