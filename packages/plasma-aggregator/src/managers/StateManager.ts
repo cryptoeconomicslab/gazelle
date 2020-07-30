@@ -1,6 +1,5 @@
 import {
   StateUpdate,
-  Transaction,
   SignedTransaction,
   DepositTransaction,
   verifyTransaction

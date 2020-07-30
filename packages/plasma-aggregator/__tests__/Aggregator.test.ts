@@ -33,7 +33,6 @@ setupContext({
 
 import { BlockManager, StateManager } from '../src/managers'
 import { ethers } from 'ethers'
-import JSBI from 'jsbi'
 
 // Setup mock contract
 const mockDeposit = jest.fn()
