@@ -128,12 +128,11 @@ export class HistoryVerifier {
           }
           witness.txs.map(async tx => {
             const txBytes = Bytes.fromHexString(tx)
+            const transaction = Transaction.fromStruct(
+              coder.decode(Transaction.getParamTypes(), txBytes)
+            )
             const txPropertyBytes = coder.encode(
-              Transaction.fromStruct(
-                coder.decode(Transaction.getParamTypes(), txBytes)
-              )
-                .toProperty(Address.default())
-                .toStruct()
+              transaction.toProperty(Address.default()).toStruct()
             )
             await putWitness(
               witnessDb,
@@ -143,7 +142,7 @@ export class HistoryVerifier {
             await putWitness(
               witnessDb,
               Hint.createSignatureHint(txPropertyBytes),
-              Bytes.fromHexString(tx)
+              transaction.signature
             )
           })
         })
