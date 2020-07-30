@@ -107,7 +107,7 @@ export class StateSyncer {
           addr,
           new Range(BigNumber.from(0), BigNumber.MAX_NUMBER)
         )
-        sus.map(async su => {
+        for (const su of sus) {
           const res = await this.apiClient.spentProof(
             su.depositContractAddress,
             su.blockNumber,
@@ -118,14 +118,14 @@ export class StateSyncer {
               coder.decode(Transaction.getParamTypes(), Bytes.fromHexString(tx))
             )
           )
-          // check spent
-          transactions.map(async tx => {
+          for (const tx of transactions) {
+            // TODO: verify that the tx spent state update
             await stateUpdateRepository.removeVerifiedStateUpdate(
               addr,
               tx.range
             )
-          })
-        })
+          }
+        }
       }
 
       const verifyStateUpdate = async (su: StateUpdate, retryTimes = 5) => {

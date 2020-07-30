@@ -64,6 +64,7 @@ export class HistoryVerifier {
     } catch (e) {
       // return false error happens while getting inclusionProof
       // TODO: if error other than 404 happens, set retry to get inclusion proof
+      console.error(e)
       return false
     }
 
