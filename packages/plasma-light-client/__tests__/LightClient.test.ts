@@ -304,10 +304,7 @@ describe('LightClient', () => {
 
     test('call sendTransaction without exception', async () => {
       const repository = await StateUpdateRepository.init(db)
-      await repository.insertVerifiedStateUpdate(
-        Address.from(depositContractAddress),
-        su
-      )
+      await repository.insertVerifiedStateUpdate(su)
 
       await client.sendTransaction(
         10,
@@ -359,14 +356,8 @@ describe('LightClient', () => {
 
       // setup
       // store ownership stateupdate
-      await repository.insertVerifiedStateUpdate(
-        Address.from(depositContractAddress),
-        su1
-      )
-      await repository.insertVerifiedStateUpdate(
-        Address.from(depositContractAddress),
-        su2
-      )
+      await repository.insertVerifiedStateUpdate(su1)
+      await repository.insertVerifiedStateUpdate(su2)
       // store inclusion proof
       const inclusionProofRepo = await InclusionProofRepository.init(db)
       await inclusionProofRepo.insertInclusionProof(

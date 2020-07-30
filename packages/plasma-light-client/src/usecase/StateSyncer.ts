@@ -111,10 +111,7 @@ export class StateSyncer {
             console.log(e)
           }
 
-          await stateUpdateRepository.insertVerifiedStateUpdate(
-            su.depositContractAddress,
-            su
-          )
+          await stateUpdateRepository.insertVerifiedStateUpdate(su)
           // store receive user action
           const { range } = su
           const tokenContractAddress = this.tokenManager.getTokenContractAddress(

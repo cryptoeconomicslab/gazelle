@@ -38,11 +38,9 @@ describe('StateUpdateRepository', () => {
 
   test('resolve state update with single state update', async () => {
     await repository.insertVerifiedStateUpdate(
-      Address.default(),
       su(JSBI.BigInt(0), JSBI.BigInt(10))
     )
     await repository.insertVerifiedStateUpdate(
-      Address.default(),
       su(JSBI.BigInt(10), JSBI.BigInt(20))
     )
 
@@ -55,11 +53,9 @@ describe('StateUpdateRepository', () => {
 
   test('resolve state update with multiple state updates', async () => {
     await repository.insertVerifiedStateUpdate(
-      Address.default(),
       su(JSBI.BigInt(0), JSBI.BigInt(10))
     )
     await repository.insertVerifiedStateUpdate(
-      Address.default(),
       su(JSBI.BigInt(10), JSBI.BigInt(20))
     )
 
@@ -77,11 +73,9 @@ describe('StateUpdateRepository', () => {
 
   test('resolve state update to be null', async () => {
     await repository.insertVerifiedStateUpdate(
-      Address.default(),
       su(JSBI.BigInt(0), JSBI.BigInt(10))
     )
     await repository.insertVerifiedStateUpdate(
-      Address.default(),
       su(JSBI.BigInt(10), JSBI.BigInt(20))
     )
 

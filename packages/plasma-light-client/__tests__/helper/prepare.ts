@@ -24,7 +24,7 @@ import {
 export async function prepareSU(witnessDb: KeyValueStore, su: StateUpdate) {
   const suRepo = await StateUpdateRepository.init(witnessDb)
   await suRepo.insertWitnessStateUpdate(su)
-  await suRepo.insertVerifiedStateUpdate(su.depositContractAddress, su)
+  await suRepo.insertVerifiedStateUpdate(su)
 }
 
 export async function prepareTx(

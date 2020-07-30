@@ -94,10 +94,7 @@ export class TransferUsecase {
               su.depositContractAddress,
               su.range
             )
-            await stateUpdateRepository.insertPendingStateUpdate(
-              su.depositContractAddress,
-              su
-            )
+            await stateUpdateRepository.insertPendingStateUpdate(su)
           }
         } else {
           throw new Error('Invalid transaction')

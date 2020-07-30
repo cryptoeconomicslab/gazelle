@@ -71,10 +71,9 @@ export class StateUpdateRepository {
    */
   private async insertStateUpdate(
     kind: Kind,
-    depositContractAddress: Address,
     stateUpdate: StateUpdate
   ): Promise<void> {
-    const db = await this.getRangeDb(kind, depositContractAddress)
+    const db = await this.getRangeDb(kind, stateUpdate.depositContractAddress)
     const range = stateUpdate.range
     const record = stateUpdate.toRecord()
     await db.put(
@@ -117,14 +116,9 @@ export class StateUpdateRepository {
   }
 
   public async insertVerifiedStateUpdate(
-    depositContractAddress: Address,
     stateUpdate: StateUpdate
   ): Promise<void> {
-    await this.insertStateUpdate(
-      Kind.Verified,
-      depositContractAddress,
-      stateUpdate
-    )
+    await this.insertStateUpdate(Kind.Verified, stateUpdate)
   }
 
   public async removeVerifiedStateUpdate(
@@ -150,14 +144,9 @@ export class StateUpdateRepository {
   }
 
   public async insertPendingStateUpdate(
-    depositContractAddress: Address,
     stateUpdate: StateUpdate
   ): Promise<void> {
-    await this.insertStateUpdate(
-      Kind.Pending,
-      depositContractAddress,
-      stateUpdate
-    )
+    await this.insertStateUpdate(Kind.Pending, stateUpdate)
   }
 
   public async removePendingStateUpdate(
@@ -183,14 +172,9 @@ export class StateUpdateRepository {
   }
 
   public async insertUnverifiedStateUpdate(
-    depositContractAddress: Address,
     stateUpdate: StateUpdate
   ): Promise<void> {
-    await this.insertStateUpdate(
-      Kind.Unverified,
-      depositContractAddress,
-      stateUpdate
-    )
+    await this.insertStateUpdate(Kind.Unverified, stateUpdate)
   }
 
   public async removeUnverifiedStateUpdate(
@@ -211,11 +195,8 @@ export class StateUpdateRepository {
     return await this.getStateUpdates(Kind.Exit, depositContractAddress, range)
   }
 
-  public async insertExitStateUpdate(
-    depositContractAddress: Address,
-    stateUpdate: StateUpdate
-  ): Promise<void> {
-    await this.insertStateUpdate(Kind.Exit, depositContractAddress, stateUpdate)
+  public async insertExitStateUpdate(stateUpdate: StateUpdate): Promise<void> {
+    await this.insertStateUpdate(Kind.Exit, stateUpdate)
   }
   public async removeExitStateUpdate(
     depositContractAddress: Address,

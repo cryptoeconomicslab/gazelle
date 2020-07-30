@@ -343,10 +343,7 @@ export default class LightClient {
     const owner = getOwner(checkpoint)
     if (owner.data === this.address) {
       // insert and put deposited
-      await suRepo.insertVerifiedStateUpdate(
-        checkpoint.depositContractAddress,
-        checkpoint
-      )
+      await suRepo.insertVerifiedStateUpdate(checkpoint)
 
       const tokenContractAddress = this.tokenManager.getTokenContractAddress(
         checkpoint.depositContractAddress
