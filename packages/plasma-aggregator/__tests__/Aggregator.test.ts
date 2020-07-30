@@ -5,7 +5,7 @@ dotenv.config({ path: path.join(__dirname, '.test.env') })
 import Aggregator from '../src/Aggregator'
 import {
   DepositTransaction,
-  Transaction,
+  UnsignedTransaction,
   StateUpdate,
   TRANSACTION_STATUS,
   PlasmaContractConfig
@@ -33,6 +33,7 @@ setupContext({
 
 import { BlockManager, StateManager } from '../src/managers'
 import { ethers } from 'ethers'
+import JSBI from 'jsbi'
 
 // Setup mock contract
 const mockDeposit = jest.fn()
@@ -191,16 +192,16 @@ describe('Aggregator integration', () => {
       coder.encode(BOB_ADDRESS)
     ])
 
-    const tx = new Transaction(
+    const tx = new UnsignedTransaction(
       depositContractAddress,
       new Range(BigNumber.from(0), BigNumber.from(5)),
       BigNumber.from(5),
       nextStateObject,
       ALIS_ADDRESS
     )
-    tx.signature = await ALIS_WALLET.signMessage(coder.encode(tx.body))
+    const signedTx = await tx.sign(ALIS_WALLET)
 
-    const receipt = await aggregator['ingestTransaction'](tx)
+    const receipt = await aggregator['ingestTransaction'](signedTx)
     expect(receipt.status).toBe(TRANSACTION_STATUS.TRUE)
 
     const stateUpdates = await aggregator['stateManager'].resolveStateUpdates(

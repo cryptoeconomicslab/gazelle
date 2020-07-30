@@ -7,11 +7,7 @@ import {
   Range,
   Property
 } from '@cryptoeconomicslab/primitives'
-import {
-  StateUpdate,
-  EXIT_CHALLENGE_TYPE,
-  createCheckpointChallenge
-} from '@cryptoeconomicslab/plasma'
+import { StateUpdate, EXIT_CHALLENGE_TYPE } from '@cryptoeconomicslab/plasma'
 import { setupContext } from '@cryptoeconomicslab/context'
 import Coder from '@cryptoeconomicslab/eth-coder'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
@@ -247,10 +243,7 @@ describe('ExitDispute', () => {
         const range = new Range(BigNumber.from(0), BigNumber.from(10))
         const bn = BigNumber.from(1)
         const su1 = SU(range, bn, ALICE)
-        const { inclusionProof: inclusionProof1 } = await prepareValidSU(
-          witnessDb,
-          su1
-        )
+        await prepareValidSU(witnessDb, su1)
         const { tx, sig } = await prepareValidTxAndSig(
           witnessDb,
           su1,
@@ -269,11 +262,10 @@ describe('ExitDispute', () => {
           su1
         )
 
-        const { coder } = ovmContext
         expect(mockFunctions.mockRemoveChallenge).toHaveBeenCalledWith(
           su2,
           su1,
-          [coder.encode(tx.body), sig]
+          [tx.message, sig]
         )
       })
     })

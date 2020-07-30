@@ -12,12 +12,12 @@ import {
 } from '@cryptoeconomicslab/primitives'
 import {
   StateUpdate,
-  Transaction,
   TransactionReceipt,
   DepositTransaction,
   TRANSACTION_STATUS,
   Block,
-  PlasmaContractConfig
+  PlasmaContractConfig,
+  SignedTransaction
 } from '@cryptoeconomicslab/plasma'
 import { KeyValueStore, getWitnesses } from '@cryptoeconomicslab/db'
 import {
@@ -252,7 +252,7 @@ export default class Aggregator {
       transactions.map(async d => {
         try {
           const tx = decodeStructable(
-            Transaction,
+            SignedTransaction,
             coder,
             Bytes.fromHexString(d)
           )
@@ -463,7 +463,7 @@ export default class Aggregator {
               const txBytes = coder.encode(tx.toStruct())
               const witness = await getWitnesses(
                 this.decider.witnessDb,
-                createSignatureHint(coder.encode(tx.body))
+                createSignatureHint(tx.message)
               )
               if (!witness[0]) throw new Error('Signature not found')
 
@@ -538,7 +538,7 @@ export default class Aggregator {
    * @param tx transaction sent by user
    */
   private async ingestTransaction(
-    tx: Transaction
+    tx: SignedTransaction
   ): Promise<TransactionReceipt> {
     console.log('transaction received: ', tx.toString())
     const nextBlockNumber = await this.blockManager.getNextBlockNumber()
@@ -565,6 +565,7 @@ export default class Aggregator {
         tx.getHash()
       )
     } catch (e) {
+      console.log(e)
       return new TransactionReceipt(
         TRANSACTION_STATUS.FALSE,
         nextBlockNumber,

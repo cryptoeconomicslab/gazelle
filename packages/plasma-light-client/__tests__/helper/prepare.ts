@@ -2,7 +2,8 @@ import { Bytes, BigNumber, Property } from '@cryptoeconomicslab/primitives'
 import { KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
 import {
   StateUpdate,
-  Transaction,
+  UnsignedTransaction,
+  SignedTransaction,
   Block,
   Checkpoint,
   Exit
@@ -31,15 +32,16 @@ export async function prepareTx(
   su: StateUpdate,
   from: Wallet,
   stateObject: Property
-): Promise<Transaction> {
+): Promise<SignedTransaction> {
   const txRepo = await TransactionRepository.init(witnessDb)
   const { blockNumber, depositContractAddress, range } = su
-  const tx = new Transaction(
+  const tx = new SignedTransaction(
     depositContractAddress,
     range,
     BigNumber.from(100),
     stateObject,
-    from.getAddress()
+    from.getAddress(),
+    Bytes.default()
   )
   await txRepo.insertTransaction(depositContractAddress, blockNumber, range, tx)
   return tx
@@ -47,13 +49,16 @@ export async function prepareTx(
 
 export async function prepareSignature(
   witnessDb: KeyValueStore,
-  transaction: Transaction,
+  transaction: UnsignedTransaction,
   from: Wallet
 ): Promise<Bytes> {
-  const txBytes = ovmContext.coder.encode(transaction.body)
-  const sign = await from.signMessage(txBytes)
-  await putWitness(witnessDb, hint.createSignatureHint(txBytes), sign)
-  return sign
+  const signedTx = await transaction.sign(from)
+  await putWitness(
+    witnessDb,
+    hint.createSignatureHint(transaction.message),
+    signedTx.signature
+  )
+  return signedTx.signature
 }
 
 export async function prepareInclusionProof(
@@ -153,10 +158,10 @@ export async function prepareValidTxAndSig(
   wallet: Wallet,
   nextSO: Property
 ): Promise<{
-  tx: Transaction
+  tx: SignedTransaction
   sig: Bytes
 }> {
   const tx = await prepareTx(witnessDb, su, wallet, nextSO)
-  const sig = await prepareSignature(witnessDb, tx, wallet)
+  const sig = await prepareSignature(witnessDb, tx.toUnsigned(), wallet)
   return { tx, sig }
 }

@@ -5,7 +5,7 @@ import {
   BigNumber,
   Range
 } from '@cryptoeconomicslab/primitives'
-import { Transaction } from '@cryptoeconomicslab/plasma'
+import { SignedTransaction } from '@cryptoeconomicslab/plasma'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 
 export class TransactionRepository {
@@ -38,14 +38,14 @@ export class TransactionRepository {
     const { coder } = ovmContext
     const bucket = await this.getBucket(depositContractAddress, blockNumber)
     const data = await bucket.get(range.start.data, range.end.data)
-    return data.map(d => decodeStructable(Transaction, coder, d.value))
+    return data.map(d => decodeStructable(SignedTransaction, coder, d.value))
   }
 
   public async insertTransaction(
     depositContractAddress: Address,
     blockNumber: BigNumber,
     range: Range,
-    transaction: Transaction
+    transaction: SignedTransaction
   ) {
     const { coder } = ovmContext
     const bucket = await this.getBucket(depositContractAddress, blockNumber)

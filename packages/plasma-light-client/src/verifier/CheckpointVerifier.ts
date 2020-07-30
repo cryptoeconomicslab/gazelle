@@ -30,7 +30,6 @@ export async function verifyCheckpoint(
   deciderManager: DeciderManager,
   stateUpdate: StateUpdate
 ): Promise<CheckpointDecision> {
-  const { coder } = ovmContext
   const { depositContractAddress, range } = stateUpdate
   const suRepo = await StateUpdateRepository.init(witnessDb)
   const txRepo = await TransactionRepository.init(witnessDb)
@@ -96,7 +95,7 @@ export async function verifyCheckpoint(
         }
 
         // validate stateObject
-        const stateObject = su.stateObject.appendInput([coder.encode(tx.body)])
+        const stateObject = su.stateObject.appendInput([tx.message])
         try {
           const decision = await deciderManager.decide(stateObject)
           if (!decision.outcome) {

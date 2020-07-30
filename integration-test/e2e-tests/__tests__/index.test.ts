@@ -132,9 +132,6 @@ describe('light client', () => {
     client: LightClient,
     blockNumber: BigNumber
   ) {
-    const StateUpdatePredicateAddress = Address.from(
-      config.deployedPredicateTable.StateUpdatePredicate.deployedAddress
-    )
     const OwnershipPredicateAddress = Address.from(
       config.deployedPredicateTable.OwnershipPredicate.deployedAddress
     )
@@ -148,7 +145,6 @@ describe('light client', () => {
       new Range(BigNumber.from(0), BigNumber.MAX_NUMBER)
     )
     return new StateUpdate(
-      StateUpdatePredicateAddress,
       depositContractAddress,
       stateUpdates[0].range,
       blockNumber,
@@ -177,11 +173,7 @@ describe('light client', () => {
     if (inclusionProof === null) {
       throw new Error("stateUpdate doesn't included")
     }
-    const exitProperty = new Property(
-      Address.from(config.deployedPredicateTable.ExitPredicate.deployedAddress),
-      [stateUpdate.toStruct(), inclusionProof.toStruct()].map(EthCoder.encode)
-    )
-    await client['adjudicationContract'].claimProperty(exitProperty)
+    await client['exitDispute']['contract'].claim(stateUpdate, inclusionProof)
   }
 
   beforeEach(async () => {
@@ -479,11 +471,7 @@ describe('light client', () => {
     }
     const exit = async (client: LightClient, stateUpdates: any[]) => {
       for (const stateUpdate of stateUpdates) {
-        const exitObject = await client['exitUsecase']['createExit'](
-          stateUpdate
-        )
-        await client['adjudicationContract'].claimProperty(exitObject.property)
-        await client['exitUsecase'].saveExit(exitObject)
+        await client['exitDispute'].claimExit(stateUpdate)
       }
     }
 
@@ -569,7 +557,7 @@ describe('light client', () => {
     const submitInvalidBlock = async (blockNumber: BigNumber, block: Block) => {
       const abi = ['function submitRoot(uint64 blkNumber, bytes32 _root)']
       const connection = new ethers.Contract(
-        config.commitmentContract,
+        config.commitment,
         abi,
         operatorWallet
       )

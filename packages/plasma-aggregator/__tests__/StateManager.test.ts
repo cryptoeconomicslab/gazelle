@@ -10,7 +10,7 @@ import {
 import {
   DepositTransaction,
   StateUpdate,
-  Transaction
+  UnsignedTransaction
 } from '@cryptoeconomicslab/plasma'
 import {
   DeciderManager,
@@ -179,18 +179,17 @@ describe('StateManager', () => {
     })
 
     test('succeed to update whole deposited range', async () => {
-      const tx = new Transaction(
+      const tx = new UnsignedTransaction(
         DEPOSIT_ADDRESS,
         new Range(BigNumber.from(0), BigNumber.from(5)),
         BigNumber.from(3),
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
         ALIS_ADDRESS
       )
-      const sig = await ALIS_WALLET.signMessage(Coder.encode(tx.body))
-      tx.signature = sig
+      const signedTx = await tx.sign(ALIS_WALLET)
       expect(
         await stateManager.executeStateTransition(
-          tx,
+          signedTx,
           BigNumber.from(1),
           deciderManager
         )
@@ -204,18 +203,17 @@ describe('StateManager', () => {
     })
 
     test('succeed to update subrange of deposited range', async () => {
-      const tx = new Transaction(
+      const tx = new UnsignedTransaction(
         DEPOSIT_ADDRESS,
         new Range(BigNumber.from(0), BigNumber.from(3)),
         BigNumber.from(2),
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
         ALIS_ADDRESS
       )
-      const sig = await ALIS_WALLET.signMessage(Coder.encode(tx.body))
-      tx.signature = sig
+      const signedTx = await tx.sign(ALIS_WALLET)
       expect(
         await stateManager.executeStateTransition(
-          tx,
+          signedTx,
           BigNumber.from(1),
           deciderManager
         )
@@ -229,18 +227,17 @@ describe('StateManager', () => {
     })
 
     test('succeed to update contigious multiple ranges', async () => {
-      const tx = new Transaction(
+      const tx = new UnsignedTransaction(
         DEPOSIT_ADDRESS,
         new Range(BigNumber.from(0), BigNumber.from(10)),
         BigNumber.from(2),
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
         ALIS_ADDRESS
       )
-      const sig = await ALIS_WALLET.signMessage(Coder.encode(tx.body))
-      tx.signature = sig
+      const signedTx = await tx.sign(ALIS_WALLET)
       expect(
         await stateManager.executeStateTransition(
-          tx,
+          signedTx,
           BigNumber.from(1),
           deciderManager
         )
@@ -254,18 +251,17 @@ describe('StateManager', () => {
     })
 
     test('succeed to update intersected multiple ranges', async () => {
-      const tx = new Transaction(
+      const tx = new UnsignedTransaction(
         DEPOSIT_ADDRESS,
         new Range(BigNumber.from(2), BigNumber.from(7)),
         BigNumber.from(2),
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
         ALIS_ADDRESS
       )
-      const sig = await ALIS_WALLET.signMessage(Coder.encode(tx.body))
-      tx.signature = sig
+      const signedTx = await tx.sign(ALIS_WALLET)
       expect(
         await stateManager.executeStateTransition(
-          tx,
+          signedTx,
           BigNumber.from(1),
           deciderManager
         )
@@ -279,17 +275,17 @@ describe('StateManager', () => {
     })
 
     test('fail to update with invalid transaction', async () => {
-      const tx = new Transaction(
+      const tx = new UnsignedTransaction(
         DEPOSIT_ADDRESS,
         new Range(BigNumber.from(0), BigNumber.from(3)),
         BigNumber.from(2),
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
         ALIS_ADDRESS
       )
-      tx.signature = Bytes.default()
+      const signedTx = await tx.sign(BOB_WALLET)
       await expect(
         stateManager.executeStateTransition(
-          tx,
+          signedTx,
           BigNumber.from(1),
           deciderManager
         )
@@ -297,17 +293,17 @@ describe('StateManager', () => {
     })
 
     test('fail to update with no intersected prevStates', async () => {
-      const tx = new Transaction(
+      const tx = new UnsignedTransaction(
         DEPOSIT_ADDRESS,
         new Range(BigNumber.from(20), BigNumber.from(25)),
         BigNumber.from(2),
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
         ALIS_ADDRESS
       )
-      tx.signature = Bytes.default()
+      const signedTx = await tx.sign(ALIS_WALLET)
       await expect(
         stateManager.executeStateTransition(
-          tx,
+          signedTx,
           BigNumber.from(1),
           deciderManager
         )
@@ -315,19 +311,18 @@ describe('StateManager', () => {
     })
 
     test('fail to update not contigious multiple ranges', async () => {
-      const tx = new Transaction(
+      const tx = new UnsignedTransaction(
         DEPOSIT_ADDRESS,
         new Range(BigNumber.from(0), BigNumber.from(15)),
         BigNumber.from(2),
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
         ALIS_ADDRESS
       )
-      const sig = await ALIS_WALLET.signMessage(Coder.encode(tx.body))
-      tx.signature = sig
+      const signedTx = await tx.sign(ALIS_WALLET)
 
       await expect(
         stateManager.executeStateTransition(
-          tx,
+          signedTx,
           BigNumber.from(1),
           deciderManager
         )

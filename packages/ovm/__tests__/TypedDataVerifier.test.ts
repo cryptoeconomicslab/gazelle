@@ -5,7 +5,7 @@ import {
   BigNumber,
   Property
 } from '@cryptoeconomicslab/primitives'
-import { Transaction } from '@cryptoeconomicslab/plasma'
+import { UnsignedTransaction } from '@cryptoeconomicslab/plasma'
 import EthCoder from '@cryptoeconomicslab/eth-coder'
 import { setupContext } from '@cryptoeconomicslab/context'
 import config from './data/test.config'
@@ -29,14 +29,14 @@ describe('TypedDataVerifier', () => {
   )
 
   function createTransaction(stateObject: Property): Bytes {
-    const tx = new Transaction(
+    const tx = new UnsignedTransaction(
       depositContractAddress,
       range,
       BigNumber.from(0),
       stateObject,
       Address.default()
     )
-    return ovmContext.coder.encode(tx.toStruct())
+    return tx.message
   }
 
   test('createTypedParams returns typed params', async () => {

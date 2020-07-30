@@ -267,9 +267,8 @@ describe('CheckpointDispute', () => {
         inclusionProof1
       )
 
-      const { coder } = ovmContext
       expect(mockFunctions.mockRemoveChallenge).toHaveBeenCalledWith(su2, su1, [
-        coder.encode(tx.body),
+        tx.message,
         sig
       ])
     })

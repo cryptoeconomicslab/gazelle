@@ -7,12 +7,7 @@ import {
   Bytes,
   FixedBytes
 } from '@cryptoeconomicslab/primitives'
-import {
-  StateUpdate,
-  Transaction,
-  ExitChallenge,
-  EXIT_CHALLENGE_TYPE
-} from '@cryptoeconomicslab/plasma'
+import { StateUpdate, SignedTransaction } from '@cryptoeconomicslab/plasma'
 import {
   DoubleLayerInclusionProof,
   IntervalTreeInclusionProof,
@@ -42,18 +37,19 @@ export function logToStateUpdate(value: any): StateUpdate {
   )
 }
 
-export function logToTransaction(value: any): Transaction {
+export function logToSignedTransaction(value: any): SignedTransaction {
   const stateObject = new Property(
     Address.from(value[3][0]),
     value[3][1].map((i: string) => Bytes.fromHexString(i))
   )
 
-  return new Transaction(
+  return new SignedTransaction(
     Address.from(value[0]),
     logToRange(value[1]),
     BigNumber.fromString(value[2].toString()),
     stateObject,
-    Address.from(value[5])
+    Address.from(value[4]),
+    Bytes.fromHexString(value[5])
   )
 }
 
@@ -82,16 +78,6 @@ export function logToInclusionProof(value: any): DoubleLayerInclusionProof {
   )
 
   return new DoubleLayerInclusionProof(intervalProof, addressProof)
-}
-
-export function logToExitChallenge(log: any): ExitChallenge {
-  // TODO: implement
-  return {
-    type: EXIT_CHALLENGE_TYPE.SPENT,
-    stateUpdate: logToStateUpdate(log[0]),
-    transaction: logToTransaction(log[1]),
-    witness: []
-  }
 }
 
 export function propertyToLog(property: Property) {

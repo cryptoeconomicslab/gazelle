@@ -113,8 +113,6 @@ export class ExitDispute {
       // This never happens
       if (!challengeStateUpdate) return
 
-      const { coder } = ovmContext
-
       // do checkpoint challenged
       const exitRepo = await ExitRepository.init(this.witnessDb)
       const claims = await exitRepo.getClaimedExits(
@@ -133,8 +131,7 @@ export class ExitDispute {
         // do nothing
         return
       }
-      const txBytes = coder.encode(transactions[0].body)
-
+      const txBytes = transactions[0].message
       const signature = await getWitnesses(
         this.witnessDb,
         Hint.createSignatureHint(txBytes)
@@ -182,8 +179,7 @@ export class ExitDispute {
       return
     }
 
-    const { coder } = ovmContext
-    const tx = coder.encode(transactions[0].body)
+    const tx = transactions[0].message
     const stateObject = new Property(
       stateUpdate.stateObject.deciderAddress,
       stateUpdate.stateObject.inputs.concat([tx])

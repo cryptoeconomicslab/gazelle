@@ -27,12 +27,13 @@ import {
 } from '@cryptoeconomicslab/contract'
 import { Wallet } from '@cryptoeconomicslab/wallet'
 import JSBI from 'jsbi'
-import UserAction from './UserAction'
+import UserAction, { createDepositUserAction } from './UserAction'
 import EventEmitter from 'event-emitter'
 import {
   StateUpdateRepository,
   DepositedRangeRepository,
-  UserActionRepository
+  UserActionRepository,
+  CheckpointRepository
 } from './repository'
 import { StateSyncer } from './usecase/StateSyncer'
 import { ExitUsecase } from './usecase/ExitUsecase'
@@ -44,6 +45,7 @@ import { UserActionEvent, EmitterEvent } from './ClientEvent'
 import { Numberish } from './types'
 import { CheckpointDispute } from './dispute/CheckpointDispute'
 import { ExitDispute } from './dispute/ExitDispute'
+import { getOwner } from './helper/stateUpdateHelper'
 
 interface LightClientOptions {
   wallet: Wallet
@@ -114,7 +116,7 @@ export default class LightClient {
       this.ee,
       this.witnessDb,
       this.commitmentContract,
-      Address.from(this.deciderConfig.commitmentContract),
+      Address.from(this.deciderConfig.commitment),
       this.apiClient,
       this.tokenManager,
       this.deciderManager,
@@ -323,6 +325,50 @@ export default class LightClient {
     )
   }
 
+  private async handleCheckpointFinalized(
+    checkpointId: Bytes,
+    checkpoint: StateUpdate
+  ) {
+    this.ee.emit(EmitterEvent.CHECKPOINT_FINALIZED, checkpointId, checkpoint)
+    const checkpointRepo = await CheckpointRepository.init(this.witnessDb)
+    await checkpointRepo.insertSettledCheckpoint(checkpoint)
+    const suRepo = await StateUpdateRepository.init(this.witnessDb)
+    const stateUpdates = await suRepo.getVerifiedStateUpdates(
+      checkpoint.depositContractAddress,
+      checkpoint.range
+    )
+
+    if (stateUpdates.length !== 0) return
+
+    const owner = getOwner(checkpoint)
+    if (owner.data === this.address) {
+      // insert and put deposited
+      await suRepo.insertVerifiedStateUpdate(
+        checkpoint.depositContractAddress,
+        checkpoint
+      )
+
+      const tokenContractAddress = this.tokenManager.getTokenContractAddress(
+        checkpoint.depositContractAddress
+      )
+      if (!tokenContractAddress) throw new Error('Token not registered')
+
+      const action = createDepositUserAction(
+        Address.from(tokenContractAddress),
+        checkpoint.range,
+        checkpoint.blockNumber
+      )
+      const actionRepository = await UserActionRepository.init(this.witnessDb)
+      await actionRepository.insertAction(
+        checkpoint.blockNumber,
+        checkpoint.range,
+        action
+      )
+
+      this.ee.emit(UserActionEvent.DEPOSIT, action)
+    }
+  }
+
   /**
    * register ERC20 token.
    * use default ERC20 contract wrapper
@@ -350,6 +396,11 @@ export default class LightClient {
     depositContract.subscribeDepositedRangeRemoved(async (range: Range) => {
       await depositedRangeRepository.removeRange(depositContract.address, range)
     })
+
+    depositContract.subscribeCheckpointFinalized(
+      this.handleCheckpointFinalized.bind(this)
+    )
+
     depositContract.startWatchingEvents()
   }
 

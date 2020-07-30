@@ -17,16 +17,13 @@ function encode(v: Codable) {
 function createChallengeInputAndWitness(challenge: ExitChallenge): Bytes[][] {
   if (challenge.type === EXIT_CHALLENGE_TYPE.SPENT) {
     return [
-      [
-        Bytes.fromString(challenge.type).toHexString(),
-        encode(challenge.transaction.body)
-      ],
+      [Bytes.fromString(challenge.type), challenge.transaction.message],
       challenge.witness
     ]
   } else if (challenge.type === EXIT_CHALLENGE_TYPE.CHECKPOINT) {
     return [
       [
-        Bytes.fromString(challenge.type).toHexString(),
+        Bytes.fromString(challenge.type),
         encode(challenge.stateUpdate.toStruct())
       ],
       [encode(challenge.inclusionProof.toStruct())]

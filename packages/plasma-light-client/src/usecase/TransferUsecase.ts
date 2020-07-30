@@ -5,7 +5,10 @@ import {
   BigNumber,
   Property
 } from '@cryptoeconomicslab/primitives'
-import { Transaction, TransactionReceipt } from '@cryptoeconomicslab/plasma'
+import {
+  UnsignedTransaction,
+  TransactionReceipt
+} from '@cryptoeconomicslab/plasma'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { StateUpdateRepository, SyncRepository } from '../repository'
@@ -56,17 +59,14 @@ export class TransferUsecase {
     const latestBlock = await syncRepository.getSyncedBlockNumber()
     const transactions = await Promise.all(
       stateUpdates.map(async su => {
-        const tx = new Transaction(
+        const tx = new UnsignedTransaction(
           Address.from(depositContractAddress),
           su.range,
           BigNumber.from(JSBI.add(latestBlock.data, JSBI.BigInt(5))),
           stateObject,
           this.wallet.getAddress()
         )
-        // sign transaction body
-        const sig = await this.wallet.signMessage(coder.encode(tx.body))
-        tx.signature = sig
-        return tx
+        return await tx.sign(this.wallet)
       })
     )
 

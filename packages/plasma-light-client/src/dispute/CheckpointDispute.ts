@@ -3,8 +3,8 @@ import { ICheckpointDisputeContract } from '@cryptoeconomicslab/contract'
 import { KeyValueStore, getWitnesses, putWitness } from '@cryptoeconomicslab/db'
 import {
   StateUpdate,
-  Transaction,
-  Checkpoint
+  Checkpoint,
+  SignedTransaction
 } from '@cryptoeconomicslab/plasma'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
@@ -127,7 +127,7 @@ export class CheckpointDispute {
       // do nothing
       return
     }
-    const txBytes = coder.encode(transactions[0].body)
+    const txBytes = transactions[0].message
 
     const signature = await getWitnesses(
       this.witnessDb,
@@ -265,9 +265,7 @@ export class CheckpointDispute {
         )
 
         const txBytes = Bytes.fromHexString(witness.transaction.tx)
-        const tx = Transaction.fromStruct(
-          coder.decode(Transaction.getParamType(), txBytes)
-        )
+        const tx = decodeStructable(SignedTransaction, coder, txBytes)
         await txRepository.insertTransaction(
           depositContractAddress,
           blockNumber,
@@ -277,7 +275,7 @@ export class CheckpointDispute {
 
         await putWitness(
           witnessDb,
-          Hint.createSignatureHint(coder.encode(tx.body)),
+          Hint.createSignatureHint(tx.message),
           Bytes.fromHexString(witness.transaction.witness)
         )
       })
