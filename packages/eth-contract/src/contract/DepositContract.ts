@@ -10,9 +10,9 @@ import {
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { IDepositContract, EventLog } from '@cryptoeconomicslab/contract'
 import { StateUpdate } from '@cryptoeconomicslab/plasma'
-import EthEventWatcher from '../events'
 import ABI from '../abi'
 import { stateUpdateToLog, logToStateUpdate, logToRange } from '../helper'
+import EthEventWatcher, { EventWatcherOptions } from '../events'
 
 export class DepositContract implements IDepositContract {
   private eventWatcher: EthEventWatcher
@@ -31,7 +31,8 @@ export class DepositContract implements IDepositContract {
   constructor(
     readonly address: Address,
     eventDb: KeyValueStore,
-    signer: ethers.Signer
+    signer: ethers.Signer,
+    eventWatcherOptions?: EventWatcherOptions
   ) {
     this.connection = new ethers.Contract(
       address.data,
@@ -43,7 +44,8 @@ export class DepositContract implements IDepositContract {
       provider: this.connection.provider,
       kvs: eventDb,
       contractAddress: address.data,
-      contractInterface: this.connection.interface
+      contractInterface: this.connection.interface,
+      options: eventWatcherOptions
     })
   }
 

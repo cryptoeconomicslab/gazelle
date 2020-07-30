@@ -9,7 +9,8 @@ import {
   OwnershipPayoutContract,
   ERC20Contract,
   CheckpointDisputeContract,
-  ExitDisputeContract
+  ExitDisputeContract,
+  EventWatcherOptions
 } from '@cryptoeconomicslab/eth-contract'
 import LightClient from '@cryptoeconomicslab/plasma-light-client'
 import { DeciderConfig } from '@cryptoeconomicslab/ovm'
@@ -30,18 +31,25 @@ interface EthLightClientOptions {
   kvs: KeyValueStore
   config: DeciderConfig & PlasmaContractConfig & EthContractConfig
   aggregatorEndpoint?: string
+  eventWatcherOptions?: EventWatcherOptions
 }
 
 export default async function initialize(options: EthLightClientOptions) {
   const eventDb = await options.kvs.bucket(Bytes.fromString('event'))
-  const ethWallet = new EthWallet(options.wallet)
+  const ethWallet = new EthWallet(options.wallet, options.config)
   const adjudicationContract = new AdjudicationContract(
     Address.from(options.config.adjudicationContract),
     eventDb,
-    options.wallet
+    options.wallet,
+    options.eventWatcherOptions
   )
   function depositContractFactory(address: Address) {
-    return new DepositContract(address, eventDb, options.wallet)
+    return new DepositContract(
+      address,
+      eventDb,
+      options.wallet,
+      options.eventWatcherOptions
+    )
   }
   function tokenContractFactory(address: Address) {
     return new ERC20Contract(address, options.wallet)
@@ -49,7 +57,8 @@ export default async function initialize(options: EthLightClientOptions) {
   const commitmentContract = new CommitmentContract(
     Address.from(options.config.commitment),
     eventDb,
-    options.wallet
+    options.wallet,
+    options.eventWatcherOptions
   )
   const ownershipPayoutContract = new OwnershipPayoutContract(
     Address.from(options.config.payoutContracts['OwnershipPayout']),

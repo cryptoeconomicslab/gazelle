@@ -7,7 +7,7 @@ import {
   ExitRepository
 } from '../src/repository'
 import { setupContext } from '@cryptoeconomicslab/context'
-import JsonCoder from '@cryptoeconomicslab/coder'
+import EthCoder from '@cryptoeconomicslab/eth-coder'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import { getOwner } from '../src/helper/stateUpdateHelper'
@@ -25,8 +25,8 @@ import {
   StateUpdate,
   Exit,
   PlasmaContractConfig,
-  Transaction,
-  TransactionReceipt
+  TransactionReceipt,
+  SignedTransaction
 } from '@cryptoeconomicslab/plasma'
 import {
   DoubleLayerInclusionProof,
@@ -36,7 +36,7 @@ import {
 import { createDepositUserAction } from '../src/UserAction'
 import { generateRandomWallet } from './helper/MockWallet'
 import JSBI from 'jsbi'
-setupContext({ coder: JsonCoder })
+setupContext({ coder: EthCoder })
 
 const mockClaimProperty = jest.fn()
 const mockIsDecided = jest.fn().mockResolvedValue(true)
@@ -146,7 +146,7 @@ function clearMocks() {
 // mock APIClient
 const mockSendTransaction = jest
   .fn()
-  .mockImplementation((txs: Transaction[] | Transaction) => {
+  .mockImplementation((txs: SignedTransaction[] | SignedTransaction) => {
     if (Array.isArray(txs)) {
       const tx = txs[0]
       return {

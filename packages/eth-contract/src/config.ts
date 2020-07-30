@@ -1,6 +1,6 @@
 export interface EthContractConfig {
   adjudicationContract: string
-  commitmentContract: string
+  commitment: string
   PlasmaETH: string
   payoutContracts: {
     OwnershipPayout: string

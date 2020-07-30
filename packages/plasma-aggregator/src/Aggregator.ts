@@ -147,7 +147,7 @@ export default class Aggregator {
       async (req: Request, res: Response) => {
         const blockNumber = BigNumber.from(Number(req.query.blockNumber))
         try {
-          const json = controller.handleBlock(blockNumber)
+          const json = await controller.handleBlock(blockNumber)
           res
             .send(json)
             .status(200)
@@ -172,7 +172,7 @@ export default class Aggregator {
           : undefined
 
         try {
-          const json = controller.handleBlockList({
+          const json = await controller.handleBlockList({
             from,
             to
           })
@@ -200,7 +200,7 @@ export default class Aggregator {
         const end = BigNumber.from(Number(req.query.end))
 
         try {
-          const json = controller.handleTransaction(
+          const json = await controller.handleTransaction(
             blockNumber,
             depositContractAddress,
             start,
@@ -225,7 +225,7 @@ export default class Aggregator {
         const blockNumber = BigNumber.from(Number(req.query.blockNumber))
 
         try {
-          const json = controller.handleTransactionList(blockNumber)
+          const json = await controller.handleTransactionList(blockNumber)
           res
             .send(json)
             .status(200)

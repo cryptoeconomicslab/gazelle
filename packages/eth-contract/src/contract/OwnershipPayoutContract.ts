@@ -24,7 +24,7 @@ export class OwnershipPayoutContract implements IOwnershipPayoutContract {
     depositedRangeId: BigNumber,
     owner: Address
   ): Promise<void> {
-    await this.connection.finalizeExit(
+    const tx = await this.connection.finalizeExit(
       depositContractAddress.data,
       [exitProperty.deciderAddress.data, exitProperty.inputs],
       depositedRangeId.raw,
@@ -33,5 +33,6 @@ export class OwnershipPayoutContract implements IOwnershipPayoutContract {
         gasLimit: this.gasLimit
       }
     )
+    await tx.wait()
   }
 }
