@@ -270,6 +270,18 @@ describe('light client', () => {
     expect(bobActions[0].amount).toEqual(parseUnitsToJsbi('0.05'))
     expect(bobActions[1].type).toEqual(ActionType.Receive)
     expect(bobActions[1].amount).toEqual(parseUnitsToJsbi('0.1'))
+
+    const aliceSyncLightClient = await createClientFromPrivateKey(
+      aliceLightClient['wallet']['ethersWallet'].privateKey
+    )
+    const bobSyncLightClient = await createClientFromPrivateKey(
+      bobLightClient['wallet']['ethersWallet'].privateKey
+    )
+    await sleep(20000)
+    expect(await getBalance(aliceSyncLightClient)).toEqual('0.0')
+    expect(await getBalance(bobSyncLightClient)).toEqual('0.05')
+    aliceSyncLightClient.stop()
+    bobSyncLightClient.stop()
   })
 
   /**
@@ -415,6 +427,18 @@ describe('light client', () => {
 
     expect(await getBalance(aliceLightClient)).toEqual('0.1')
     expect(await getBalance(bobLightClient)).toEqual('1.1')
+
+    const aliceSyncLightClient = await createClientFromPrivateKey(
+      aliceLightClient['wallet']['ethersWallet'].privateKey
+    )
+    const bobSyncLightClient = await createClientFromPrivateKey(
+      bobLightClient['wallet']['ethersWallet'].privateKey
+    )
+    await sleep(20000)
+    expect(await getBalance(aliceSyncLightClient)).toEqual('0.1')
+    expect(await getBalance(bobSyncLightClient)).toEqual('1.1')
+    aliceSyncLightClient.stop()
+    bobSyncLightClient.stop()
   })
 
   /**
@@ -467,6 +491,18 @@ describe('light client', () => {
     expect(aliceActions[0].amount).toEqual(parseUnitsToJsbi('0.2'))
     expect(bobActions[0].type).toEqual(ActionType.Receive)
     expect(bobActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
+
+    const aliceSyncLightClient = await createClientFromPrivateKey(
+      aliceLightClient['wallet']['ethersWallet'].privateKey
+    )
+    const bobSyncLightClient = await createClientFromPrivateKey(
+      bobLightClient['wallet']['ethersWallet'].privateKey
+    )
+    await sleep(20000)
+    expect(await getBalance(aliceSyncLightClient)).toEqual('0.1')
+    expect(await getBalance(bobSyncLightClient)).toEqual('0.1')
+    aliceSyncLightClient.stop()
+    bobSyncLightClient.stop()
   })
 
   test('sync state', async () => {
