@@ -150,4 +150,11 @@ export default class UserAction {
   public get blockNumber(): JSBI {
     return this._blockNumber.data
   }
+
+  public get range(): { start: string; end: string } {
+    return {
+      start: this._range.start.raw,
+      end: this._range.end.raw
+    }
+  }
 }
