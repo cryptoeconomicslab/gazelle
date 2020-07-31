@@ -111,7 +111,14 @@ const MockApiClient = jest
       }),
       spentProof: jest.fn().mockResolvedValue({
         data: {
-          data: [ovmContext.coder.encode(transaction.toStruct()).toHexString()]
+          data: [
+            {
+              tx: ovmContext.coder.encode(transaction.toStruct()).toHexString(),
+              blockNumber: ovmContext.coder
+                .encode(BigNumber.from(5))
+                .toHexString()
+            }
+          ]
         }
       }),
       inclusionProof: jest.fn().mockResolvedValue({

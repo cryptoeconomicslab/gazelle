@@ -262,15 +262,14 @@ describe('light client', () => {
     const bobActions = await bobLightClient.getAllUserActions()
 
     // TODO: Send action isn't stored
-    // expect(aliceActions[0].type).toEqual(ActionType.Send)
-    // expect(aliceActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
     expect(aliceActions[0].type).toEqual(ActionType.Deposit)
     expect(aliceActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(aliceActions[1].type).toEqual(ActionType.Send)
+    expect(aliceActions[1].amount).toEqual(parseUnitsToJsbi('0.1'))
     expect(bobActions[0].type).toEqual(ActionType.Exit)
     expect(bobActions[0].amount).toEqual(parseUnitsToJsbi('0.05'))
     expect(bobActions[1].type).toEqual(ActionType.Receive)
     expect(bobActions[1].amount).toEqual(parseUnitsToJsbi('0.1'))
-
     const aliceSyncLightClient = await createClientFromPrivateKey(
       aliceLightClient['wallet']['ethersWallet'].privateKey
     )
@@ -280,6 +279,19 @@ describe('light client', () => {
     await sleep(20000)
     expect(await getBalance(aliceSyncLightClient)).toEqual('0.0')
     expect(await getBalance(bobSyncLightClient)).toEqual('0.05')
+
+    const syncedAliceActions = await aliceSyncLightClient.getAllUserActions()
+    const syncedBobActions = await bobSyncLightClient.getAllUserActions()
+
+    expect(syncedAliceActions[0].type).toEqual(ActionType.Deposit)
+    expect(syncedAliceActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(syncedAliceActions[1].type).toEqual(ActionType.Send)
+    expect(syncedAliceActions[1].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(syncedBobActions[0].type).toEqual(ActionType.Exit)
+    expect(syncedBobActions[0].amount).toEqual(parseUnitsToJsbi('0.05'))
+    expect(syncedBobActions[1].type).toEqual(ActionType.Receive)
+    expect(syncedBobActions[1].amount).toEqual(parseUnitsToJsbi('0.1'))
+
     aliceSyncLightClient.stop()
     bobSyncLightClient.stop()
   })

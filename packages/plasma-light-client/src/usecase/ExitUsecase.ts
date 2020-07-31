@@ -239,6 +239,11 @@ export class ExitUsecase {
       this.witnessDb
     )
 
+    console.log(
+      'removeVerifiedStateUpdate',
+      stateUpdate.range.start.raw,
+      stateUpdate.range.end.raw
+    )
     await stateUpdateRepository.removeVerifiedStateUpdate(
       stateUpdate.depositContractAddress,
       stateUpdate.range

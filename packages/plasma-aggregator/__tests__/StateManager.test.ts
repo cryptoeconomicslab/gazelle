@@ -93,7 +93,7 @@ describe('StateManager', () => {
       'Ownership'
     ) as CompiledPredicate
     const rangeDb = new RangeDb(kvs)
-    stateManager = new StateManager(rangeDb)
+    stateManager = new StateManager(rangeDb, kvs)
   })
 
   describe('insert deposit range, resolve state updates', () => {

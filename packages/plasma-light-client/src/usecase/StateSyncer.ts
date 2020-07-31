@@ -21,9 +21,10 @@ import {
 } from '../repository'
 import { HistoryVerifier } from '../verifier'
 import { EmitterEvent, UserActionEvent } from '../ClientEvent'
-import { createReceiveUserAction } from '../UserAction'
+import { createReceiveUserAction, createSendUserAction } from '../UserAction'
 import APIClient from '../APIClient'
 import { getOwner } from '../helper/stateUpdateHelper'
+import * as StateObjectHelper from '../helper/stateObjectHelper'
 import { getStorageDb } from '../helper/storageDbHelper'
 import TokenManager from '../managers/TokenManager'
 import { sleep } from '../utils'
@@ -45,6 +46,71 @@ export class StateSyncer {
       apiClient,
       deciderManager
     )
+  }
+
+  private async syncTransfers() {
+    const { coder } = ovmContext
+    // check sending to other accounts
+    const stateUpdateRepository = await StateUpdateRepository.init(
+      this.witnessDb
+    )
+    for (const addr of this.tokenManager.depositContractAddresses) {
+      const wholeRange = new Range(BigNumber.from(0), BigNumber.MAX_NUMBER)
+      const sus = await stateUpdateRepository.getVerifiedStateUpdates(
+        addr,
+        wholeRange
+      )
+      const pendingStateUpdates = await stateUpdateRepository.getPendingStateUpdates(
+        addr,
+        wholeRange
+      )
+      for (const su of sus.concat(pendingStateUpdates)) {
+        const res = await this.apiClient.spentProof(
+          su.depositContractAddress,
+          su.blockNumber,
+          su.range
+        )
+        const spentProofs: {
+          tx: Transaction
+          blockNumber: BigNumber
+        }[] = res.data.data.map(({ tx, blockNumber }) => {
+          return {
+            tx: Transaction.fromStruct(
+              coder.decode(Transaction.getParamTypes(), Bytes.fromHexString(tx))
+            ),
+            blockNumber: coder.decode(
+              BigNumber.default(),
+              Bytes.fromHexString(blockNumber)
+            )
+          }
+        })
+        for (const { tx, blockNumber } of spentProofs) {
+          // TODO: verify that the tx spent state update
+          await stateUpdateRepository.removeVerifiedStateUpdate(addr, tx.range)
+          const tokenContractAddress = this.tokenManager.getTokenContractAddress(
+            addr
+          )
+          if (tokenContractAddress === undefined) {
+            throw new Error('token address not found')
+          }
+          const actionRepository = await UserActionRepository.init(
+            this.witnessDb
+          )
+          // TODO: get sentBlockNumber
+          const sentBlockNumber = blockNumber
+          const action = createSendUserAction(
+            Address.from(tokenContractAddress),
+            tx.range,
+            StateObjectHelper.getOwner(tx.stateObject),
+            sentBlockNumber
+          )
+          await actionRepository.insertAction(sentBlockNumber, tx.range, action)
+
+          this.ee.emit(UserActionEvent.SEND, action)
+          this.ee.emit(EmitterEvent.TRANSFER_COMPLETE, su)
+        }
+      }
+    }
   }
 
   private async isStateUpdateWithinCheckpoint(
@@ -95,31 +161,7 @@ export class StateSyncer {
       )
       // if aggregator latest state doesn't have client state, client should check spending proof
       // clear verified state updates
-      for (const addr of this.tokenManager.depositContractAddresses) {
-        const sus = await stateUpdateRepository.getVerifiedStateUpdates(
-          addr,
-          new Range(BigNumber.from(0), BigNumber.MAX_NUMBER)
-        )
-        for (const su of sus) {
-          const res = await this.apiClient.spentProof(
-            su.depositContractAddress,
-            su.blockNumber,
-            su.range
-          )
-          const transactions: Transaction[] = res.data.data.map((tx: string) =>
-            Transaction.fromStruct(
-              coder.decode(Transaction.getParamTypes(), Bytes.fromHexString(tx))
-            )
-          )
-          for (const tx of transactions) {
-            // TODO: verify that the tx spent state update
-            await stateUpdateRepository.removeVerifiedStateUpdate(
-              addr,
-              tx.range
-            )
-          }
-        }
-      }
+      await this.syncTransfers()
 
       const verifyStateUpdate = async (su: StateUpdate, retryTimes = 5) => {
         try {
@@ -147,6 +189,21 @@ export class StateSyncer {
           su.depositContractAddress,
           su
         )
+        const tokenContractAddress = this.tokenManager.getTokenContractAddress(
+          su.depositContractAddress
+        )
+        if (!tokenContractAddress)
+          throw new Error('Token Contract Address not found')
+        const action = createReceiveUserAction(
+          Address.from(tokenContractAddress),
+          su.range,
+          getOwner(su),
+          su.blockNumber
+        )
+        const actionRepository = await UserActionRepository.init(this.witnessDb)
+        await actionRepository.insertAction(su.blockNumber, su.range, action)
+
+        this.ee.emit(UserActionEvent.RECIEVE, action)
       }
       const promises = stateUpdates.map(async su => verifyStateUpdate(su))
       await Promise.all(promises)
@@ -206,6 +263,12 @@ export class StateSyncer {
     address: Address
   ) {
     const { coder } = ovmContext
+    const syncRepository = await SyncRepository.init(this.witnessDb)
+    const synced = await syncRepository.getSyncedBlockNumber()
+    if (JSBI.greaterThanOrEqual(synced.data, blockNumber.data)) {
+      console.log(`already synced: Block{${blockNumber.raw}}`)
+      return
+    }
     console.log(`syncing state: Block{${blockNumber.raw}}`)
     this.ee.emit(EmitterEvent.SYNC_STARTED, blockNumber)
     const stateUpdateRepository = await StateUpdateRepository.init(
@@ -220,6 +283,8 @@ export class StateSyncer {
           decodeStructable(Property, coder, Bytes.fromHexString(s))
         )
       )
+
+      await this.syncTransfers()
 
       const promises = stateUpdates.map(async su => {
         try {
@@ -256,7 +321,6 @@ export class StateSyncer {
         this.ee.emit(UserActionEvent.RECIEVE, action)
       })
       await Promise.all(promises)
-      const syncRepository = await SyncRepository.init(this.witnessDb)
       await syncRepository.updateSyncedBlockNumber(blockNumber)
       await syncRepository.insertBlockRoot(blockNumber, root)
 

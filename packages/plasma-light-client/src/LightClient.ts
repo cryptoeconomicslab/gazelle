@@ -118,6 +118,7 @@ export default class LightClient {
       this.tokenManager
     )
     this.transferUsecase = new TransferUsecase(
+      this.ee,
       this.witnessDb,
       this.wallet,
       this.apiClient,
@@ -221,7 +222,7 @@ export default class LightClient {
           root,
           Address.from(this.address)
         )
-        await this.pendingStateUpdatesVerifier.verify(blockNumber)
+        // await this.pendingStateUpdatesVerifier.verify(blockNumber)
       }
     )
     this.commitmentContract.startWatchingEvents()

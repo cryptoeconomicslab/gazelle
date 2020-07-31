@@ -8,14 +8,23 @@ import {
 import { Transaction, TransactionReceipt } from '@cryptoeconomicslab/plasma'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
-import { StateUpdateRepository, SyncRepository } from '../repository'
+import {
+  StateUpdateRepository,
+  SyncRepository,
+  UserActionRepository
+} from '../repository'
 import TokenManager from '../managers/TokenManager'
 import { Numberish } from '../types'
 import { Wallet } from '@cryptoeconomicslab/wallet'
 import APIClient from '../APIClient'
+import { createSendUserAction } from '../UserAction'
+import { getOwner } from '../helper/stateUpdateHelper'
+import { EventEmitter } from 'events'
+import { UserActionEvent } from '../ClientEvent'
 
 export class TransferUsecase {
   constructor(
+    private ee: EventEmitter,
     private witnessDb: KeyValueStore,
     private wallet: Wallet,
     private apiClient: APIClient,

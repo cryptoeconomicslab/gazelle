@@ -17,12 +17,13 @@ import {
 } from '@cryptoeconomicslab/primitives'
 import { RangeStore, KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
 import JSBI from 'jsbi'
+import { Keccak256 } from '../../../merkle-tree/node_modules/@cryptoeconomicslab/hash/lib'
 
 /**
  * StateManager stores the latest states
  */
 export default class StateManager {
-  constructor(private db: RangeStore) {}
+  constructor(private db: RangeStore, private kvs: KeyValueStore) {}
 
   public async resolveStateUpdatesAtBlock(
     address: Address,
@@ -173,6 +174,7 @@ export default class StateManager {
       nextStateUpdate,
       prevStates.map(s => s.blockNumber)
     )
+    await this.storeTxIncludedBlock(tx, nextBlockNumber)
     await this.putStateUpdate(nextStateUpdate)
     await this.putStateUpdateAtBlock(nextStateUpdate, nextBlockNumber)
     return nextStateUpdate
@@ -295,5 +297,27 @@ export default class StateManager {
         coder.encode(tx.toStruct())
       )
     }
+  }
+
+  private async storeTxIncludedBlock(tx: Transaction, blockNumber: BigNumber) {
+    const { coder } = ovmContext
+    const txBucket = await this.kvs.bucket(
+      Bytes.fromString('TxIncludedAtBlock')
+    )
+    const id = Keccak256.hash(coder.encode(tx.toStruct()))
+    await txBucket.put(id, coder.encode(blockNumber))
+  }
+
+  public async getTxIncludedBlock(tx: Transaction): Promise<BigNumber | null> {
+    const { coder } = ovmContext
+    const txBucket = await this.kvs.bucket(
+      Bytes.fromString('TxIncludedAtBlock')
+    )
+    const id = Keccak256.hash(coder.encode(tx.toStruct()))
+    const encoded = await txBucket.get(id)
+    if (!encoded) {
+      return null
+    }
+    return coder.decode(BigNumber.default(), encoded)
   }
 }

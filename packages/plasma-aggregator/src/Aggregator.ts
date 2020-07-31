@@ -368,10 +368,17 @@ export default class Aggregator {
         blockNumber,
         range
       )
+      const spentProofPromises = txs.map(async tx => {
+        const blockNumber = await this.stateManager.getTxIncludedBlock(tx)
+        if (blockNumber === null) throw new Error('blockNumber not found')
+        return {
+          tx: ovmContext.coder.encode(tx.toStruct()).toHexString(),
+          blockNumber: ovmContext.coder.encode(blockNumber).toHexString()
+        }
+      })
+      const spentProofs = await Promise.all(spentProofPromises)
       res.send({
-        data: txs.map(tx =>
-          ovmContext.coder.encode(tx.toStruct()).toHexString()
-        )
+        data: spentProofs
       })
       res.status(200).end()
     } catch (e) {
