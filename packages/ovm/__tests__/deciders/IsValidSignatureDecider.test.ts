@@ -2,9 +2,16 @@ import {
   DeciderManager,
   IsValidSignatureDecider,
   ForAllSuchThatDecider,
-  LogicalConnective
+  LogicalConnective,
+  createTypedParams
 } from '../../src'
-import { Address, Bytes, Property } from '@cryptoeconomicslab/primitives'
+import {
+  Address,
+  BigNumber,
+  Bytes,
+  Property,
+  Range
+} from '@cryptoeconomicslab/primitives'
 import * as ethers from 'ethers'
 import { Secp256k1Signer } from '@cryptoeconomicslab/signature'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
@@ -12,6 +19,9 @@ import EthCoder from '@cryptoeconomicslab/eth-coder'
 import { setupContext } from '@cryptoeconomicslab/context'
 import { ForAllSuchThatDeciderAddress } from '../helpers/initiateDeciderManager'
 import config from '../data/test.config'
+import { UnsignedTransaction } from '@cryptoeconomicslab/plasma'
+import { signTypedDataLegacy } from 'eth-sig-util'
+import { arrayify } from 'ethers/utils'
 setupContext({ coder: EthCoder })
 
 describe('IsValidSignatureDecider', () => {
@@ -93,19 +103,38 @@ describe('IsValidSignatureDecider', () => {
     expect(decision.outcome).toBeFalsy()
   })
 
-  // TODO: update message, signature
-  test.skip('typedData verifier type', async () => {
+  test('typedData verifier type', async () => {
+    const ownershipPredicateAddress = Address.from(
+      '0x13274fe19c0178208bcbee397af8167a7be27f6f'
+    )
+    const owner = Address.from('0x4e71920b7330515faf5ea0c690f1ad06a85fb002')
+    const depositContractAddress = Address.from(
+      '0x4e71920b7330515faf5ea0c690f1ad06a85fb60c'
+    )
+    const range = new Range(
+      BigNumber.fromString('0'),
+      BigNumber.fromString('100000000000000000')
+    )
+    const stateObject = new Property(ownershipPredicateAddress, [
+      ovmContext.coder.encode(owner)
+    ])
+    const tx = new UnsignedTransaction(
+      depositContractAddress,
+      range,
+      BigNumber.from(0),
+      stateObject,
+      Address.default()
+    )
+    const txBytes = ovmContext.coder.encode(tx.toStruct())
+    const signature = signTypedDataLegacy(
+      Buffer.from(arrayify(wallet.privateKey)),
+      { data: createTypedParams(config, txBytes) }
+    )
+
     const property = new Property(addr, [
-      Bytes.fromHexString(
-        '0x0000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000000200000000000000000000000004e71920b7330515faf5ea0c690f1ad06a85fb60c00000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016345785d8a00000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000500000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000013274fe19c0178208bcbee397af8167a7be27f6f0000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000020000000000000000000000000f17f52151ebef6c7334fad080c5704d77216b732'
-      ),
-      // sign with MetaMask
-      Bytes.fromHexString(
-        '0x50796a5cd37512a03bef440be4bbeee54245bd8bf7f7e8e2ae0ef845844ca7c47d06a039145e4f59d11ffd8564f1817855666449c243513ea5e20ff90dd0b9171c'
-      ),
-      EthCoder.encode(
-        Address.from('0x627306090abab3a6e1400e9345bc60c78a8bef57')
-      ),
+      txBytes,
+      Bytes.fromHexString(signature),
+      EthCoder.encode(Address.from(wallet.address)),
       Bytes.fromString('typedData')
     ])
 
