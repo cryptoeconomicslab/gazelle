@@ -60,14 +60,7 @@ export class StateSyncer {
         checkpoints[0].stateUpdate
       )
       return (
-        JSBI.greaterThanOrEqual(
-          su.range.start.data,
-          checkpointStateUpdate.range.start.data
-        ) &&
-        JSBI.lessThanOrEqual(
-          su.range.end.data,
-          checkpointStateUpdate.range.end.data
-        ) &&
+        checkpointStateUpdate.range.contains(su.range) &&
         checkpointStateUpdate.blockNumber.equals(su.blockNumber)
       )
     }
