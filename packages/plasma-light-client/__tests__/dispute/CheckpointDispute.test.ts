@@ -49,7 +49,9 @@ const MockContractWrapper = jest.fn().mockImplementation(() => {
       mockFunctions.mockSubscribeCheckpointChallenged,
     subscribeCheckpointChallengeRemoved:
       mockFunctions.mockSubscribeCheckpointChallengeRemoved,
-    subscribeCheckpointSettled: mockFunctions.mockSubscribeCheckpointSettled
+    subscribeCheckpointSettled: mockFunctions.mockSubscribeCheckpointSettled,
+    startWatchingEvents: jest.fn(),
+    unsubscribeAll: jest.fn()
   }
 })
 

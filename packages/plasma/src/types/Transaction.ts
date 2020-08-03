@@ -15,4 +15,5 @@ export default interface Transaction {
   from: Address
   message: Bytes
   toStruct(): Struct
+  toString(): string
 }

@@ -11,25 +11,30 @@ import {
 import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
 import { KeyValueStore, getWitnesses } from '@cryptoeconomicslab/db'
 import { IExitDisputeContract } from '@cryptoeconomicslab/contract'
+import APIClient from '../APIClient'
 import {
   StateUpdateRepository,
   TransactionRepository,
   InclusionProofRepository,
   ExitRepository,
-  SyncRepository
+  SyncRepository,
+  CheckpointRepository
 } from '../repository'
 import { verifyCheckpoint } from '../verifier/CheckpointVerifier'
+import { prepareCheckpointWitness } from '../helper/checkpointWitnessHelper'
 
 export class ExitDispute {
   constructor(
     private contract: IExitDisputeContract,
     private witnessDb: KeyValueStore,
-    private deciderManager: DeciderManager
+    private deciderManager: DeciderManager,
+    private apiClient: APIClient
   ) {
     // watch exit contract to handle challenge
-    this.contract.subscribeExitClaimed(this.handleExitClaimed)
-    this.contract.subscribeExitChallenged(this.handleExitChallenged)
-    this.contract.subscribeExitSettled(this.handleExitSettled)
+    this.contract.subscribeExitClaimed(this.handleExitClaimed.bind(this))
+    this.contract.subscribeExitChallenged(this.handleExitChallenged.bind(this))
+    this.contract.subscribeExitSettled(this.handleExitSettled.bind(this))
+    this.contract.startWatchingEvents()
   }
 
   /**
@@ -47,14 +52,27 @@ export class ExitDispute {
       stateUpdate.blockNumber,
       stateUpdate.range
     )
-    if (inclusionProofs.length !== 1) {
-      // TODO: check if checkpoint exists for the stateUpdate. if true, ExitCheckpoint
-
-      throw new Error(
-        `Inclusion proof not found for stateUpdate: ${stateUpdate.toString()}`
+    if (inclusionProofs.length === 0) {
+      const checkpointRepo = await CheckpointRepository.init(this.witnessDb)
+      const checkpoints = await checkpointRepo.getSettledCheckpoints(
+        stateUpdate.depositContractAddress,
+        stateUpdate.range
       )
+      if (checkpoints.length === 0) {
+        throw new Error(
+          `Inclusion proof not found for stateUpdate: ${stateUpdate.toString()}`
+        )
+      }
+      if (checkpoints[0].blockNumber.equals(stateUpdate.blockNumber)) {
+        // TODO: check if checkpoints[0] contains stateUpdate
+        // TODO: if different checkpoint exists for the stateUpdate
+        const checkpoint = checkpoints[0]
+        console.log('claimExit for checkpoint: ', checkpoint.hash.toHexString())
+        await this.contract.claimExitCheckpoint(stateUpdate, checkpoint)
+      }
+    } else {
+      await this.contract.claim(stateUpdate, inclusionProofs[0])
     }
-    this.contract.claim(stateUpdate, inclusionProofs[0])
 
     const syncRepo = await SyncRepository.init(this.witnessDb)
     const claimedBlockNumber = await syncRepo.getSyncedBlockNumber()
@@ -74,6 +92,10 @@ export class ExitDispute {
     await exitRepo.insertSettledExit(exit.stateUpdate)
   }
 
+  public async getClaimDecision(stateUpdate: StateUpdate): Promise<number> {
+    return await this.contract.getClaimDecision(stateUpdate)
+  }
+
   /**
    * @name handleExitClaimed
    * @description handle ExitClaimed event from ExitDispute contract.
@@ -82,6 +104,7 @@ export class ExitDispute {
    * @param stateUpdate
    */
   async handleExitClaimed(stateUpdate: StateUpdate) {
+    console.log('handle exit claimed')
     const suRepo = await StateUpdateRepository.init(this.witnessDb)
 
     // check if claimed stateUpdate is same range and greater blockNumber of owning stateUpdate
@@ -91,8 +114,11 @@ export class ExitDispute {
     )
     if (stateUpdates.length === 0) return
 
+    await prepareCheckpointWitness(stateUpdate, this.apiClient, this.witnessDb)
+
     const checkpointChallenge = await this.checkCheckpointChallenge(stateUpdate)
     if (checkpointChallenge) {
+      console.log('do checkpoint challenge', checkpointChallenge)
       await this.contract.challenge(checkpointChallenge)
       return
     }
@@ -148,8 +174,7 @@ export class ExitDispute {
     }
   }
 
-  async handleExitSettled(stateUpdate: StateUpdate) {
-    console.log('exit settled') // TODO: log informative message
+  async handleExitSettled(stateUpdate: StateUpdate, decision: boolean) {
     const repository = await ExitRepository.init(this.witnessDb)
     const claimedExits = await repository.getClaimedExits(
       stateUpdate.depositContractAddress,

@@ -7,28 +7,33 @@ import { StateUpdate } from '@cryptoeconomicslab/plasma'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import { IExitDisputeContract } from '@cryptoeconomicslab/contract'
 import { ExitChallenge, EXIT_CHALLENGE_TYPE } from '@cryptoeconomicslab/plasma'
-import { logToStateUpdate, logToInclusionProof } from '../helper'
+import { logToStateUpdate, stateUpdateToLog } from '../helper'
 import ABI from '../abi'
 
 function encode(v: Codable) {
   return ovmContext.coder.encode(v).toHexString()
 }
 
-function createChallengeInputAndWitness(challenge: ExitChallenge): Bytes[][] {
+function createChallengeInputAndWitness(
+  challenge: ExitChallenge
+): { challengeInput: string[]; witness: string[] } {
   const { coder } = ovmContext
   if (challenge.type === EXIT_CHALLENGE_TYPE.SPENT) {
-    return [
-      [Bytes.fromString(challenge.type), challenge.transaction.message],
-      challenge.witness
-    ]
-  } else if (challenge.type === EXIT_CHALLENGE_TYPE.CHECKPOINT) {
-    return [
-      [
-        Bytes.fromString(challenge.type),
-        coder.encode(challenge.stateUpdate.toStruct())
+    return {
+      challengeInput: [
+        Bytes.fromString(challenge.type).toHexString(),
+        challenge.transaction.message.toHexString()
       ],
-      [coder.encode(challenge.inclusionProof.toStruct())]
-    ]
+      witness: challenge.witness.map(w => w.toHexString())
+    }
+  } else if (challenge.type === EXIT_CHALLENGE_TYPE.CHECKPOINT) {
+    return {
+      challengeInput: [
+        Bytes.fromString(challenge.type).toHexString(),
+        coder.encode(challenge.stateUpdate.toStruct()).toHexString()
+      ],
+      witness: [coder.encode(challenge.inclusionProof.toStruct()).toHexString()]
+    }
   } else {
     throw new Error('Invalid Exit challenge type')
   }
@@ -48,13 +53,14 @@ export class ExitDisputeContract implements IExitDisputeContract {
     `event ExitSpentChallenged(${ABI.STATE_UPDATE} stateUpdate)`,
     `event ExitCheckpointChallenged(${ABI.STATE_UPDATE} stateUpdate, ${ABI.STATE_UPDATE} challengingStateUpdate)`,
     `event ChallengeRemoved(${ABI.STATE_UPDATE} stateUpdate, ${ABI.STATE_UPDATE} challengingStateUpdate)`,
-    `event ExitSettled(${ABI.STATE_UPDATE})`,
+    `event ExitSettled(${ABI.STATE_UPDATE} stateUpdate, bool decision)`,
 
     // methods
     'function claim(bytes[] inputs, bytes[] witness)',
     'function challenge(bytes[] inputs, bytes[] challengeInputs, bytes[] witness)',
     'function removeChallenge(bytes[] inputs, bytes[] challengeInputs, bytes[] witness)',
-    'function settle(bytes[] inputs)'
+    'function settle(bytes[] inputs)',
+    `function getClaimDecision(${ABI.STATE_UPDATE} su) returns (uint)`
   ]
 
   constructor(
@@ -79,18 +85,38 @@ export class ExitDisputeContract implements IExitDisputeContract {
     stateUpdate: StateUpdate,
     inclusionProof: DoubleLayerInclusionProof
   ): Promise<void> {
-    await this.connection.claim(
+    const tx = await this.connection.claim(
       [encode(stateUpdate.toStruct())],
-      [encode(inclusionProof.toStruct())]
+      [encode(inclusionProof.toStruct())],
+      { gasLimit: this.gasLimit }
     )
+    await tx.wait()
+  }
+
+  public async claimExitCheckpoint(
+    stateUpdate: StateUpdate,
+    checkpoint: StateUpdate
+  ) {
+    const tx = await this.connection.claim(
+      [encode(stateUpdate.toStruct()), encode(checkpoint.toStruct())],
+      [],
+      { gasLimit: this.gasLimit }
+    )
+    await tx.wait()
   }
 
   public async challenge(challenge: ExitChallenge): Promise<void> {
-    // tODO: conditional call for challenge type
-    await this.connection.challenge(
-      [encode(challenge.stateUpdate.toStruct())],
-      ...createChallengeInputAndWitness(challenge)
+    const { challengeInput, witness } = createChallengeInputAndWitness(
+      challenge
     )
+
+    const tx = await this.connection.challenge(
+      [encode(challenge.stateUpdate.toStruct())],
+      challengeInput,
+      witness,
+      { gasLimit: this.gasLimit }
+    )
+    await tx.wait()
   }
 
   public async removeChallenge(
@@ -98,28 +124,34 @@ export class ExitDisputeContract implements IExitDisputeContract {
     challengeStateUpdate: StateUpdate,
     witness: Bytes[]
   ): Promise<void> {
-    await this.connection.removeChallenge(
+    const tx = await this.connection.removeChallenge(
       [encode(stateUpdate.toStruct())],
       [encode(challengeStateUpdate.toStruct())],
-      witness.map(b => b.toHexString())
+      witness.map(b => b.toHexString()),
+      { gasLimit: this.gasLimit }
     )
+    await tx.wait()
   }
 
   public async settle(stateUpdate: StateUpdate): Promise<void> {
-    await this.connection.settle([encode(stateUpdate.toStruct())])
+    const tx = await this.connection.settle([encode(stateUpdate.toStruct())], {
+      gasLimit: this.gasLimit
+    })
+    await tx.wait()
+  }
+
+  public async getClaimDecision(stateUpdate: StateUpdate): Promise<number> {
+    const decision = await this.connection.getClaimDecision(
+      stateUpdateToLog(stateUpdate)
+    )
+    return decision.value.toNumber()
   }
 
   public subscribeExitClaimed(
-    handler: (
-      stateUpdate: StateUpdate,
-      inclusionProof: DoubleLayerInclusionProof
-    ) => void
+    handler: (stateUpdate: StateUpdate) => void
   ): void {
     this.eventWatcher.subscribe('ExitClaimed', (log: EventLog) => {
-      handler(
-        logToStateUpdate(log.values[0]),
-        logToInclusionProof(log.values[1])
-      )
+      handler(logToStateUpdate(log.values[0]))
     })
   }
 
@@ -154,10 +186,22 @@ export class ExitDisputeContract implements IExitDisputeContract {
   }
 
   public subscribeExitSettled(
-    handler: (stateUpdate: StateUpdate) => void
+    handler: (stateUpdate: StateUpdate, decision: boolean) => void
   ): void {
     this.eventWatcher.subscribe('ExitSettled', (log: EventLog) => {
-      handler(logToStateUpdate(log.values[0]))
+      console.log('ExitSettled')
+      handler(logToStateUpdate(log.values[0]), log.values[1])
     })
+  }
+
+  async startWatchingEvents() {
+    this.unsubscribeAll()
+    await this.eventWatcher.start(() => {
+      // do nothing
+    })
+  }
+
+  unsubscribeAll() {
+    this.eventWatcher.cancel()
   }
 }

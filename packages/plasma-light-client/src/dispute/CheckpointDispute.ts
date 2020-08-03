@@ -1,13 +1,8 @@
-import { Bytes, BigNumber, Range } from '@cryptoeconomicslab/primitives'
+import { BigNumber, Range } from '@cryptoeconomicslab/primitives'
 import { ICheckpointDisputeContract } from '@cryptoeconomicslab/contract'
-import { KeyValueStore, getWitnesses, putWitness } from '@cryptoeconomicslab/db'
-import {
-  StateUpdate,
-  Checkpoint,
-  SignedTransaction
-} from '@cryptoeconomicslab/plasma'
+import { KeyValueStore, getWitnesses } from '@cryptoeconomicslab/db'
+import { StateUpdate, Checkpoint } from '@cryptoeconomicslab/plasma'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
-import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
 import {
   StateUpdateRepository,
@@ -20,12 +15,7 @@ import APIClient from '../APIClient'
 import JSBI from 'jsbi'
 import TokenManager from '../managers/TokenManager'
 import { verifyCheckpoint } from '../verifier/CheckpointVerifier'
-
-type CheckpointWitness = {
-  stateUpdate: string
-  transaction: { tx: string; witness: string }
-  inclusionProof: string
-}
+import { prepareCheckpointWitness } from '../helper/checkpointWitnessHelper'
 
 const INTERVAL = 60000
 const DISPUTE_PERIOD = 100 // FIXME: set correct dispute period from .env
@@ -50,10 +40,15 @@ export class CheckpointDispute {
     private tokenManager: TokenManager,
     private apiClient: APIClient
   ) {
-    contract.subscribeCheckpointClaimed(this.handleCheckpointClaimed)
-    contract.subscribeCheckpointChallenged(this.handleCheckpointChallenged)
-    contract.subscribeCheckpointChallengeRemoved(this.handleChallengeRemoved)
-    contract.subscribeCheckpointSettled(this.handleCheckpointSettled)
+    contract.subscribeCheckpointClaimed(this.handleCheckpointClaimed.bind(this))
+    contract.subscribeCheckpointChallenged(
+      this.handleCheckpointChallenged.bind(this)
+    )
+    contract.subscribeCheckpointChallengeRemoved(
+      this.handleChallengeRemoved.bind(this)
+    )
+    contract.subscribeCheckpointSettled(this.handleCheckpointSettled.bind(this))
+    this.contract.startWatchingEvents()
   }
 
   async handleCheckpointClaimed(
@@ -77,7 +72,7 @@ export class CheckpointDispute {
     )
     if (!challengeSu) return
 
-    await this.prepareCheckpointWitness(stateUpdate)
+    await prepareCheckpointWitness(stateUpdate, this.apiClient, this.witnessDb)
 
     // evaluate the stateUpdate history validity and
     const result = await verifyCheckpoint(
@@ -108,8 +103,6 @@ export class CheckpointDispute {
     challenge: StateUpdate,
     inclusionProof: DoubleLayerInclusionProof
   ) {
-    const { coder } = ovmContext
-
     const checkpointRepo = await CheckpointRepository.init(this.witnessDb)
     const claims = await checkpointRepo.getClaimedCheckpoints(
       stateUpdate.depositContractAddress,
@@ -224,61 +217,5 @@ export class CheckpointDispute {
 
   public async settle(stateUpdate: StateUpdate) {
     this.contract.settle(stateUpdate)
-  }
-
-  // TODO: extract
-  public async prepareCheckpointWitness(stateUpdate: StateUpdate) {
-    const { coder } = ovmContext
-    const res = await this.apiClient.checkpointWitness(
-      stateUpdate.depositContractAddress,
-      stateUpdate.blockNumber,
-      stateUpdate.range
-    )
-
-    const witnessDb = this.witnessDb
-    const suRepository = await StateUpdateRepository.init(witnessDb)
-    const txRepository = await TransactionRepository.init(witnessDb)
-    const inclusionProofRepository = await InclusionProofRepository.init(
-      witnessDb
-    )
-
-    await Promise.all(
-      res.data.data.map(async (witness: CheckpointWitness) => {
-        const stateUpdate = decodeStructable(
-          StateUpdate,
-          coder,
-          Bytes.fromHexString(witness.stateUpdate)
-        )
-        const { blockNumber, depositContractAddress, range } = stateUpdate
-        await suRepository.insertWitnessStateUpdate(stateUpdate)
-
-        const inclusionProof = decodeStructable(
-          DoubleLayerInclusionProof,
-          coder,
-          Bytes.fromHexString(witness.inclusionProof)
-        )
-        await inclusionProofRepository.insertInclusionProof(
-          depositContractAddress,
-          blockNumber,
-          range,
-          inclusionProof
-        )
-
-        const txBytes = Bytes.fromHexString(witness.transaction.tx)
-        const tx = decodeStructable(SignedTransaction, coder, txBytes)
-        await txRepository.insertTransaction(
-          depositContractAddress,
-          blockNumber,
-          range,
-          tx
-        )
-
-        await putWitness(
-          witnessDb,
-          Hint.createSignatureHint(tx.message),
-          Bytes.fromHexString(witness.transaction.witness)
-        )
-      })
-    )
   }
 }

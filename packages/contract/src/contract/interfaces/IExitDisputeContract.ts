@@ -12,6 +12,11 @@ export interface IExitDisputeContract {
     inclusionProof: DoubleLayerInclusionProof
   ): Promise<void>
 
+  claimExitCheckpoint(
+    stateUpdate: StateUpdate,
+    checkpoint: StateUpdate
+  ): Promise<void>
+
   challenge(challenge: ExitChallenge): Promise<void>
 
   removeChallenge(
@@ -22,12 +27,9 @@ export interface IExitDisputeContract {
 
   settle(stateUpdate: StateUpdate): Promise<void>
 
-  subscribeExitClaimed(
-    handler: (
-      stateUpdate: StateUpdate,
-      inclusionProof: DoubleLayerInclusionProof
-    ) => void
-  ): void
+  getClaimDecision(stateUpdate: StateUpdate): Promise<number>
+
+  subscribeExitClaimed(handler: (stateUpdate: StateUpdate) => void): void
   subscribeExitChallenged(
     handler: (
       challengeType: EXIT_CHALLENGE_TYPE,
@@ -41,5 +43,11 @@ export interface IExitDisputeContract {
       challengeStateUpdate: StateUpdate
     ) => void
   ): void
-  subscribeExitSettled(handler: (stateUpdate: StateUpdate) => void): void
+  subscribeExitSettled(
+    handler: (stateUpdate: StateUpdate, decision: boolean) => void
+  ): void
+
+  startWatchingEvents(): void
+
+  unsubscribeAll(): void
 }

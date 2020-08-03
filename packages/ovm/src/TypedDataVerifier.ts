@@ -105,29 +105,24 @@ export function createTypedParams(
   config: DeciderConfig,
   transactionMessage: Bytes
 ): EIP712TypedData[] {
-  console.log('hi')
   const transaction = decodeStructable(
     UnsignedTransaction,
     ovmContext.coder,
     transactionMessage
   )
-  console.log('transaction decoded')
   const compiledPredicate = getPredicate(
     transaction.stateObject.deciderAddress,
     config
   )
   if (!compiledPredicate) {
-    console.log('no compiled predicate')
     throw new Error(
       `createTypedParams failed because compiledPredicate of ${transaction.stateObject.deciderAddress} was not found.`
     )
   }
-  console.log('create so params')
   const stateObjectHash = createStateObjectParams(
     transaction.stateObject,
     compiledPredicate
   )
-  console.log('create transaction params')
   return createTransactionParams(
     transaction,
     transactionMessage,
@@ -149,23 +144,13 @@ export async function verifyTypedDataSignature(
   signature: Bytes,
   pubkey: Bytes
 ): Promise<boolean> {
-  console.log('createTypedParams')
   const params = createTypedParams(config, transactionMessage)
-  console.log('decode pubkey')
   const address = ovmContext.coder.decode(Address.default(), pubkey)
-  console.log('recoverTypedSignature')
-  console.log('pubkey', pubkey.toHexString())
 
-  try {
-    const recovered = recoverTypedSignatureLegacy({
-      data: params,
-      sig: signature.toHexString()
-    }).toLowerCase()
+  const recovered = recoverTypedSignatureLegacy({
+    data: params,
+    sig: signature.toHexString()
+  }).toLowerCase()
 
-    console.log('recovered', address.data === recovered, recovered)
-    return address.data === recovered
-  } catch (e) {
-    console.log(e)
-    throw new Error(e)
-  }
+  return address.data === recovered
 }

@@ -1,10 +1,13 @@
 import * as ethers from 'ethers'
 import { IOwnershipPayoutContract } from '@cryptoeconomicslab/contract'
-import { Address, BigNumber, Property } from '@cryptoeconomicslab/primitives'
+import { Address, BigNumber } from '@cryptoeconomicslab/primitives'
+import { StateUpdate } from '@cryptoeconomicslab/plasma'
+import { stateUpdateToLog } from '../helper'
+import ABI from '../abi'
 
 export class OwnershipPayoutContract implements IOwnershipPayoutContract {
   public static abi = [
-    'function finalizeExit(address depositContractAddress,tuple(address, bytes[]) _exitProperty, uint256 _depositedRangeId, address _owner)'
+    `function finalizeExit(address depositContractAddress, ${ABI.STATE_UPDATE} _exit, uint256 _depositedRangeId, address _owner)`
   ]
 
   private connection: ethers.Contract
@@ -20,13 +23,13 @@ export class OwnershipPayoutContract implements IOwnershipPayoutContract {
 
   public async finalizeExit(
     depositContractAddress: Address,
-    exitProperty: Property,
+    exit: StateUpdate,
     depositedRangeId: BigNumber,
     owner: Address
   ): Promise<void> {
     const tx = await this.connection.finalizeExit(
       depositContractAddress.data,
-      [exitProperty.deciderAddress.data, exitProperty.inputs],
+      stateUpdateToLog(exit),
       depositedRangeId.raw,
       owner.data,
       {

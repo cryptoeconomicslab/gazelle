@@ -8,17 +8,22 @@ import TokenManager from '../managers/TokenManager'
 import {
   StateUpdateRepository,
   SyncRepository,
-  ExitRepository
+  ExitRepository,
+  DepositedRangeRepository,
+  UserActionRepository
 } from '../repository'
 import { EmitterEvent } from '../ClientEvent'
 import { ExitDispute } from '../dispute/ExitDispute'
+import { IOwnershipPayoutContract } from '@cryptoeconomicslab/contract'
+import { createExitUserAction } from '../UserAction'
 
 export class ExitUsecase {
   constructor(
     private ee: EventEmitter,
     private witnessDb: KeyValueStore,
     private tokenManager: TokenManager,
-    private exitDispute: ExitDispute
+    private exitDispute: ExitDispute,
+    private ownershipPayoutContract: IOwnershipPayoutContract
   ) {}
 
   /**
@@ -53,7 +58,13 @@ export class ExitUsecase {
       // resolve promises in sequence to avoid an error of ethers.js on calling claimProperty
       // "the tx doesn't have the correct nonce."
       for (const stateUpdate of stateUpdates) {
+        // TODO: need to rollback if part of stateUpdates fails.
         await this.exitDispute.claimExit(stateUpdate)
+        await stateUpdateRepository.insertExitStateUpdate(stateUpdate)
+        await stateUpdateRepository.removeVerifiedStateUpdate(
+          stateUpdate.depositContractAddress,
+          stateUpdate.range
+        )
       }
     } else {
       throw new Error('Insufficient amount')
@@ -70,34 +81,49 @@ export class ExitUsecase {
    * @param address Address to exit on chain
    */
   public async completeWithdrawal(exit: Exit, address: Address) {
-    const syncRepo = await SyncRepository.init(this.witnessDb)
-    const currentBlockNumber = await syncRepo.getSyncedBlockNumber()
+    // const syncRepo = await SyncRepository.init(this.witnessDb)
+    // const currentBlockNumber = await syncRepo.getSyncedBlockNumber()
 
-    if (
-      JSBI.greaterThan(
-        JSBI.add(exit.claimedBlockNumber.data, JSBI.BigInt(1)),
-        currentBlockNumber.data
-      )
-    ) {
-      throw new Error('Exit dispute period have not been passed')
-    }
     // TODO: check claim can be settled. call `disputeManager.canSettle()`
-    this.exitDispute.settle(exit) // call DepositContract (finalizeExit inside)
+    // if (
+    //   JSBI.greaterThan(
+    //     JSBI.add(exit.claimedBlockNumber.data, JSBI.BigInt(1)),
+    //     currentBlockNumber.data
+    //   )
+    // ) {
+    //   throw new Error('Exit dispute period have not been passed')
+    // }
 
-    // TODO: fix payout.finalizeExit()
-    // const depositedRangeRepository = await DepositedRangeRepository.init(
-    //   this.witnessDb
-    // )
-    // const depositedRangeId = await depositedRangeRepository.getDepositedRangeId(
-    //   exit.stateUpdate.depositContractAddress,
-    //   exit.stateUpdate.range
-    // )
-    // await this.ownershipPayoutContract.finalizeExit(
-    //   exit.stateUpdate.depositContractAddress,
-    //   exitProperty,
-    //   depositedRangeId,
-    //   address
-    // )
+    await this.exitDispute.settle(exit)
+
+    const depositedRangeRepository = await DepositedRangeRepository.init(
+      this.witnessDb
+    )
+    const depositedRangeId = await depositedRangeRepository.getDepositedRangeId(
+      exit.stateUpdate.depositContractAddress,
+      exit.stateUpdate.range
+    )
+    await this.ownershipPayoutContract.finalizeExit(
+      exit.stateUpdate.depositContractAddress,
+      exit.stateUpdate,
+      depositedRangeId,
+      address
+    )
+
+    // save action
+    const syncRepo = await SyncRepository.init(this.witnessDb)
+    const blockNumber = await syncRepo.getNextBlockNumber()
+    const su = exit.stateUpdate
+    const tokenAddress = this.tokenManager.getTokenContractAddress(
+      su.depositContractAddress
+    ) as string
+    const action = createExitUserAction(
+      Address.from(tokenAddress),
+      su.range,
+      blockNumber
+    )
+    const repo = await UserActionRepository.init(this.witnessDb)
+    await repo.insertAction(blockNumber, su.range, action)
 
     this.ee.emit(EmitterEvent.EXIT_FINALIZED, exit.stateUpdate)
   }

@@ -4,7 +4,6 @@ import {
   Address,
   Bytes,
   BigNumber,
-  Property,
   FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import { decodeStructable } from '@cryptoeconomicslab/coder'

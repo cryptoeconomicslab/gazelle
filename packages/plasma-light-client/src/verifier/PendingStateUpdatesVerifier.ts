@@ -58,9 +58,6 @@ export class PendingStateUpdatesVerifier {
       }
 
       pendingStateUpdates.forEach(async su => {
-        console.info(
-          `Verify pended state update: (${su.range.start.data.toString()}, ${su.range.end.data.toString()})`
-        )
         let res
         try {
           res = await this.apiClient.inclusionProof(su)
@@ -79,9 +76,6 @@ export class PendingStateUpdatesVerifier {
           FixedBytes.from(32, Keccak256.hash(coder.encode(su.toStruct())).data)
         )
         if (verifier.verifyInclusion(leaf, su.range, root, inclusionProof)) {
-          console.info(
-            `Pended state update (${su.range.start.data.toString()}, ${su.range.end.data.toString()}) verified. remove from stateDB`
-          )
           await stateUpdateRepository.removePendingStateUpdate(
             su.depositContractAddress,
             su.range

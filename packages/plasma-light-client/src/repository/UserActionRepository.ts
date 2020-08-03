@@ -50,4 +50,17 @@ export class UserActionRepository {
     }
     return result
   }
+
+  public async getAllUserActionsUntilBlock(
+    b: BigNumber
+  ): Promise<UserAction[]> {
+    let result: UserAction[] = []
+    let blockNumber = JSBI.BigInt(0)
+    while (JSBI.lessThanOrEqual(blockNumber, b.data)) {
+      const actions = await this.getUserActions(BigNumber.from(blockNumber))
+      result = result.concat(actions)
+      blockNumber = JSBI.add(blockNumber, JSBI.BigInt(1))
+    }
+    return result
+  }
 }

@@ -33,7 +33,8 @@ import {
   StateUpdateRepository,
   DepositedRangeRepository,
   UserActionRepository,
-  CheckpointRepository
+  CheckpointRepository,
+  SyncRepository
 } from './repository'
 import { StateSyncer } from './usecase/StateSyncer'
 import { ExitUsecase } from './usecase/ExitUsecase'
@@ -110,7 +111,8 @@ export default class LightClient {
     this.exitDispute = new ExitDispute(
       exitDisputeContract,
       witnessDb,
-      this.deciderManager
+      this.deciderManager,
+      this.apiClient
     )
     this.stateSyncer = new StateSyncer(
       this.ee,
@@ -126,7 +128,8 @@ export default class LightClient {
       this.ee,
       this.witnessDb,
       this.tokenManager,
-      this.exitDispute
+      this.exitDispute,
+      this.ownershipPayoutContract
     )
     this.transferUsecase = new TransferUsecase(
       this.witnessDb,
@@ -329,6 +332,7 @@ export default class LightClient {
     checkpointId: Bytes,
     checkpoint: StateUpdate
   ) {
+    console.log('handle checkpoint finalized', checkpointId.toHexString())
     this.ee.emit(EmitterEvent.CHECKPOINT_FINALIZED, checkpointId, checkpoint)
     const checkpointRepo = await CheckpointRepository.init(this.witnessDb)
     await checkpointRepo.insertSettledCheckpoint(checkpoint)
@@ -355,6 +359,7 @@ export default class LightClient {
         checkpoint.range,
         checkpoint.blockNumber
       )
+
       const actionRepository = await UserActionRepository.init(this.witnessDb)
       await actionRepository.insertAction(
         checkpoint.blockNumber,
@@ -422,18 +427,10 @@ export default class LightClient {
    * get all user actions until currentBlockNumber
    */
   public async getAllUserActions(): Promise<UserAction[]> {
-    let result: UserAction[] = []
-    const currentBlockNumber = await this.commitmentContract.getCurrentBlock()
-    let blockNumber = JSBI.BigInt(0)
+    const syncRepo = await SyncRepository.init(this.witnessDb)
+    const blockNumber = await syncRepo.getNextBlockNumber()
     const actionRepository = await UserActionRepository.init(this.witnessDb)
-    while (JSBI.lessThanOrEqual(blockNumber, currentBlockNumber.data)) {
-      const actions = await actionRepository.getUserActions(
-        BigNumber.from(blockNumber)
-      )
-      result = result.concat(actions)
-      blockNumber = JSBI.add(blockNumber, JSBI.BigInt(1))
-    }
-    return result
+    return await actionRepository.getAllUserActionsUntilBlock(blockNumber)
   }
 
   //

@@ -42,4 +42,8 @@ export interface ICheckpointDisputeContract {
     handler: (stateUpdate: StateUpdate, challenge: StateUpdate) => void
   ): void
   subscribeCheckpointSettled(handler: (stateUpdate: StateUpdate) => void): void
+
+  startWatchingEvents(): void
+
+  unsubscribeAll(): void
 }

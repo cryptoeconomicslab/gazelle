@@ -54,10 +54,12 @@ export class CheckpointDisputeContract implements ICheckpointDisputeContract {
     stateUpdate: StateUpdate,
     inclusionProof: DoubleLayerInclusionProof
   ) {
-    await this.connection.claim(
+    const tx = await this.connection.claim(
       [encode(stateUpdate.toStruct())],
-      [encode(inclusionProof.toStruct())]
+      [encode(inclusionProof.toStruct())],
+      { gasLimit: this.gasLimit }
     )
+    await tx.wait()
   }
 
   async challenge(
@@ -65,11 +67,13 @@ export class CheckpointDisputeContract implements ICheckpointDisputeContract {
     challenge: StateUpdate,
     inclusionProof: DoubleLayerInclusionProof
   ) {
-    await this.connection.challenge(
+    const tx = await this.connection.challenge(
       [encode(stateUpdate.toStruct())],
       [encode(challenge.toStruct())],
-      [encode(inclusionProof.toStruct())]
+      [encode(inclusionProof.toStruct())],
+      { gasLimit: this.gasLimit }
     )
+    await tx.wait()
   }
 
   async removeChallenge(
@@ -77,15 +81,20 @@ export class CheckpointDisputeContract implements ICheckpointDisputeContract {
     challenge: StateUpdate,
     witness: Bytes[]
   ) {
-    await this.connection.removeChallenge(
+    const tx = await this.connection.removeChallenge(
       [encode(stateUpdate.toStruct())],
       [encode(challenge.toStruct())],
-      witness.map(b => b.toHexString())
+      witness.map(b => b.toHexString()),
+      { gasLimit: this.gasLimit }
     )
+    await tx.wait()
   }
 
   async settle(stateUpdate: StateUpdate) {
-    await this.connection.settle([encode(stateUpdate.toStruct())])
+    const tx = await this.connection.settle([encode(stateUpdate.toStruct())], {
+      gasLimit: this.gasLimit
+    })
+    await tx.wait()
   }
 
   subscribeCheckpointClaimed(
@@ -130,5 +139,16 @@ export class CheckpointDisputeContract implements ICheckpointDisputeContract {
     this.eventWatcher.subscribe('CheckpointSettled', (log: EventLog) => {
       handler(logToStateUpdate(log.values[0]))
     })
+  }
+
+  async startWatchingEvents() {
+    this.unsubscribeAll()
+    await this.eventWatcher.start(() => {
+      // do nothing
+    })
+  }
+
+  unsubscribeAll() {
+    this.eventWatcher.cancel()
   }
 }

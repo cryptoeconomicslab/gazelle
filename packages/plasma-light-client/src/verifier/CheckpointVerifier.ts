@@ -11,7 +11,8 @@ import {
   StateUpdateRepository,
   SyncRepository,
   TransactionRepository,
-  InclusionProofRepository
+  InclusionProofRepository,
+  CheckpointRepository
 } from '../repository'
 import JSBI from 'jsbi'
 
@@ -36,6 +37,9 @@ export async function verifyCheckpoint(
   const inclusionProofRepo = await InclusionProofRepository.init(witnessDb)
   const syncRepo = await SyncRepository.init(witnessDb)
   const inclusionProofVerifier = new DoubleLayerTreeVerifier()
+  const checkpointRepo = await CheckpointRepository.init(witnessDb)
+
+  console.log('verifyCheckpoint')
 
   for (
     let b = JSBI.BigInt(0);
@@ -49,12 +53,25 @@ export async function verifyCheckpoint(
       blockNumber,
       range
     )
+    console.log(stateUpdateWitnesses)
 
     const result = await Promise.all(
       stateUpdateWitnesses.map(async su => {
         const blockRoot = await syncRepo.getBlockRoot(blockNumber)
         if (!blockRoot)
           throw new Error(`Merkle root at ${blockNumber.raw} is missing.`)
+
+        // const checkpoint = await checkpointRepo.getSettledCheckpoints(
+        //   su.depositContractAddress,
+        //   su.range
+        // )
+
+        // if (
+        //   checkpoint.length !== 0 &&
+        //   checkpoint[0].blockNumber.equals(su.blockNumber)
+        // ) {
+        //   return { decision: true }
+        // }
 
         // check inclusion proof
         const inclusionProof = await inclusionProofRepo.getInclusionProofs(
@@ -110,6 +127,7 @@ export async function verifyCheckpoint(
     )
 
     const challenge = result.find(r => !r.decision)
+    console.log(challenge)
     if (challenge) {
       return challenge
     }
