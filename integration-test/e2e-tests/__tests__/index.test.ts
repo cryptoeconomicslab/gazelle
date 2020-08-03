@@ -212,7 +212,7 @@ describe('light client', () => {
    * Alice transfer 0.1 ETH to Bob
    * Bob attemts exit 0.1 ETH
    */
-  test.skip('user deposits, transfers and attempts exit asset', async () => {
+  test('user deposits, transfers and attempts exit asset', async () => {
     await depositPETH(aliceLightClient, senderWallet, '0.1')
     await sleep(10000)
 
@@ -262,7 +262,7 @@ describe('light client', () => {
    * Alice deposits 0.1 ETH
    * Alice exit 0.05 ETH
    */
-  test.skip('user attempts exit depositted asset', async () => {
+  test('user attempts exit depositted asset', async () => {
     await depositPETH(aliceLightClient, senderWallet, '0.1')
     await sleep(10000)
 
@@ -293,7 +293,7 @@ describe('light client', () => {
    * Bob sends 0.1 ETH to Alice by 1 transaction
    * exit all asset
    */
-  test.skip('multiple transfers in same block', async () => {
+  test('multiple transfers in same block', async () => {
     console.log('multiple transfers in same block')
     await depositPETH(aliceLightClient, senderWallet, '0.5')
     await depositPETH(bobLightClient, recieverWallet, '0.5')
@@ -356,7 +356,7 @@ describe('light client', () => {
    * Alice deposit 0.1 ETH
    * Bob deposit 0.8 ETH
    */
-  test.skip('deposit after withdraw', async () => {
+  test('deposit after withdraw', async () => {
     console.log('deposit after withdraw')
     await depositPETH(aliceLightClient, senderWallet, '0.5')
     await sleep(10000)
@@ -402,7 +402,7 @@ describe('light client', () => {
    * Alice tries to exit 0.5 ETH, but gets error
    * Alice sends 0.1 ETH to Bob
    */
-  test.skip('transfer after error', async () => {
+  test('transfer after error', async () => {
     await depositPETH(aliceLightClient, senderWallet, '0.2')
     await sleep(10000)
 
@@ -440,14 +440,13 @@ describe('light client', () => {
     const aliceActions = await aliceLightClient.getAllUserActions()
     const bobActions = await bobLightClient.getAllUserActions()
 
-    // TODO: Send action isn't stored
     expect(aliceActions[0].type).toEqual(ActionType.Deposit)
     expect(aliceActions[0].amount).toEqual(parseUnitsToJsbi('0.2'))
     expect(bobActions[0].type).toEqual(ActionType.Receive)
     expect(bobActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
   })
 
-  test.skip('spent challenge', async () => {
+  test('spent challenge', async () => {
     console.log('spent challenge')
     const getStateUpdates = async (
       client: LightClient,

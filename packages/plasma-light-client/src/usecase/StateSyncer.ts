@@ -24,6 +24,7 @@ import { getStorageDb } from '../helper/storageDbHelper'
 import TokenManager from '../managers/TokenManager'
 import { CheckpointDispute } from '../dispute/CheckpointDispute'
 import { verifyCheckpoint } from '../verifier/CheckpointVerifier'
+import { prepareCheckpointWitness } from '../helper/checkpointWitnessHelper'
 
 export class StateSyncer {
   constructor(
@@ -99,7 +100,7 @@ export class StateSyncer {
       await Promise.all(
         stateUpdates.map(async su => {
           try {
-            await this.checkpointDispute.prepareCheckpointWitness(su)
+            await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
             const verified = await verifyCheckpoint(
               this.witnessDb,
               this.deciderManager,
