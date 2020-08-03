@@ -542,6 +542,7 @@ describe('light client', () => {
       'commitmentContract'
     ].getCurrentBlock()
 
+    // TODO: fix this is actually not invalid stateUpdate.
     const invalidStateUpdate = await createInvalidStateUpdate(
       bobLightClient,
       blockNumber

@@ -21,6 +21,7 @@ import {
   prepareValidSU,
   prepareValidTxAndSig
 } from '../helper/prepare'
+import APIClient from '../../src/APIClient'
 import { generateRandomWallet } from '../helper/MockWallet'
 import { DeciderManager, DeciderConfig } from '@cryptoeconomicslab/ovm'
 import { Wallet } from '@cryptoeconomicslab/wallet'
@@ -47,6 +48,23 @@ const MockContractWrapper = jest.fn().mockImplementation(() => {
     subscribeExitSettled: mockFunctions.mockSubscribeExitSettled,
     startWatchingEvents: jest.fn(),
     unsubscribeAll: jest.fn()
+  }
+})
+
+const MockApiClient = jest.fn().mockImplementation(() => {
+  return {
+    syncState() {
+      return { data: { data: [] } }
+    },
+    inclusionProof() {
+      return { data: { data: [] } }
+    },
+    sendTransaction() {
+      return { data: { data: [] } }
+    },
+    checkpointWitness() {
+      return { data: { data: [] } }
+    }
   }
 })
 
@@ -80,7 +98,8 @@ describe('ExitDispute', () => {
     exitDispute = new ExitDispute(
       new MockContractWrapper(),
       witnessDb,
-      deciderManager
+      deciderManager,
+      new MockApiClient()
     )
   })
 
