@@ -16,6 +16,6 @@ export function verifyTransaction(
     stateUpdate.depositContractAddress.equals(
       transaction.depositContractAddress
     ) &&
-    transaction.range.contains(stateUpdate.range)
+    transaction.range.intersect(stateUpdate.range)
   )
 }

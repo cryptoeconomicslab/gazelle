@@ -125,7 +125,11 @@ export class ExitDispute {
 
     const spentChallenge = await this.checkSpentChallenge(stateUpdate)
     if (spentChallenge) {
-      await this.contract.challenge(spentChallenge)
+      try {
+        await this.contract.challenge(spentChallenge)
+      } catch (e) {
+        console.log(e)
+      }
       return
     }
   }

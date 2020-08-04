@@ -62,6 +62,13 @@ export default class Range {
     )
   }
 
+  public intersect(range: Range): boolean {
+    return !(
+      JSBI.greaterThan(this.start.data, range.end.data) ||
+      JSBI.lessThan(this.end.data, range.start.data)
+    )
+  }
+
   public toString(): string {
     return `Range(${this.start.raw}, ${this.end.raw})`
   }

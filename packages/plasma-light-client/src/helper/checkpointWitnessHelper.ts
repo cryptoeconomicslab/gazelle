@@ -23,11 +23,18 @@ export async function prepareCheckpointWitness(
   witnessDb: KeyValueStore
 ) {
   const { coder } = ovmContext
-  const res = await apiClient.checkpointWitness(
-    stateUpdate.depositContractAddress,
-    stateUpdate.blockNumber,
-    stateUpdate.range
-  )
+
+  let res
+  try {
+    res = await apiClient.checkpointWitness(
+      stateUpdate.depositContractAddress,
+      stateUpdate.blockNumber,
+      stateUpdate.range
+    )
+  } catch (e) {
+    console.log(e)
+    return
+  }
 
   const suRepository = await StateUpdateRepository.init(witnessDb)
   const txRepository = await TransactionRepository.init(witnessDb)

@@ -133,7 +133,8 @@ describe('light client', () => {
   // helpers for challenge scenarios
   async function createInvalidStateUpdate(
     client: LightClient,
-    blockNumber: BigNumber
+    blockNumber: BigNumber,
+    owner: Address
   ) {
     const OwnershipPredicateAddress = Address.from(
       config.deployedPredicateTable.OwnershipPredicate.deployedAddress
@@ -141,7 +142,6 @@ describe('light client', () => {
     const depositContractAddress = Address.from(
       config.payoutContracts.DepositContract
     )
-    const owner = Address.from(client.address)
     const repository = await StateUpdateRepository.init(client['witnessDb'])
     const stateUpdates: StateUpdate[] = await repository.getVerifiedStateUpdates(
       depositContractAddress,
@@ -293,8 +293,7 @@ describe('light client', () => {
    * Bob sends 0.1 ETH to Alice by 1 transaction
    * exit all asset
    */
-  test('multiple transfers in same block', async () => {
-    console.log('multiple transfers in same block')
+  test.skip('multiple transfers in same block', async () => {
     await depositPETH(aliceLightClient, senderWallet, '0.5')
     await depositPETH(bobLightClient, recieverWallet, '0.5')
 
@@ -357,7 +356,6 @@ describe('light client', () => {
    * Bob deposit 0.8 ETH
    */
   test('deposit after withdraw', async () => {
-    console.log('deposit after withdraw')
     await depositPETH(aliceLightClient, senderWallet, '0.5')
     await sleep(10000)
 
@@ -427,7 +425,7 @@ describe('light client', () => {
     await checkBalance(aliceLightClient, '0.2')
     await checkBalance(bobLightClient, '0.0')
 
-    aliceLightClient.transfer(
+    await aliceLightClient.transfer(
       parseUnitsToJsbi('0.1'),
       config.PlasmaETH,
       bobLightClient.address
@@ -447,7 +445,6 @@ describe('light client', () => {
   })
 
   test('spent challenge', async () => {
-    console.log('spent challenge')
     const getStateUpdates = async (
       client: LightClient,
       depositContractAddress: string,
@@ -489,7 +486,7 @@ describe('light client', () => {
       aliceLightClient.address
     )
 
-    await sleep(20000)
+    await sleep(30000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.1')
     expect(await getBalance(bobLightClient)).toEqual('0.4')
@@ -533,7 +530,7 @@ describe('light client', () => {
       config.PlasmaETH,
       bobLightClient.address
     )
-    await sleep(20000)
+    await sleep(30000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.0')
     expect(await getBalance(bobLightClient)).toEqual('0.5')
@@ -542,13 +539,15 @@ describe('light client', () => {
       'commitmentContract'
     ].getCurrentBlock()
 
-    // TODO: fix this is actually not invalid stateUpdate.
+    const b = BigNumber.from(Number(blockNumber.data.toString()) + 1)
+
     const invalidStateUpdate = await createInvalidStateUpdate(
       bobLightClient,
-      blockNumber
+      b,
+      Address.from(aliceLightClient.address)
     )
 
-    const block = createBlock(blockNumber, [invalidStateUpdate])
+    const block = createBlock(b, [invalidStateUpdate])
     await submitInvalidBlock(
       BigNumber.from(Number(blockNumber.data.toString()) + 1),
       block
