@@ -4,8 +4,7 @@ import {
   Struct,
   List,
   FixedBytes,
-  Integer,
-  Property
+  Integer
 } from '@cryptoeconomicslab/primitives'
 import { Keccak256 } from '@cryptoeconomicslab/hash'
 import {
@@ -51,7 +50,11 @@ export default class Block {
     return this.tree
   }
 
-  private generateLeaf(stateUpdate: StateUpdate) {
+  public getRoot(): FixedBytes {
+    return this.getTree().getRoot()
+  }
+
+  static generateLeaf(stateUpdate: StateUpdate) {
     return new DoubleLayerTreeLeaf(
       stateUpdate.depositContractAddress,
       stateUpdate.range.start,
@@ -69,7 +72,7 @@ export default class Block {
     this.stateUpdatesMap.forEach(v => {
       stateUpdates = [...stateUpdates, ...v]
     })
-    const leaves = stateUpdates.map(this.generateLeaf)
+    const leaves = stateUpdates.map(Block.generateLeaf)
     return new DoubleLayerTree(leaves)
   }
 
@@ -78,7 +81,7 @@ export default class Block {
     inclusionProof: DoubleLayerInclusionProof
   ): boolean {
     const tree = this.getTree()
-    const leaf = this.generateLeaf(stateUpdate)
+    const leaf = Block.generateLeaf(stateUpdate)
     if (tree.findIndex(leaf.data) === null) {
       return false
     }
@@ -94,7 +97,7 @@ export default class Block {
   public getInclusionProof(
     stateUpdate: StateUpdate
   ): DoubleLayerInclusionProof | null {
-    const leaf = this.generateLeaf(stateUpdate)
+    const leaf = Block.generateLeaf(stateUpdate)
     const tree = this.getTree()
     const i = tree.findIndex(leaf.data)
     if (i === null) return null
@@ -117,7 +120,7 @@ export default class Block {
       map.set(
         key,
         stateUpdatesList.data[i].data.map((s: Struct) =>
-          this.StateUpdate.fromProperty(Property.fromStruct(s))
+          StateUpdate.fromStruct(s)
         )
       )
     })
@@ -131,10 +134,10 @@ export default class Block {
 
     const stateUpdatesList = addrs.map(addr => {
       const stateUpdates = this.stateUpdatesMap.get(addr) || []
-      const list = stateUpdates.map(s => s.property.toStruct())
+      const list = stateUpdates.map(s => s.toStruct())
       return List.from(
         {
-          default: Property.getParamType
+          default: StateUpdate.getParamType
         },
         list
       )
@@ -156,9 +159,9 @@ export default class Block {
             default: () =>
               List.default(
                 {
-                  default: Property.getParamType
+                  default: StateUpdate.getParamType
                 },
-                Property.getParamType()
+                StateUpdate.getParamType()
               )
           },
           stateUpdatesList
@@ -189,12 +192,12 @@ export default class Block {
             default: () =>
               List.default(
                 {
-                  default: Property.getParamType
+                  default: StateUpdate.getParamType
                 },
-                Property.getParamType()
+                StateUpdate.getParamType()
               )
           },
-          List.from({ default: Property.getParamType }, [])
+          List.from({ default: StateUpdate.getParamType }, [])
         )
       },
       {

@@ -20,16 +20,12 @@ setupContext({
 })
 
 function su(start: JSBI, end: JSBI): StateUpdate {
-  const property = new Property(
+  return new StateUpdate(
     Address.default(),
-    [
-      Address.default(),
-      new Range(BigNumber.from(start), BigNumber.from(end)).toStruct(),
-      BigNumber.from(1),
-      new Property(Address.default(), [Bytes.fromHexString('0x01')]).toStruct()
-    ].map(ovmContext.coder.encode)
+    new Range(BigNumber.from(start), BigNumber.from(end)),
+    BigNumber.from(1),
+    new Property(Address.default(), [Bytes.fromHexString('0x01')])
   )
-  return StateUpdate.fromProperty(property)
 }
 
 describe('StateUpdateRepository', () => {
@@ -42,11 +38,9 @@ describe('StateUpdateRepository', () => {
 
   test('resolve state update with single state update', async () => {
     await repository.insertVerifiedStateUpdate(
-      Address.default(),
       su(JSBI.BigInt(0), JSBI.BigInt(10))
     )
     await repository.insertVerifiedStateUpdate(
-      Address.default(),
       su(JSBI.BigInt(10), JSBI.BigInt(20))
     )
 
@@ -59,11 +53,9 @@ describe('StateUpdateRepository', () => {
 
   test('resolve state update with multiple state updates', async () => {
     await repository.insertVerifiedStateUpdate(
-      Address.default(),
       su(JSBI.BigInt(0), JSBI.BigInt(10))
     )
     await repository.insertVerifiedStateUpdate(
-      Address.default(),
       su(JSBI.BigInt(10), JSBI.BigInt(20))
     )
 
@@ -81,11 +73,9 @@ describe('StateUpdateRepository', () => {
 
   test('resolve state update to be null', async () => {
     await repository.insertVerifiedStateUpdate(
-      Address.default(),
       su(JSBI.BigInt(0), JSBI.BigInt(10))
     )
     await repository.insertVerifiedStateUpdate(
-      Address.default(),
       su(JSBI.BigInt(10), JSBI.BigInt(20))
     )
 

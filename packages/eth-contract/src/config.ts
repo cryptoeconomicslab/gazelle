@@ -6,4 +6,6 @@ export interface EthContractConfig {
     OwnershipPayout: string
     DepositContract: string
   }
+  checkpointDisputeContract: string
+  exitDisputeContract: string
 }

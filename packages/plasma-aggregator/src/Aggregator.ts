@@ -8,17 +8,16 @@ import {
   Address,
   Bytes,
   BigNumber,
-  Property,
   Range
 } from '@cryptoeconomicslab/primitives'
 import {
   StateUpdate,
-  Transaction,
   TransactionReceipt,
   DepositTransaction,
   TRANSACTION_STATUS,
   Block,
-  PlasmaContractConfig
+  PlasmaContractConfig,
+  SignedTransaction
 } from '@cryptoeconomicslab/plasma'
 import { KeyValueStore, getWitnesses } from '@cryptoeconomicslab/db'
 import {
@@ -244,6 +243,7 @@ export default class Aggregator {
   // TODO: what if part of the transactions are invalid?
   // respond 201 if more than one transactions are valid, otherwise respond 422.
   private async handleSendTransaction(req: Request, res: Response) {
+    const { coder } = ovmContext
     const { data } = req.body
     const transactions: string[] = Array.isArray(data) ? data : [data]
     const nextBlockNumber = await this.blockManager.getNextBlockNumber()
@@ -251,11 +251,11 @@ export default class Aggregator {
     Promise.all(
       transactions.map(async d => {
         try {
-          const decodedStruct = ovmContext.coder.decode(
-            Transaction.getParamTypes(),
+          const tx = decodeStructable(
+            SignedTransaction,
+            coder,
             Bytes.fromHexString(d)
           )
-          const tx = Transaction.fromStruct(decodedStruct)
           const receipt = await this.ingestTransaction(tx)
           return receipt
         } catch (e) {
@@ -325,7 +325,7 @@ export default class Aggregator {
       res
         .send(
           stateUpdates.map(s =>
-            ovmContext.coder.encode(s.property.toStruct()).toHexString()
+            ovmContext.coder.encode(s.toStruct()).toHexString()
           )
         )
         .status(200)
@@ -360,9 +360,12 @@ export default class Aggregator {
     try {
       const blockNumber = BigNumber.from(req.query.blockNumber)
       const stateUpdateByte = Bytes.fromHexString(req.query.stateUpdate)
-      const stateUpdate = StateUpdate.fromProperty(
-        decodeStructable(Property, ovmContext.coder, stateUpdateByte)
+      const stateUpdate = decodeStructable(
+        StateUpdate,
+        ovmContext.coder,
+        stateUpdateByte
       )
+
       this.blockManager.getBlock(blockNumber).then(block => {
         if (!block) {
           res.status(404)
@@ -450,9 +453,7 @@ export default class Aggregator {
               )
               if (!tx) {
                 return {
-                  stateUpdate: coder
-                    .encode(su.property.toStruct())
-                    .toHexString(),
+                  stateUpdate: coder.encode(su.toStruct()).toHexString(),
                   inclusionProof: inclusionProof
                     ? coder.encode(inclusionProof.toStruct()).toHexString()
                     : null,
@@ -462,9 +463,7 @@ export default class Aggregator {
               const txBytes = coder.encode(tx.toStruct())
               const witness = await getWitnesses(
                 this.decider.witnessDb,
-                createSignatureHint(
-                  coder.encode(tx.toProperty(Address.default()).toStruct())
-                )
+                createSignatureHint(tx.message)
               )
               if (!witness[0]) throw new Error('Signature not found')
 
@@ -474,7 +473,7 @@ export default class Aggregator {
               }
 
               return {
-                stateUpdate: coder.encode(su.property.toStruct()).toHexString(),
+                stateUpdate: coder.encode(su.toStruct()).toHexString(),
                 inclusionProof: inclusionProof
                   ? coder.encode(inclusionProof.toStruct()).toHexString()
                   : null,
@@ -539,9 +538,9 @@ export default class Aggregator {
    * @param tx transaction sent by user
    */
   private async ingestTransaction(
-    tx: Transaction
+    tx: SignedTransaction
   ): Promise<TransactionReceipt> {
-    console.log('transaction received: ', tx.range, tx.depositContractAddress)
+    console.log('transaction received: ', tx.toString())
     const nextBlockNumber = await this.blockManager.getNextBlockNumber()
     const stateUpdates = await this.stateManager.resolveStateUpdates(
       tx.depositContractAddress,
@@ -566,6 +565,7 @@ export default class Aggregator {
         tx.getHash()
       )
     } catch (e) {
+      console.log(e)
       return new TransactionReceipt(
         TRANSACTION_STATUS.FALSE,
         nextBlockNumber,
@@ -584,11 +584,10 @@ export default class Aggregator {
    */
   private depositHandlerFactory(
     depositContractAddress: Address
-  ): (checkpointId: Bytes, checkpoint: [Property]) => Promise<void> {
-    return async (checkpointId: Bytes, checkpoint: [Property]) => {
+  ): (checkpointId: Bytes, checkpoint: StateUpdate) => Promise<void> {
+    return async (checkpointId: Bytes, checkpoint: StateUpdate) => {
       const blockNumber = await this.blockManager.getCurrentBlockNumber()
-      const stateUpdate = checkpoint[0]
-      const tx = new DepositTransaction(depositContractAddress, stateUpdate)
+      const tx = new DepositTransaction(depositContractAddress, checkpoint)
       this.stateManager.insertDepositRange(tx, blockNumber)
     }
   }
@@ -602,6 +601,7 @@ export default class Aggregator {
     this.blockManager.registerToken(tokenAddress)
     const depositContract = this.depositContractFactory(tokenAddress)
     this.depositContracts.push(depositContract)
+
     depositContract.subscribeCheckpointFinalized(
       this.depositHandlerFactory(depositContract.address)
     )

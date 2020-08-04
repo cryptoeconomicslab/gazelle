@@ -1,4 +1,5 @@
 import { Struct, BigNumber, Bytes } from './'
+import JSBI from 'jsbi'
 
 export default class Range {
   constructor(readonly start: BigNumber, readonly end: BigNumber) {}
@@ -48,5 +49,27 @@ export default class Range {
 
   public equals(range: Range): boolean {
     return this.start.equals(range.start) && this.end.equals(range.end)
+  }
+
+  /**
+   * checks if this range contains given range
+   * @param range range to be checked if its contained
+   */
+  public contains(range: Range): boolean {
+    return (
+      JSBI.greaterThanOrEqual(range.start.data, this.start.data) &&
+      JSBI.lessThanOrEqual(range.end.data, this.end.data)
+    )
+  }
+
+  public intersect(range: Range): boolean {
+    return !(
+      JSBI.greaterThan(this.start.data, range.end.data) ||
+      JSBI.lessThan(this.end.data, range.start.data)
+    )
+  }
+
+  public toString(): string {
+    return `Range(${this.start.raw}, ${this.end.raw})`
   }
 }

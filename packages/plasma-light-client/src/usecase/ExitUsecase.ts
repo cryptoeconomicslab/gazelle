@@ -1,46 +1,30 @@
 import JSBI from 'jsbi'
 import EventEmitter from 'event-emitter'
-import { Address, Bytes, Property } from '@cryptoeconomicslab/primitives'
-import {
-  IExit,
-  Exit,
-  ExitDeposit,
-  StateUpdate
-} from '@cryptoeconomicslab/plasma'
-import { getWitnesses, KeyValueStore } from '@cryptoeconomicslab/db'
-import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
+import { Address } from '@cryptoeconomicslab/primitives'
+import { Exit } from '@cryptoeconomicslab/plasma'
+import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { Numberish } from '../types'
 import TokenManager from '../managers/TokenManager'
 import {
   StateUpdateRepository,
-  CheckpointRepository,
+  SyncRepository,
   ExitRepository,
   DepositedRangeRepository,
   UserActionRepository
 } from '../repository'
-import { EmitterEvent, UserActionEvent } from '../ClientEvent'
+import { EmitterEvent } from '../ClientEvent'
+import { ExitDispute } from '../dispute/ExitDispute'
+import { IOwnershipPayoutContract } from '@cryptoeconomicslab/contract'
 import { createExitUserAction } from '../UserAction'
-import {
-  IAdjudicationContract,
-  ICommitmentContract,
-  IOwnershipPayoutContract
-} from '@cryptoeconomicslab/contract'
-import { Keccak256 } from '@cryptoeconomicslab/hash'
 
 export class ExitUsecase {
   constructor(
     private ee: EventEmitter,
     private witnessDb: KeyValueStore,
-    private adjudicationContract: IAdjudicationContract,
-    private commitmentContract: ICommitmentContract,
-    private ownershipPayoutContract: IOwnershipPayoutContract,
-    private deciderManager: DeciderManager,
-    private tokenManager: TokenManager
+    private tokenManager: TokenManager,
+    private exitDispute: ExitDispute,
+    private ownershipPayoutContract: IOwnershipPayoutContract
   ) {}
-
-  private async getClaimDb(): Promise<KeyValueStore> {
-    return await this.witnessDb.bucket(Bytes.fromString('claimedProperty'))
-  }
 
   /**
    * Withdrawal process starts from calling this method.
@@ -71,12 +55,16 @@ export class ExitUsecase {
       JSBI.BigInt(amount)
     )
     if (Array.isArray(stateUpdates) && stateUpdates.length > 0) {
-      // resolve promises in serial to avoid an error of ethers.js on calling claimProperty
+      // resolve promises in sequence to avoid an error of ethers.js on calling claimProperty
       // "the tx doesn't have the correct nonce."
       for (const stateUpdate of stateUpdates) {
-        const exit = await this.createExit(stateUpdate)
-        await this.adjudicationContract.claimProperty(exit.property)
-        await this.saveExit(exit)
+        // TODO: need to rollback if part of stateUpdates fails.
+        await this.exitDispute.claimExit(stateUpdate)
+        await stateUpdateRepository.insertExitStateUpdate(stateUpdate)
+        await stateUpdateRepository.removeVerifiedStateUpdate(
+          stateUpdate.depositContractAddress,
+          stateUpdate.range
+        )
       }
     } else {
       throw new Error('Insufficient amount')
@@ -92,181 +80,65 @@ export class ExitUsecase {
    * @param exit Exit object to finalize
    * @param address Address to exit on chain
    */
-  public async completeWithdrawal(exit: IExit, address: Address) {
-    const exitProperty = exit.property
-    const decided = await this.adjudicationContract.isDecided(exit.id)
-    if (!decided) {
-      const decidable = await this.adjudicationContract.isDecidable(exit.id)
-      if (decidable) {
-        await this.adjudicationContract.decideClaimToTrue(exit.id)
-        const db = await this.getClaimDb()
-        await db.del(exit.id)
-      } else {
-        throw new Error('Exit property is not decidable')
-      }
-    }
+  public async completeWithdrawal(exit: Exit, address: Address) {
+    // const syncRepo = await SyncRepository.init(this.witnessDb)
+    // const currentBlockNumber = await syncRepo.getSyncedBlockNumber()
+
+    // TODO: check claim can be settled. call `disputeManager.canSettle()`
+    // if (
+    //   JSBI.greaterThan(
+    //     JSBI.add(exit.claimedBlockNumber.data, JSBI.BigInt(1)),
+    //     currentBlockNumber.data
+    //   )
+    // ) {
+    //   throw new Error('Exit dispute period have not been passed')
+    // }
+
+    await this.exitDispute.settle(exit)
+
     const depositedRangeRepository = await DepositedRangeRepository.init(
       this.witnessDb
     )
-
     const depositedRangeId = await depositedRangeRepository.getDepositedRangeId(
       exit.stateUpdate.depositContractAddress,
-      exit.range
+      exit.stateUpdate.range
     )
-
     await this.ownershipPayoutContract.finalizeExit(
       exit.stateUpdate.depositContractAddress,
-      exitProperty,
+      exit.stateUpdate,
       depositedRangeId,
       address
     )
 
-    this.ee.emit(EmitterEvent.EXIT_FINALIZED, exit.id)
+    // save action
+    const syncRepo = await SyncRepository.init(this.witnessDb)
+    const blockNumber = await syncRepo.getNextBlockNumber()
+    const su = exit.stateUpdate
+    const tokenAddress = this.tokenManager.getTokenContractAddress(
+      su.depositContractAddress
+    ) as string
+    const action = createExitUserAction(
+      Address.from(tokenAddress),
+      su.range,
+      blockNumber
+    )
+    const repo = await UserActionRepository.init(this.witnessDb)
+    await repo.insertAction(blockNumber, su.range, action)
+
+    this.ee.emit(EmitterEvent.EXIT_FINALIZED, exit.stateUpdate)
   }
 
   /**
    * Get pending withdrawal list
    */
-  public async getPendingWithdrawals(): Promise<IExit[]> {
-    const exitRepository = await ExitRepository.init(
-      this.witnessDb,
-      this.deciderManager.getDeciderAddress('Exit'),
-      this.deciderManager.getDeciderAddress('ExitDeposit')
-    )
-
-    const exitList = await Promise.all(
+  public async getPendingWithdrawals(): Promise<Exit[]> {
+    const exitRepo = await ExitRepository.init(this.witnessDb)
+    const exits = await Promise.all(
       this.tokenManager.depositContractAddresses.map(async addr => {
-        return await exitRepository.getAllExits(addr)
+        return await exitRepo.getAllClaimedExits(addr)
       })
     )
-    return Array.prototype.concat.apply([], exitList)
-  }
 
-  /**
-   * create exit property from StateUpdate
-   * If a checkpoint that is same range and block as `stateUpdate` exists, return exitDeposit property.
-   * If inclusion proof for `stateUpdate` exists, return exit property.
-   * otherwise throw exception
-   * @param stateUpdate
-   */
-  private async createExit(stateUpdate: StateUpdate): Promise<IExit> {
-    const exitPredicate = this.deciderManager.compiledPredicateMap.get('Exit')
-    const exitDepositPredicate = this.deciderManager.compiledPredicateMap.get(
-      'ExitDeposit'
-    )
-    if (!exitPredicate) throw new Error('Exit predicate not found')
-    if (!exitDepositPredicate)
-      throw new Error('ExitDeposit predicate not found')
-
-    const checkpointRepository = await CheckpointRepository.init(this.witnessDb)
-    const { coder } = ovmContext
-    const inputsOfExitProperty = [coder.encode(stateUpdate.property.toStruct())]
-    const checkpoints = await checkpointRepository.getCheckpoints(
-      stateUpdate.depositContractAddress,
-      stateUpdate.range
-    )
-    if (checkpoints.length > 0) {
-      const checkpointStateUpdate = StateUpdate.fromProperty(
-        checkpoints[0].stateUpdate
-      )
-      // check stateUpdate is subrange of checkpoint
-      if (
-        checkpointStateUpdate.depositContractAddress.data ===
-          stateUpdate.depositContractAddress.data &&
-        JSBI.equal(
-          checkpointStateUpdate.blockNumber.data,
-          stateUpdate.blockNumber.data
-        )
-      ) {
-        // making exitDeposit property
-        inputsOfExitProperty.push(
-          coder.encode(checkpoints[0].property.toStruct())
-        )
-        return ExitDeposit.fromProperty(
-          exitDepositPredicate.makeProperty(inputsOfExitProperty)
-        )
-      }
-    }
-    // making exit property
-    const hint = Hint.createInclusionProofHint(
-      stateUpdate.blockNumber,
-      stateUpdate.depositContractAddress,
-      stateUpdate.range
-    )
-    const quantified = await getWitnesses(this.witnessDb, hint)
-
-    if (quantified.length !== 1) {
-      throw new Error('invalid range')
-    }
-    const proof = quantified[0]
-    inputsOfExitProperty.push(proof)
-    return Exit.fromProperty(exitPredicate.makeProperty(inputsOfExitProperty))
-  }
-
-  /**
-   * create exit object from Property
-   * @param property
-   */
-  public createExitFromProperty(property: Property): IExit | null {
-    if (
-      property.deciderAddress.equals(
-        this.deciderManager.getDeciderAddress('Exit')
-      )
-    ) {
-      return Exit.fromProperty(property)
-    } else if (
-      property.deciderAddress.equals(
-        this.deciderManager.getDeciderAddress('ExitDeposit')
-      )
-    ) {
-      return ExitDeposit.fromProperty(property)
-    }
-    return null
-  }
-
-  public async saveExit(exit: IExit) {
-    const { coder } = ovmContext
-    const stateUpdate = exit.stateUpdate
-    const propertyBytes = coder.encode(exit.property.toStruct())
-    const exitRepository = await ExitRepository.init(
-      this.witnessDb,
-      this.deciderManager.getDeciderAddress('Exit'),
-      this.deciderManager.getDeciderAddress('ExitDeposit')
-    )
-    await exitRepository.insertExit(stateUpdate.depositContractAddress, exit)
-
-    const stateUpdateRepository = await StateUpdateRepository.init(
-      this.witnessDb
-    )
-
-    await stateUpdateRepository.removeVerifiedStateUpdate(
-      stateUpdate.depositContractAddress,
-      stateUpdate.range
-    )
-    await stateUpdateRepository.insertExitStateUpdate(
-      stateUpdate.depositContractAddress,
-      stateUpdate
-    )
-    const id = Keccak256.hash(propertyBytes)
-    const claimDb = await this.getClaimDb()
-    await claimDb.put(id, propertyBytes)
-
-    // put exit action
-    const { range } = stateUpdate
-    const blockNumber = await this.commitmentContract.getCurrentBlock()
-    const tokenContractAddress = this.tokenManager.getTokenContractAddress(
-      stateUpdate.depositContractAddress
-    )
-    if (!tokenContractAddress)
-      throw new Error('Token Contract Address not found')
-    const action = createExitUserAction(
-      Address.from(tokenContractAddress),
-      range,
-      blockNumber
-    )
-    const actionRepository = await UserActionRepository.init(this.witnessDb)
-    await actionRepository.insertAction(blockNumber, range, action)
-
-    this.ee.emit(UserActionEvent.EXIT, action)
+    return ([] as Exit[]).concat(...exits)
   }
 }

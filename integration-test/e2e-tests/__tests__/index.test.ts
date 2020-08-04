@@ -21,7 +21,10 @@ import { ActionType } from '@cryptoeconomicslab/plasma-light-client/lib/UserActi
 import { EthCoder } from '@cryptoeconomicslab/eth-coder'
 import { Block, StateUpdate } from '@cryptoeconomicslab/plasma'
 import { DateUtils } from '@cryptoeconomicslab/utils'
+import { setupContext } from '@cryptoeconomicslab/context'
 import config from '../config.local.json'
+
+setupContext({ coder: EthCoder })
 
 jest.setTimeout(120000)
 
@@ -130,25 +133,21 @@ describe('light client', () => {
   // helpers for challenge scenarios
   async function createInvalidStateUpdate(
     client: LightClient,
-    blockNumber: BigNumber
+    blockNumber: BigNumber,
+    owner: Address
   ) {
-    const StateUpdatePredicateAddress = Address.from(
-      config.deployedPredicateTable.StateUpdatePredicate.deployedAddress
-    )
     const OwnershipPredicateAddress = Address.from(
       config.deployedPredicateTable.OwnershipPredicate.deployedAddress
     )
     const depositContractAddress = Address.from(
       config.payoutContracts.DepositContract
     )
-    const owner = Address.from(client.address)
     const repository = await StateUpdateRepository.init(client['witnessDb'])
     const stateUpdates: StateUpdate[] = await repository.getVerifiedStateUpdates(
       depositContractAddress,
       new Range(BigNumber.from(0), BigNumber.MAX_NUMBER)
     )
     return new StateUpdate(
-      StateUpdatePredicateAddress,
       depositContractAddress,
       stateUpdates[0].range,
       blockNumber,
@@ -177,13 +176,7 @@ describe('light client', () => {
     if (inclusionProof === null) {
       throw new Error("stateUpdate doesn't included")
     }
-    const exitProperty = new Property(
-      Address.from(config.deployedPredicateTable.ExitPredicate.deployedAddress),
-      [stateUpdate.property.toStruct(), inclusionProof.toStruct()].map(
-        EthCoder.encode
-      )
-    )
-    await client['adjudicationContract'].claimProperty(exitProperty)
+    await client['exitDispute']['contract'].claim(stateUpdate, inclusionProof)
   }
 
   beforeEach(async () => {
@@ -248,22 +241,20 @@ describe('light client', () => {
 
     await increaseBlock()
 
-    expect(await getL1PETHBalance(bobLightClient)).toEqual('0.0')
     await finalizeExit(bobLightClient)
     expect(await getL1PETHBalance(bobLightClient)).toEqual('0.05')
 
     const aliceActions = await aliceLightClient.getAllUserActions()
     const bobActions = await bobLightClient.getAllUserActions()
 
-    // TODO: Send action isn't stored
-    // expect(aliceActions[0].type).toEqual(ActionType.Send)
-    // expect(aliceActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
     expect(aliceActions[0].type).toEqual(ActionType.Deposit)
     expect(aliceActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
-    expect(bobActions[0].type).toEqual(ActionType.Exit)
-    expect(bobActions[0].amount).toEqual(parseUnitsToJsbi('0.05'))
-    expect(bobActions[1].type).toEqual(ActionType.Receive)
-    expect(bobActions[1].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(aliceActions[1].type).toEqual(ActionType.Send)
+    expect(aliceActions[1].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(bobActions[0].type).toEqual(ActionType.Receive)
+    expect(bobActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(bobActions[1].type).toEqual(ActionType.Exit)
+    expect(bobActions[1].amount).toEqual(parseUnitsToJsbi('0.05'))
   })
 
   /**
@@ -272,11 +263,6 @@ describe('light client', () => {
    * Alice exit 0.05 ETH
    */
   test('user attempts exit depositted asset', async () => {
-    const createClientFromPrivateKey = async (privateKey: string) => {
-      const provider = new ethers.providers.JsonRpcProvider(nodeEndpoint)
-      const wallet = new ethers.Wallet(privateKey, provider)
-      return await createClient(wallet)
-    }
     await depositPETH(aliceLightClient, senderWallet, '0.1')
     await sleep(10000)
 
@@ -286,25 +272,18 @@ describe('light client', () => {
       parseUnitsToJsbi('0.05'),
       config.PlasmaETH
     )
-    await sleep(10000)
-    const client = await createClientFromPrivateKey(
-      aliceLightClient['wallet']['ethersWallet'].privateKey
-    )
-    await sleep(10000)
 
+    await sleep(10000)
     expect(await getBalance(aliceLightClient)).toEqual('0.05')
 
     const exitList = await aliceLightClient.getPendingWithdrawals()
     expect(exitList.length).toBe(1)
-    const syncedExitList = await client.getPendingWithdrawals()
-    expect(syncedExitList.length).toBe(1)
 
     await increaseBlock()
 
     expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.0')
     await finalizeExit(aliceLightClient)
     expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.05')
-    client.stop()
   })
 
   /**
@@ -314,8 +293,7 @@ describe('light client', () => {
    * Bob sends 0.1 ETH to Alice by 1 transaction
    * exit all asset
    */
-  test('multiple transfers in same block', async () => {
-    console.log('multiple transfers in same block')
+  test.skip('multiple transfers in same block', async () => {
     await depositPETH(aliceLightClient, senderWallet, '0.5')
     await depositPETH(bobLightClient, recieverWallet, '0.5')
 
@@ -378,7 +356,6 @@ describe('light client', () => {
    * Bob deposit 0.8 ETH
    */
   test('deposit after withdraw', async () => {
-    console.log('deposit after withdraw')
     await depositPETH(aliceLightClient, senderWallet, '0.5')
     await sleep(10000)
 
@@ -448,7 +425,7 @@ describe('light client', () => {
     await checkBalance(aliceLightClient, '0.2')
     await checkBalance(bobLightClient, '0.0')
 
-    aliceLightClient.transfer(
+    await aliceLightClient.transfer(
       parseUnitsToJsbi('0.1'),
       config.PlasmaETH,
       bobLightClient.address
@@ -461,7 +438,6 @@ describe('light client', () => {
     const aliceActions = await aliceLightClient.getAllUserActions()
     const bobActions = await bobLightClient.getAllUserActions()
 
-    // TODO: Send action isn't stored
     expect(aliceActions[0].type).toEqual(ActionType.Deposit)
     expect(aliceActions[0].amount).toEqual(parseUnitsToJsbi('0.2'))
     expect(bobActions[0].type).toEqual(ActionType.Receive)
@@ -469,7 +445,6 @@ describe('light client', () => {
   })
 
   test('spent challenge', async () => {
-    console.log('spent challenge')
     const getStateUpdates = async (
       client: LightClient,
       depositContractAddress: string,
@@ -481,11 +456,7 @@ describe('light client', () => {
     }
     const exit = async (client: LightClient, stateUpdates: any[]) => {
       for (const stateUpdate of stateUpdates) {
-        const exitObject = await client['exitUsecase']['createExit'](
-          stateUpdate
-        )
-        await client['adjudicationContract'].claimProperty(exitObject.property)
-        await client['exitUsecase'].saveExit(exitObject)
+        await client['exitDispute'].claimExit(stateUpdate)
       }
     }
 
@@ -515,7 +486,7 @@ describe('light client', () => {
       aliceLightClient.address
     )
 
-    await sleep(20000)
+    await sleep(30000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.1')
     expect(await getBalance(bobLightClient)).toEqual('0.4')
@@ -525,44 +496,9 @@ describe('light client', () => {
     await increaseBlock()
 
     await expect(finalizeExit(bobLightClient)).rejects.toEqual(
-      new Error('Exit property is not decidable')
-    )
-  })
-
-  test('invalid inclusion proof', async () => {
-    console.log('invalid inclusion proof')
-
-    await depositPETH(aliceLightClient, senderWallet, '0.5')
-    await sleep(10000)
-
-    expect(await getBalance(aliceLightClient)).toEqual('0.5')
-
-    await aliceLightClient.transfer(
-      parseUnitsToJsbi('0.5'),
-      config.PlasmaETH,
-      bobLightClient.address
-    )
-    await sleep(20000)
-
-    expect(await getBalance(aliceLightClient)).toEqual('0.0')
-    expect(await getBalance(bobLightClient)).toEqual('0.5')
-
-    const blockNumber: BigNumber = await aliceLightClient[
-      'commitmentContract'
-    ].getCurrentBlock()
-
-    const invalidStateUpdate = await createInvalidStateUpdate(
-      bobLightClient,
-      blockNumber
-    )
-    const block = createBlock(blockNumber, [invalidStateUpdate])
-
-    await exitInvalidStateUpdate(aliceLightClient, invalidStateUpdate, block)
-
-    await increaseBlock()
-
-    await expect(finalizeExit(aliceLightClient)).rejects.toEqual(
-      new Error('revert')
+      new Error(
+        'VM Exception while processing transaction: revert undecided challenge exists'
+      )
     )
   })
 
@@ -594,7 +530,7 @@ describe('light client', () => {
       config.PlasmaETH,
       bobLightClient.address
     )
-    await sleep(20000)
+    await sleep(30000)
 
     expect(await getBalance(aliceLightClient)).toEqual('0.0')
     expect(await getBalance(bobLightClient)).toEqual('0.5')
@@ -603,12 +539,15 @@ describe('light client', () => {
       'commitmentContract'
     ].getCurrentBlock()
 
+    const b = BigNumber.from(Number(blockNumber.data.toString()) + 1)
+
     const invalidStateUpdate = await createInvalidStateUpdate(
       bobLightClient,
-      blockNumber
+      b,
+      Address.from(aliceLightClient.address)
     )
 
-    const block = createBlock(blockNumber, [invalidStateUpdate])
+    const block = createBlock(b, [invalidStateUpdate])
     await submitInvalidBlock(
       BigNumber.from(Number(blockNumber.data.toString()) + 1),
       block

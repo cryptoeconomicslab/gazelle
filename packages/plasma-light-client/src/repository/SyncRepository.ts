@@ -1,5 +1,6 @@
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { FixedBytes, Bytes, BigNumber } from '@cryptoeconomicslab/primitives'
+import JSBI from 'jsbi'
 
 const LATEST_SYNCED_BLOCK = Bytes.fromString('latest_synced_block')
 
@@ -16,8 +17,13 @@ export class SyncRepository {
   public async getSyncedBlockNumber(): Promise<BigNumber> {
     const d = await this.db.get(LATEST_SYNCED_BLOCK)
 
-    if (!d) return BigNumber.from(-1)
+    if (!d) return BigNumber.from(0)
     return ovmContext.coder.decode(BigNumber.default(), d)
+  }
+
+  public async getNextBlockNumber(): Promise<BigNumber> {
+    const current = await this.getSyncedBlockNumber()
+    return BigNumber.from(JSBI.add(current.data, JSBI.BigInt(1)))
   }
 
   /**

@@ -1,7 +1,7 @@
 jest.unmock('ethers')
 const { EthWallet } = require('../src/EthWallet')
 const ethers = require('ethers')
-const { Transaction } = require('@cryptoeconomicslab/plasma')
+const { UnsignedTransaction } = require('@cryptoeconomicslab/plasma')
 const {
   Address,
   BigNumber,
@@ -13,7 +13,7 @@ const { setupContext } = require('@cryptoeconomicslab/context')
 const JsonCoder = require('@cryptoeconomicslab/coder')
 setupContext({ coder: JsonCoder.default })
 
-let config = {
+const config = {
   deployedPredicateTable: {
     OwnershipPredicate: {
       deployedAddress: '0x13274fe19c0178208bcbee397af8167a7be27f6f',
@@ -76,19 +76,18 @@ describe('EthWallet', () => {
   const predicateAddress = Address.from(
     '0x13274fe19c0178208bcbee397af8167a7be27f6f'
   )
-  const txAddress = Address.default()
 
   function createTransaction(stateObject) {
-    const tx = new Transaction(
+    const tx = new UnsignedTransaction(
       depositContractAddress,
       range,
       BigNumber.from(0),
       stateObject,
       Address.default()
     )
-    return ovmContext.coder.encode(tx.toProperty(txAddress).toStruct())
+    return tx
   }
-  const message = createTransaction(
+  const tx = createTransaction(
     new Property(predicateAddress, [ovmContext.coder.encode(toAddress)])
   )
 
@@ -104,14 +103,19 @@ describe('EthWallet', () => {
   })
   describe('signMessage', () => {
     it('succeed to sign hex string', async () => {
-      const signature = await wallet.signMessage(message)
+      const signedTx = await tx.sign(wallet)
+      const signature = signedTx.signature
       expect(signature).toBeTruthy()
     })
   })
   describe('verifyMySignature', () => {
     it('succeed to verify signature', async () => {
-      const signatureDigest = await wallet.signMessage(message)
-      const verify = await wallet.verifyMySignature(message, signatureDigest)
+      const signedTx = await tx.sign(wallet)
+      const signatureDigest = signedTx.signature
+      const verify = await wallet.verifyMySignature(
+        signedTx.message,
+        signatureDigest
+      )
       expect(verify).toBeTruthy()
     })
     it('fail to verify signature', async () => {
@@ -121,9 +125,10 @@ describe('EthWallet', () => {
         ),
         config
       )
-      const bobSignatureDigest = await bobWallet.signMessage(message)
+      const signedTx = await tx.sign(bobWallet)
+      const bobSignatureDigest = signedTx.signature
       const verify = await wallet.verifyMySignature(
-        message,
+        signedTx.message,
         bobSignatureDigest,
         Bytes.default()
       )

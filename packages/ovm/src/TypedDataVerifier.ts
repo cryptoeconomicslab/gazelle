@@ -1,4 +1,4 @@
-import { Transaction } from '@cryptoeconomicslab/plasma'
+import { Transaction, UnsignedTransaction } from '@cryptoeconomicslab/plasma'
 import JSBI from 'jsbi'
 import { CompiledPredicate } from '@cryptoeconomicslab/ovm-transpiler'
 import { recoverTypedSignatureLegacy } from 'eth-sig-util'
@@ -9,6 +9,7 @@ import {
   Address
 } from '@cryptoeconomicslab/primitives'
 import { DeciderConfig } from './load'
+import { decodeStructable } from '@cryptoeconomicslab/coder'
 
 /**
  * EIP712TypedData
@@ -104,10 +105,11 @@ export function createTypedParams(
   config: DeciderConfig,
   transactionMessage: Bytes
 ): EIP712TypedData[] {
-  const property = Property.fromStruct(
-    ovmContext.coder.decode(Property.getParamType(), transactionMessage)
+  const transaction = decodeStructable(
+    UnsignedTransaction,
+    ovmContext.coder,
+    transactionMessage
   )
-  const transaction = Transaction.fromProperty(property)
   const compiledPredicate = getPredicate(
     transaction.stateObject.deciderAddress,
     config
@@ -132,7 +134,7 @@ export function createTypedParams(
  * @name verifyTypedDataSignature
  * @description verify signature for EIP712 TypedData
  * @param manager DeciderManager
- * @param transactionMessage transaction message
+ * @param transactionMessage transaction message encoded unsigned transaction
  * @param signature signature
  * @param pubkey address of signer
  */
@@ -144,11 +146,11 @@ export async function verifyTypedDataSignature(
 ): Promise<boolean> {
   const params = createTypedParams(config, transactionMessage)
   const address = ovmContext.coder.decode(Address.default(), pubkey)
-  return (
-    address.data ===
-    recoverTypedSignatureLegacy({
-      data: params,
-      sig: signature.toHexString()
-    }).toLowerCase()
-  )
+
+  const recovered = recoverTypedSignatureLegacy({
+    data: params,
+    sig: signature.toHexString()
+  }).toLowerCase()
+
+  return address.data === recovered
 }

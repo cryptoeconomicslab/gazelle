@@ -13,14 +13,11 @@ import { setupContext } from '@cryptoeconomicslab/context'
 import { DateUtils } from '@cryptoeconomicslab/utils'
 setupContext({ coder: Coder })
 
-const stateUpdateProperty = new Property(
+const su = new StateUpdate(
   Address.default(),
-  [
-    Address.default(),
-    new Range(BigNumber.from(0), BigNumber.from(10)).toStruct(),
-    BigNumber.from(1),
-    new Property(Address.default(), [Bytes.fromHexString('0x01')]).toStruct()
-  ].map(Coder.encode)
+  new Range(BigNumber.from(0), BigNumber.from(10)),
+  BigNumber.from(1),
+  new Property(Address.default(), [Bytes.fromHexString('0x01')])
 )
 
 describe('BlockItem', () => {
@@ -28,7 +25,6 @@ describe('BlockItem', () => {
   const testAddr2 = '0x0000000000000000000000000000000000000002'
 
   const map = new Map()
-  const su = StateUpdate.fromProperty(stateUpdateProperty)
   map.set(testAddr, [su, su])
   map.set(testAddr2, [su, su, su])
   const timestamp = DateUtils.getCurrentDate()

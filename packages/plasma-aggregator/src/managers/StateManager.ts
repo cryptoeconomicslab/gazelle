@@ -1,22 +1,24 @@
 import {
   StateUpdate,
-  Transaction,
-  DepositTransaction
+  SignedTransaction,
+  DepositTransaction,
+  verifyTransaction
 } from '@cryptoeconomicslab/plasma'
-import {
-  DeciderManager,
-  CompiledPredicate,
-  hint
-} from '@cryptoeconomicslab/ovm'
+import { DeciderManager, hint } from '@cryptoeconomicslab/ovm'
 import {
   Bytes,
   Address,
   BigNumber,
-  Property,
   Range
 } from '@cryptoeconomicslab/primitives'
-import { RangeStore, KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
+import {
+  RangeStore,
+  KeyValueStore,
+  putWitness,
+  getWitnesses
+} from '@cryptoeconomicslab/db'
 import JSBI from 'jsbi'
+import { createSignatureHint } from '@cryptoeconomicslab/ovm/lib/hintString'
 
 /**
  * StateManager stores the latest states
@@ -76,6 +78,7 @@ export default class StateManager {
   }
 
   /**
+   * TODO: Fix implementation
    * given transaction, execute state transition on
    * existing state updates with gaiven range and returns new state update.
    * if transaction is invalid, throws.
@@ -84,12 +87,11 @@ export default class StateManager {
    * @param deciderManager decider manager
    */
   public async executeStateTransition(
-    tx: Transaction,
+    tx: SignedTransaction,
     nextBlockNumber: BigNumber,
     deciderManager: DeciderManager
   ): Promise<StateUpdate> {
-    console.log('execute state transition', tx.range)
-    const { coder } = ovmContext
+    console.log('execute state transition')
     const range = tx.range
     const prevStates = await this.resolveStateUpdates(
       tx.depositContractAddress,
@@ -131,6 +133,7 @@ export default class StateManager {
       })
     }
 
+    console.log('store witness tx')
     await this.storeWitness(
       deciderManager.witnessDb,
       tx,
@@ -138,35 +141,26 @@ export default class StateManager {
       prevStates.map(s => s.range)
     )
 
+    // TODO: fix decision
+    console.log('decide state transition')
     const decisions = await Promise.all(
-      prevStates.map(async state => {
-        return await deciderManager.decide(state.property)
-      })
+      prevStates.map(async su =>
+        this.verifyStateTransition(su, tx, deciderManager)
+      )
     )
-
-    decisions.map(d => console.log(d.traceInfo?.toJson()))
 
     if (decisions.some(d => !d.outcome)) {
       throw new Error('InvalidTransaction')
     }
 
-    const inputs: Bytes[] = [
+    const nextStateUpdate = new StateUpdate(
       tx.depositContractAddress,
-      tx.range.toStruct(),
+      tx.range,
       nextBlockNumber,
-      tx.stateObject.toStruct(),
-      tx.range.toStruct()
-    ].map(coder.encode)
-
-    const nextStateUpdate = StateUpdate.fromProperty(
-      new Property(
-        (deciderManager.compiledPredicateMap.get(
-          'StateUpdate'
-        ) as CompiledPredicate).deployedAddress,
-        inputs
-      )
+      tx.stateObject
     )
 
+    console.log('store tx data')
     // store data in db
     await this.storeTx(
       tx,
@@ -178,6 +172,27 @@ export default class StateManager {
     return nextStateUpdate
   }
 
+  private async verifyStateTransition(
+    su: StateUpdate,
+    tx: SignedTransaction,
+    deciderManager: DeciderManager
+  ): Promise<{ outcome: boolean }> {
+    const txVerified = verifyTransaction(su, tx) // use verifyTransaction same as lightClient
+    if (!txVerified) {
+      return { outcome: false }
+    }
+    const message = tx.message
+    const sig = await getWitnesses(
+      deciderManager.witnessDb,
+      createSignatureHint(message)
+    )
+    const result = await deciderManager.decide(
+      su.stateObject.appendInput([message, ...sig])
+    )
+
+    return { outcome: result.outcome }
+  }
+
   /**
    * insert a range into state db when deposited
    * @param tx deposit transaction
@@ -187,8 +202,8 @@ export default class StateManager {
     tx: DepositTransaction,
     blockNumber: BigNumber
   ) {
-    console.log('insertDepositRange: ', tx)
-    const stateUpdate = StateUpdate.fromProperty(tx.stateUpdate)
+    console.log('Deposited: ', tx.stateUpdate.toString())
+    const stateUpdate = tx.stateUpdate
     stateUpdate.update({ blockNumber })
     await this.putStateUpdate(stateUpdate)
     await this.putStateUpdateAtBlock(stateUpdate, blockNumber)
@@ -226,21 +241,22 @@ export default class StateManager {
       })
   }
 
+  // TODO: use repository
+
   /**
    * store transaction and signature to witness database
    * @param witnessDb witness database
-   * @param tx transaction data
+   * @param tx signed transaction data
    */
   private async storeWitness(
     witnessDb: KeyValueStore,
-    tx: Transaction,
+    tx: SignedTransaction,
     prevBlockNumbers: BigNumber[],
     prevStateRanges: Range[]
   ) {
     for await (const [index, prevBlockNumber] of prevBlockNumbers.entries()) {
-      const message = ovmContext.coder.encode(
-        tx.toProperty(Address.default()).toStruct()
-      )
+      const message = tx.message
+
       await putWitness(
         witnessDb,
         hint.createSignatureHint(message),
@@ -271,13 +287,13 @@ export default class StateManager {
     )
     const ranges = await addrBucket.get(range.start.data, range.end.data)
     if (ranges.length == 0) return null
-    return Transaction.fromStruct(
-      ovmContext.coder.decode(Transaction.getParamTypes(), ranges[0].value)
+    return SignedTransaction.fromStruct(
+      ovmContext.coder.decode(SignedTransaction.getParamType(), ranges[0].value)
     )
   }
 
   private async storeTx(
-    tx: Transaction,
+    tx: SignedTransaction,
     su: StateUpdate,
     blockNumberOfDeprecatedStates: BigNumber[]
   ) {

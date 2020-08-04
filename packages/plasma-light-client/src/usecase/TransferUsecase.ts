@@ -5,14 +5,22 @@ import {
   BigNumber,
   Property
 } from '@cryptoeconomicslab/primitives'
-import { Transaction, TransactionReceipt } from '@cryptoeconomicslab/plasma'
+import {
+  UnsignedTransaction,
+  TransactionReceipt
+} from '@cryptoeconomicslab/plasma'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
-import { StateUpdateRepository, SyncRepository } from '../repository'
+import {
+  StateUpdateRepository,
+  SyncRepository,
+  UserActionRepository
+} from '../repository'
 import TokenManager from '../managers/TokenManager'
 import { Numberish } from '../types'
 import { Wallet } from '@cryptoeconomicslab/wallet'
 import APIClient from '../APIClient'
+import { createSendUserAction } from '../UserAction'
 
 export class TransferUsecase {
   constructor(
@@ -54,20 +62,17 @@ export class TransferUsecase {
 
     const syncRepository = await SyncRepository.init(this.witnessDb)
     const latestBlock = await syncRepository.getSyncedBlockNumber()
+
     const transactions = await Promise.all(
       stateUpdates.map(async su => {
-        const tx = new Transaction(
+        const tx = new UnsignedTransaction(
           Address.from(depositContractAddress),
           su.range,
           BigNumber.from(JSBI.add(latestBlock.data, JSBI.BigInt(5))),
           stateObject,
           this.wallet.getAddress()
         )
-        const sig = await this.wallet.signMessage(
-          coder.encode(tx.toProperty(Address.default()).toStruct())
-        )
-        tx.signature = sig
-        return tx
+        return await tx.sign(this.wallet)
       })
     )
 
@@ -87,6 +92,7 @@ export class TransferUsecase {
         )
       })
 
+      const nextBlock = await syncRepository.getNextBlockNumber()
       // TODO: is this valid handling?
       for await (const receipt of receipts) {
         if (receipt.status.data === 1) {
@@ -95,10 +101,18 @@ export class TransferUsecase {
               su.depositContractAddress,
               su.range
             )
-            await stateUpdateRepository.insertPendingStateUpdate(
-              su.depositContractAddress,
-              su
+            await stateUpdateRepository.insertPendingStateUpdate(su)
+
+            const userActionRepo = await UserActionRepository.init(
+              this.witnessDb
             )
+            const action = createSendUserAction(
+              Address.from(tokenContractAddress),
+              su.range,
+              coder.decode(Address.default(), su.stateObject.inputs[0]),
+              nextBlock
+            )
+            await userActionRepo.insertAction(nextBlock, su.range, action)
           }
         } else {
           throw new Error('Invalid transaction')

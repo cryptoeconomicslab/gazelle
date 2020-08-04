@@ -13,7 +13,8 @@ enum Kind {
   Verified = 'Verified',
   Unverified = 'Unverified',
   Pending = 'Pending',
-  Exit = 'Exit'
+  Exit = 'Exit',
+  Witness = 'Witness'
 }
 
 export class StateUpdateRepository {
@@ -28,9 +29,22 @@ export class StateUpdateRepository {
 
   private async getRangeDb(kind: Kind, addr: Address): Promise<RangeDb> {
     const bucket = await (await this.db.bucket(Bytes.fromString(kind))).bucket(
-      Bytes.fromString(addr.raw)
+      Bytes.fromHexString(addr.raw)
     )
     return new RangeDb(bucket)
+  }
+
+  private async getBlockDb(
+    kind: Kind,
+    addr: Address,
+    blockNumber: BigNumber
+  ): Promise<RangeDb> {
+    const bucket = await this.db.bucket(Bytes.fromString(kind))
+    const addrBucket = await bucket.bucket(Bytes.fromHexString(addr.raw))
+    const blockBucket = await addrBucket.bucket(
+      ovmContext.coder.encode(blockNumber)
+    )
+    return new RangeDb(blockBucket)
   }
 
   /**
@@ -57,10 +71,9 @@ export class StateUpdateRepository {
    */
   private async insertStateUpdate(
     kind: Kind,
-    depositContractAddress: Address,
     stateUpdate: StateUpdate
   ): Promise<void> {
-    const db = await this.getRangeDb(kind, depositContractAddress)
+    const db = await this.getRangeDb(kind, stateUpdate.depositContractAddress)
     const range = stateUpdate.range
     const record = stateUpdate.toRecord()
     await db.put(
@@ -103,14 +116,9 @@ export class StateUpdateRepository {
   }
 
   public async insertVerifiedStateUpdate(
-    depositContractAddress: Address,
     stateUpdate: StateUpdate
   ): Promise<void> {
-    await this.insertStateUpdate(
-      Kind.Verified,
-      depositContractAddress,
-      stateUpdate
-    )
+    await this.insertStateUpdate(Kind.Verified, stateUpdate)
   }
 
   public async removeVerifiedStateUpdate(
@@ -136,14 +144,9 @@ export class StateUpdateRepository {
   }
 
   public async insertPendingStateUpdate(
-    depositContractAddress: Address,
     stateUpdate: StateUpdate
   ): Promise<void> {
-    await this.insertStateUpdate(
-      Kind.Pending,
-      depositContractAddress,
-      stateUpdate
-    )
+    await this.insertStateUpdate(Kind.Pending, stateUpdate)
   }
 
   public async removePendingStateUpdate(
@@ -169,14 +172,9 @@ export class StateUpdateRepository {
   }
 
   public async insertUnverifiedStateUpdate(
-    depositContractAddress: Address,
     stateUpdate: StateUpdate
   ): Promise<void> {
-    await this.insertStateUpdate(
-      Kind.Unverified,
-      depositContractAddress,
-      stateUpdate
-    )
+    await this.insertStateUpdate(Kind.Unverified, stateUpdate)
   }
 
   public async removeUnverifiedStateUpdate(
@@ -197,17 +195,63 @@ export class StateUpdateRepository {
     return await this.getStateUpdates(Kind.Exit, depositContractAddress, range)
   }
 
-  public async insertExitStateUpdate(
-    depositContractAddress: Address,
-    stateUpdate: StateUpdate
-  ): Promise<void> {
-    await this.insertStateUpdate(Kind.Exit, depositContractAddress, stateUpdate)
+  public async insertExitStateUpdate(stateUpdate: StateUpdate): Promise<void> {
+    await this.insertStateUpdate(Kind.Exit, stateUpdate)
   }
   public async removeExitStateUpdate(
     depositContractAddress: Address,
     range: Range
   ): Promise<void> {
     await this.removeStateUpdate(Kind.Exit, depositContractAddress, range)
+  }
+
+  //
+  // Exit state update
+  //
+
+  public async getWitnessStateUpdates(
+    depositContractAddress: Address,
+    blockNumber: BigNumber,
+    range: Range
+  ): Promise<StateUpdate[]> {
+    const db = await this.getBlockDb(
+      Kind.Witness,
+      depositContractAddress,
+      blockNumber
+    )
+    const data = await db.get(range.start.data, range.end.data)
+    return data.map(StateUpdate.fromRangeRecord)
+  }
+
+  public async insertWitnessStateUpdate(
+    stateUpdate: StateUpdate
+  ): Promise<void> {
+    const db = await this.getBlockDb(
+      Kind.Witness,
+      stateUpdate.depositContractAddress,
+      stateUpdate.blockNumber
+    )
+    const range = stateUpdate.range
+    const record = stateUpdate.toRecord()
+    await db.put(
+      range.start.data,
+      range.end.data,
+      ovmContext.coder.encode(record.toStruct())
+    )
+  }
+
+  public async removeWitnessStateUpdate(
+    depositContractAddress: Address,
+    blockNumber: BigNumber,
+    range: Range
+  ): Promise<void> {
+    const db = await this.getBlockDb(
+      Kind.Witness,
+      depositContractAddress,
+      blockNumber
+    )
+    await db.put(range.start.data, range.end.data, Bytes.default())
+    await db.del(range.start.data, range.end.data)
   }
 
   /**

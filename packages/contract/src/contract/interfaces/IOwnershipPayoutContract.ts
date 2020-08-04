@@ -1,4 +1,5 @@
-import { Address, BigNumber, Property } from '@cryptoeconomicslab/primitives'
+import { Address, BigNumber } from '@cryptoeconomicslab/primitives'
+import { StateUpdate } from '@cryptoeconomicslab/plasma'
 
 /**
  * OwnershipPayoutContract interface
@@ -6,7 +7,7 @@ import { Address, BigNumber, Property } from '@cryptoeconomicslab/primitives'
 export interface IOwnershipPayoutContract {
   finalizeExit(
     depositContractAddress: Address,
-    exitProperty: Property,
+    exit: StateUpdate,
     depositedRangeId: BigNumber,
     owner: Address
   ): Promise<void>

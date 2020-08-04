@@ -1,16 +1,43 @@
 import LightClient from '../src/LightClient'
 import {
   StateUpdateRepository,
-  CheckpointRepository,
-  DepositedRangeRepository,
-  UserActionRepository
+  UserActionRepository,
+  SyncRepository,
+  InclusionProofRepository,
+  ExitRepository,
+  DepositedRangeRepository
 } from '../src/repository'
 import { setupContext } from '@cryptoeconomicslab/context'
 import EthCoder from '@cryptoeconomicslab/eth-coder'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
-import { LevelKeyValueStore } from '@cryptoeconomicslab/level-kvs'
-import { hint } from '@cryptoeconomicslab/ovm'
+import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import { getOwner } from '../src/helper/stateUpdateHelper'
+import {
+  Address,
+  Bytes,
+  BigNumber,
+  Integer,
+  Property,
+  Range
+} from '@cryptoeconomicslab/primitives'
+import deciderConfig from './config.local'
+import { DeciderConfig } from '@cryptoeconomicslab/ovm'
+import {
+  StateUpdate,
+  Exit,
+  PlasmaContractConfig,
+  TransactionReceipt,
+  SignedTransaction
+} from '@cryptoeconomicslab/plasma'
+import {
+  DoubleLayerInclusionProof,
+  IntervalTreeInclusionProof,
+  AddressTreeInclusionProof
+} from '@cryptoeconomicslab/merkle-tree'
+import { createDepositUserAction } from '../src/UserAction'
+import { generateRandomWallet } from './helper/MockWallet'
+import JSBI from 'jsbi'
+setupContext({ coder: EthCoder })
 
 const mockClaimProperty = jest.fn()
 const mockIsDecided = jest.fn().mockResolvedValue(true)
@@ -69,44 +96,63 @@ const MockOwnershipPayoutContract = jest.fn().mockImplementation(() => {
   }
 })
 
-import {
-  Address,
-  Bytes,
-  BigNumber,
-  Integer,
-  Property,
-  Range
-} from '@cryptoeconomicslab/primitives'
-import { ethers } from 'ethers'
-import deciderConfig from './config.local'
-import { DeciderConfig, CompiledPredicate } from '@cryptoeconomicslab/ovm'
-import {
-  StateUpdate,
-  Exit,
-  ExitDeposit,
-  PlasmaContractConfig,
-  Transaction,
-  TransactionReceipt,
-  Checkpoint
-} from '@cryptoeconomicslab/plasma'
-import { putWitness } from '@cryptoeconomicslab/db'
-import { Balance } from '@cryptoeconomicslab/wallet'
-import {
-  Secp256k1Signer,
-  secp256k1Verifier
-} from '@cryptoeconomicslab/signature'
-import {
-  DoubleLayerInclusionProof,
-  IntervalTreeInclusionProof,
-  AddressTreeInclusionProof
-} from '@cryptoeconomicslab/merkle-tree'
-import { createDepositUserAction } from '../src/UserAction'
-setupContext({ coder: EthCoder })
+const mockClaim = jest.fn()
+const mockChallenge = jest.fn()
+const mockRemoveChallenge = jest.fn()
+const mockSettle = jest.fn()
+const mockSubscribeCheckpointChallenged = jest.fn()
+const mockSubscribeCheckpointClaimed = jest.fn()
+const mockSubscribeCheckpointSettled = jest.fn()
+const mockSubscribeCheckpointChallengeRemoved = jest.fn()
+const MockCheckpointDisputeContract = jest.fn().mockImplementation(() => {
+  return {
+    claim: mockClaim,
+    challenge: mockChallenge,
+    removeChallenge: mockRemoveChallenge,
+    settle: mockSettle,
+    subscribeCheckpointClaimed: mockSubscribeCheckpointClaimed,
+    subscribeCheckpointChallenged: mockSubscribeCheckpointChallenged,
+    subscribeCheckpointChallengeRemoved: mockSubscribeCheckpointChallengeRemoved,
+    subscribeCheckpointSettled: mockSubscribeCheckpointSettled,
+    startWatchingEvents: jest.fn(),
+    unsubscribeAll: jest.fn()
+  }
+})
+
+const mockExitDisputeFunctions = {
+  mockClaim: jest.fn(),
+  mockChallenge: jest.fn(),
+  mockRemoveChallenge: jest.fn(),
+  mockSettle: jest.fn(),
+  mockSubscribeExitClaim: jest.fn(),
+  mockSubscribeExitChallenged: jest.fn(),
+  mockSubscribeExitSettled: jest.fn()
+}
+
+const MockExitDisputeContract = jest.fn().mockImplementation(() => {
+  return {
+    claim: mockExitDisputeFunctions.mockClaim,
+    challenge: mockExitDisputeFunctions.mockChallenge,
+    settle: mockExitDisputeFunctions.mockSettle,
+    removeChallenge: mockExitDisputeFunctions.mockRemoveChallenge,
+    subscribeExitClaimed: mockExitDisputeFunctions.mockSubscribeExitClaim,
+    subscribeExitChallenged:
+      mockExitDisputeFunctions.mockSubscribeExitChallenged,
+    subscribeExitSettled: mockExitDisputeFunctions.mockSubscribeExitSettled,
+    startWatchingEvents: jest.fn(),
+    unsubscribeAll: jest.fn()
+  }
+})
+
+function clearMocks() {
+  MockExitDisputeContract.mockClear()
+  Object.values(mockExitDisputeFunctions).forEach(mock => mock.mockClear())
+}
 
 // mock APIClient
 const mockSendTransaction = jest
   .fn()
-  .mockImplementation((txs: Transaction[] | Transaction) => {
+  .mockImplementation((txs: SignedTransaction[] | SignedTransaction) => {
     if (Array.isArray(txs)) {
       const tx = txs[0]
       return {
@@ -138,37 +184,13 @@ jest.mock('../src/APIClient', () => {
   })
 })
 
-// mock wallet
-const MockWallet = jest.fn().mockImplementation(() => {
-  const w = ethers.Wallet.createRandom()
-  const signingKey = new ethers.utils.SigningKey(w.privateKey)
-  const address = w.address
-
-  return {
-    getAddress: () => Address.from(address),
-    getL1Balance: async (tokenAddress?: Address) => {
-      return new Balance(BigNumber.from(0), 18, 'eth')
-    },
-    signMessage: async (message: Bytes) => {
-      const signer = new Secp256k1Signer(
-        Bytes.fromHexString(signingKey.privateKey)
-      )
-      return signer.sign(message)
-    },
-    verifyMySignature: async (message: Bytes, signature: Bytes) => {
-      const publicKey = Bytes.fromHexString(address)
-      return await secp256k1Verifier.verify(message, signature, publicKey)
-    }
-  }
-})
-
 // returns LightClient instance and witnessDb instance
 async function initialize(
   aggregatorEndpoint?: string
 ): Promise<{ lightClient: LightClient; witnessDb: KeyValueStore }> {
-  const kvs = new LevelKeyValueStore(Bytes.fromString('root'))
+  const kvs = new InMemoryKeyValueStore(Bytes.fromString('root'))
   const witnessDb = await kvs.bucket(Bytes.fromString('witness'))
-  const wallet = new MockWallet()
+  const wallet = generateRandomWallet()
   const eventDb = await kvs.bucket(Bytes.fromString('event'))
   const adjudicationContract = new MockAdjudicationContract(
     Address.from('0x8f0483125FCb9aaAEFA9209D8E9d7b9C8B9Fb90F'),
@@ -185,6 +207,8 @@ async function initialize(
     eventDb
   )
   const ownershipPayoutContract = new MockOwnershipPayoutContract()
+  const checkpointDisputeContract = new MockCheckpointDisputeContract()
+  const exitDisputeContract = new MockExitDisputeContract()
 
   const lightClient = await LightClient.initilize({
     wallet,
@@ -194,6 +218,8 @@ async function initialize(
     tokenContractFactory,
     commitmentContract,
     ownershipPayoutContract,
+    checkpointDisputeContract,
+    exitDisputeContract,
     deciderConfig: deciderConfig as DeciderConfig & PlasmaContractConfig,
     aggregatorEndpoint
   })
@@ -212,6 +238,7 @@ describe('LightClient', () => {
     MockDepositContract.mockClear()
     MockCommitmentContract.mockClear()
     MockERC20Contract.mockClear()
+    clearMocks()
 
     const { lightClient, witnessDb } = await initialize()
     client = lightClient
@@ -274,10 +301,6 @@ describe('LightClient', () => {
     beforeAll(() => {
       mockSendTransaction.mockClear()
       su = new StateUpdate(
-        Address.from(
-          deciderConfig.deployedPredicateTable.StateUpdatePredicate
-            .deployedAddress
-        ),
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(20)),
         BigNumber.from(0),
@@ -287,10 +310,7 @@ describe('LightClient', () => {
 
     test('call sendTransaction without exception', async () => {
       const repository = await StateUpdateRepository.init(db)
-      await repository.insertVerifiedStateUpdate(
-        Address.from(depositContractAddress),
-        su
-      )
+      await repository.insertVerifiedStateUpdate(su)
 
       await client.sendTransaction(
         10,
@@ -315,25 +335,15 @@ describe('LightClient', () => {
     let su1: StateUpdate
     let su2: StateUpdate
     let proof: DoubleLayerInclusionProof
-    let checkpoint: Checkpoint
-    let checkpointPredicate: CompiledPredicate
 
     beforeAll(() => {
       su1 = new StateUpdate(
-        Address.from(
-          deciderConfig.deployedPredicateTable.StateUpdatePredicate
-            .deployedAddress
-        ),
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(20)),
         BigNumber.from(0),
         client.ownershipProperty(Address.from(client.address))
       )
       su2 = new StateUpdate(
-        Address.from(
-          deciderConfig.deployedPredicateTable.StateUpdatePredicate
-            .deployedAddress
-        ),
         Address.from(depositContractAddress),
         new Range(BigNumber.from(30), BigNumber.from(40)),
         BigNumber.from(1),
@@ -344,129 +354,90 @@ describe('LightClient', () => {
         new IntervalTreeInclusionProof(BigNumber.from(0), 0, []),
         new AddressTreeInclusionProof(Address.default(), 0, [])
       )
-
-      checkpointPredicate = client['deciderManager'].compiledPredicateMap.get(
-        'Checkpoint'
-      ) as CompiledPredicate
-      checkpoint = new Checkpoint(
-        checkpointPredicate.deployedAddress,
-        su1.property
-      )
     })
 
     beforeEach(async () => {
       // let's say ownership stateupdate of range 0-20 and inclusion proof for that is stored in client.
-      const { coder } = ovmContext
       const repository = await StateUpdateRepository.init(db)
 
       // setup
       // store ownership stateupdate
-      await repository.insertVerifiedStateUpdate(
-        Address.from(depositContractAddress),
-        su1
-      )
-      await repository.insertVerifiedStateUpdate(
-        Address.from(depositContractAddress),
-        su2
-      )
+      await repository.insertVerifiedStateUpdate(su1)
+      await repository.insertVerifiedStateUpdate(su2)
       // store inclusion proof
-      const hint1 = hint.createInclusionProofHint(
-        su1.blockNumber,
+      const inclusionProofRepo = await InclusionProofRepository.init(db)
+      await inclusionProofRepo.insertInclusionProof(
         su1.depositContractAddress,
+        su1.blockNumber,
+        su1.range,
+        proof
+      )
+      await inclusionProofRepo.insertInclusionProof(
+        su2.depositContractAddress,
+        su2.blockNumber,
+        su2.range,
+        proof
+      )
+      const depositedRepo = await DepositedRangeRepository.init(db)
+      await depositedRepo.extendRange(
+        Address.from(depositContractAddress),
         su1.range
       )
-      await putWitness(
-        client['witnessDb'],
-        hint1,
-        coder.encode(proof.toStruct())
-      )
-      const hint2 = hint.createInclusionProofHint(
-        su2.blockNumber,
-        su2.depositContractAddress,
+      await depositedRepo.extendRange(
+        Address.from(depositContractAddress),
         su2.range
-      )
-
-      await putWitness(
-        client['witnessDb'],
-        hint2,
-        coder.encode(proof.toStruct())
       )
     })
 
     test('startWithdrawal calls claimProperty of adjudicationContract', async () => {
-      const repository = await StateUpdateRepository.init(db)
-      const { coder } = ovmContext
       await client.startWithdrawal(20, erc20Address)
+      const syncRepo = await SyncRepository.init(db)
+      const blockNumber = await syncRepo.getSyncedBlockNumber()
 
-      const exitProperty = (client['deciderManager'].compiledPredicateMap.get(
-        'Exit'
-      ) as CompiledPredicate).makeProperty([
-        coder.encode(su1.property.toStruct()),
-        coder.encode(proof.toStruct())
-      ])
-      expect(mockClaimProperty).toHaveBeenLastCalledWith(exitProperty)
+      const exit = new Exit(su1, blockNumber)
 
-      const exitingStateUpdate = await repository.getExitStateUpdates(
-        Address.from(depositContractAddress),
-        new Range(BigNumber.from(0), BigNumber.from(20))
-      )
-      expect(exitingStateUpdate).toEqual([su1])
-    })
-
-    test('startWithdrawal calls claimProperty with exitDeposit property', async () => {
-      // store checkpoint
-      const checkpointRepository = await CheckpointRepository.init(db)
-      await checkpointRepository.insertCheckpoint(
-        Address.from(depositContractAddress),
-        checkpoint
+      expect(mockExitDisputeFunctions.mockClaim).toHaveBeenCalledWith(
+        exit.stateUpdate,
+        proof
       )
 
-      const { coder } = ovmContext
-      await client.startWithdrawal(20, erc20Address)
-
-      const exitProperty = (client['deciderManager'].compiledPredicateMap.get(
-        'ExitDeposit'
-      ) as CompiledPredicate).makeProperty([
-        coder.encode(su1.property.toStruct()),
-        coder.encode(checkpoint.property.toStruct())
-      ])
-      expect(mockClaimProperty).toHaveBeenLastCalledWith(exitProperty)
-      // check pending withdrawal list
-      const pendingWithdrawals = await client.getPendingWithdrawals()
-      expect(pendingWithdrawals).toEqual([
-        ExitDeposit.fromProperty(exitProperty)
-      ])
+      const exitRepo = await ExitRepository.init(db)
+      const claims = await exitRepo.getClaimedExits(
+        exit.stateUpdate.depositContractAddress,
+        exit.stateUpdate.range
+      )
+      expect(claims).toEqual([exit])
     })
 
     test('startWithdrawal with multiple range', async () => {
-      const { coder } = ovmContext
       await client.startWithdrawal(25, erc20Address)
-
-      const exitProperty = (client['deciderManager'].compiledPredicateMap.get(
-        'Exit'
-      ) as CompiledPredicate).makeProperty([
-        coder.encode(su1.property.toStruct()),
-        coder.encode(proof.toStruct())
-      ])
+      const syncRepo = await SyncRepository.init(db)
+      const blockNumber = await syncRepo.getSyncedBlockNumber()
       su2.update({
-        range: new Range(BigNumber.from(30), BigNumber.from(35))
+        range: new Range(
+          su2.range.start,
+          BigNumber.from(JSBI.add(su2.range.start.data, JSBI.BigInt(5)))
+        )
       })
-      const exitProperty2 = (client['deciderManager'].compiledPredicateMap.get(
-        'Exit'
-      ) as CompiledPredicate).makeProperty([
-        coder.encode(su2.property.toStruct()),
-        coder.encode(proof.toStruct())
-      ])
 
-      expect(mockClaimProperty).toHaveBeenCalledWith(exitProperty)
-      expect(mockClaimProperty).toHaveBeenCalledWith(exitProperty2)
-      const repository = await StateUpdateRepository.init(db)
+      const exit1 = new Exit(su1, blockNumber)
+      const exit2 = new Exit(su2, blockNumber)
 
-      const exitingStateUpdates = await repository.getExitStateUpdates(
-        Address.from(depositContractAddress),
+      expect(mockExitDisputeFunctions.mockClaim).toHaveBeenCalledWith(
+        exit1.stateUpdate,
+        proof
+      )
+      expect(mockExitDisputeFunctions.mockClaim).toHaveBeenCalledWith(
+        exit2.stateUpdate,
+        proof
+      )
+
+      const exitRepo = await ExitRepository.init(db)
+      const claims = await exitRepo.getClaimedExits(
+        exit1.stateUpdate.depositContractAddress,
         new Range(BigNumber.from(0), BigNumber.from(40))
       )
-      expect(exitingStateUpdates).toEqual([su1, su2])
+      expect(claims).toEqual([exit1, exit2])
     })
 
     test('startWithdrawal calls fail with unsufficient amount', async () => {
@@ -476,97 +447,25 @@ describe('LightClient', () => {
     })
 
     test('pendingWithdrawals', async () => {
+      const syncRepo = await SyncRepository.init(db)
+      const blockNumber = await syncRepo.getSyncedBlockNumber()
+
       await client.startWithdrawal(25, erc20Address)
       const pendingWithdrawals = await client.getPendingWithdrawals()
 
-      const { coder } = ovmContext
-      const exitProperty = (client['deciderManager'].compiledPredicateMap.get(
-        'Exit'
-      ) as CompiledPredicate).makeProperty([
-        coder.encode(su1.property.toStruct()),
-        coder.encode(proof.toStruct())
-      ])
-      su2.update({
-        range: new Range(BigNumber.from(30), BigNumber.from(35))
-      })
-      const exitProperty2 = (client['deciderManager'].compiledPredicateMap.get(
-        'Exit'
-      ) as CompiledPredicate).makeProperty([
-        coder.encode(su2.property.toStruct()),
-        coder.encode(proof.toStruct())
-      ])
-
       expect(pendingWithdrawals).toEqual([
-        Exit.fromProperty(exitProperty),
-        Exit.fromProperty(exitProperty2)
+        new Exit(su1, blockNumber),
+        new Exit(su2, blockNumber)
       ])
     })
 
-    test('completeWithdrawal', async () => {
-      // setup depositedRangeId
-      const depositedRangeRepository = await DepositedRangeRepository.init(db)
-      await depositedRangeRepository.extendRange(
-        Address.from(depositContractAddress),
-        new Range(BigNumber.from(0), BigNumber.from(50))
-      )
+    test.skip('fail to completeWithdrawal property is not decidable', async () => {
+      const syncRepo = await SyncRepository.init(db)
+      const blockNumber = await syncRepo.getNextBlockNumber()
 
-      const { coder } = ovmContext
-      const exitProperty = (client['deciderManager'].compiledPredicateMap.get(
-        'Exit'
-      ) as CompiledPredicate).makeProperty([
-        coder.encode(su1.property.toStruct()),
-        coder.encode(proof.toStruct())
-      ])
-      const exit = Exit.fromProperty(exitProperty)
-      await client.completeWithdrawal(exit)
-
-      expect(mockFinalizeExit).toHaveBeenLastCalledWith(
-        exit.stateUpdate.depositContractAddress,
-        exit.property,
-        BigNumber.from(50),
-        Address.from(client.address)
-      )
-    })
-
-    test('completeWithdrawal with exitDeposit', async () => {
-      // setup depositedRangeId
-      const depositedRangeRepository = await DepositedRangeRepository.init(db)
-      await depositedRangeRepository.extendRange(
-        Address.from(depositContractAddress),
-        new Range(BigNumber.from(0), BigNumber.from(50))
-      )
-
-      const { coder } = ovmContext
-      const exitProperty = (client['deciderManager'].compiledPredicateMap.get(
-        'ExitDeposit'
-      ) as CompiledPredicate).makeProperty([
-        coder.encode(su1.property.toStruct()),
-        coder.encode(checkpoint.property.toStruct())
-      ])
-      const exit = ExitDeposit.fromProperty(exitProperty)
-      await client.completeWithdrawal(exit)
-
-      expect(mockFinalizeExit).toHaveBeenLastCalledWith(
-        exit.stateUpdate.depositContractAddress,
-        exit.property,
-        BigNumber.from(50),
-        Address.from(client.address)
-      )
-    })
-
-    test('fail to completeWithdrawal property is not decidable', async () => {
-      mockIsDecided.mockResolvedValueOnce(false)
-      mockIsDecidable.mockResolvedValueOnce(false)
-      const { coder } = ovmContext
-      const exitProperty = (client['deciderManager'].compiledPredicateMap.get(
-        'Exit'
-      ) as CompiledPredicate).makeProperty([
-        coder.encode(su1.property.toStruct()),
-        coder.encode(proof.toStruct())
-      ])
-      const exit = Exit.fromProperty(exitProperty)
+      const exit = new Exit(su1, blockNumber)
       await expect(client.completeWithdrawal(exit)).rejects.toEqual(
-        new Error(`Exit property is not decidable`)
+        new Error('Exit dispute period have not been passed')
       )
     })
   })
@@ -591,10 +490,6 @@ describe('LightClient', () => {
   test('getOwner', () => {
     const owner = getOwner(
       new StateUpdate(
-        Address.from(
-          deciderConfig.deployedPredicateTable.StateUpdatePredicate
-            .deployedAddress
-        ),
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(20)),
         BigNumber.from(0),

@@ -5,7 +5,7 @@ dotenv.config({ path: path.join(__dirname, '.test.env') })
 import Aggregator from '../src/Aggregator'
 import {
   DepositTransaction,
-  Transaction,
+  UnsignedTransaction,
   StateUpdate,
   TRANSACTION_STATUS,
   PlasmaContractConfig
@@ -139,7 +139,6 @@ describe('Aggregator integration', () => {
       'Ownership'
     ) as CompiledPredicate
     const stateUpdate = new StateUpdate(
-      decider.getDeciderAddress('StateUpdate'),
       depositContractAddress,
       new Range(BigNumber.from(0), BigNumber.from(10)),
       BigNumber.from(0),
@@ -147,7 +146,7 @@ describe('Aggregator integration', () => {
     )
     const depositTx = new DepositTransaction(
       depositContractAddress,
-      stateUpdate.property
+      stateUpdate
     )
     await aggregator['stateManager'].insertDepositRange(
       depositTx,
@@ -174,7 +173,6 @@ describe('Aggregator integration', () => {
       'Ownership'
     ) as CompiledPredicate
     const stateUpdate = new StateUpdate(
-      decider.getDeciderAddress('StateUpdate'),
       depositContractAddress,
       new Range(BigNumber.from(0), BigNumber.from(10)),
       BigNumber.from(0),
@@ -182,7 +180,7 @@ describe('Aggregator integration', () => {
     )
     const depositTx = new DepositTransaction(
       depositContractAddress,
-      stateUpdate.property
+      stateUpdate
     )
     await aggregator['stateManager'].insertDepositRange(
       depositTx,
@@ -193,18 +191,16 @@ describe('Aggregator integration', () => {
       coder.encode(BOB_ADDRESS)
     ])
 
-    const tx = new Transaction(
+    const tx = new UnsignedTransaction(
       depositContractAddress,
       new Range(BigNumber.from(0), BigNumber.from(5)),
       BigNumber.from(5),
       nextStateObject,
       ALIS_ADDRESS
     )
-    tx.signature = await ALIS_WALLET.signMessage(
-      coder.encode(tx.toProperty(Address.default()).toStruct())
-    )
+    const signedTx = await tx.sign(ALIS_WALLET)
 
-    const receipt = await aggregator['ingestTransaction'](tx)
+    const receipt = await aggregator['ingestTransaction'](signedTx)
     expect(receipt.status).toBe(TRANSACTION_STATUS.TRUE)
 
     const stateUpdates = await aggregator['stateManager'].resolveStateUpdates(
@@ -215,14 +211,12 @@ describe('Aggregator integration', () => {
     expect(stateUpdates.length).toBe(2)
     expect(stateUpdates).toEqual([
       new StateUpdate(
-        decider.getDeciderAddress('StateUpdate'),
         depositContractAddress,
         new Range(BigNumber.from(0), BigNumber.from(5)),
         BigNumber.from(1),
         ownershipPredicate.makeProperty([coder.encode(BOB_ADDRESS)])
       ),
       new StateUpdate(
-        decider.getDeciderAddress('StateUpdate'),
         depositContractAddress,
         new Range(BigNumber.from(5), BigNumber.from(10)),
         BigNumber.from(0),

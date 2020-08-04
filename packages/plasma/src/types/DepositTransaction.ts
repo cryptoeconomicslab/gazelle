@@ -1,9 +1,10 @@
-import { Address, Property } from '@cryptoeconomicslab/primitives'
+import { Address } from '@cryptoeconomicslab/primitives'
+import StateUpdate from './StateUpdate'
 
 export default class DepositTransaction {
   constructor(
     readonly depositContractAddress: Address,
-    readonly stateUpdate: Property
+    readonly stateUpdate: StateUpdate
   ) {}
 
   public toString(): string {
