@@ -65,6 +65,12 @@ describe('light client', () => {
     return client
   }
 
+  async function createClientFromPrivateKey(privateKey: string) {
+    const provider = new ethers.providers.JsonRpcProvider(nodeEndpoint)
+    const wallet = new ethers.Wallet(privateKey, provider)
+    return await createClient(wallet)
+  }
+
   async function increaseBlock() {
     for (let i = 0; i < 10; i++) {
       await operatorWallet.sendTransaction({
@@ -255,6 +261,31 @@ describe('light client', () => {
     expect(bobActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
     expect(bobActions[1].type).toEqual(ActionType.Exit)
     expect(bobActions[1].amount).toEqual(parseUnitsToJsbi('0.05'))
+
+    const aliceSyncLightClient = await createClientFromPrivateKey(
+      aliceLightClient['wallet']['ethersWallet'].privateKey
+    )
+    const bobSyncLightClient = await createClientFromPrivateKey(
+      bobLightClient['wallet']['ethersWallet'].privateKey
+    )
+    await sleep(20000)
+    expect(await getBalance(aliceSyncLightClient)).toEqual('0.0')
+    expect(await getBalance(bobSyncLightClient)).toEqual('0.05')
+
+    const syncedAliceActions = await aliceSyncLightClient.getAllUserActions()
+    const syncedBobActions = await bobSyncLightClient.getAllUserActions()
+
+    expect(syncedAliceActions[0].type).toEqual(ActionType.Deposit)
+    expect(syncedAliceActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(syncedAliceActions[1].type).toEqual(ActionType.Send)
+    expect(syncedAliceActions[1].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(syncedBobActions[0].type).toEqual(ActionType.Receive)
+    expect(syncedBobActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(syncedBobActions[1].type).toEqual(ActionType.Exit)
+    expect(syncedBobActions[1].amount).toEqual(parseUnitsToJsbi('0.05'))
+
+    aliceSyncLightClient.stop()
+    bobSyncLightClient.stop()
   })
 
   /**
@@ -322,6 +353,18 @@ describe('light client', () => {
 
     await checkBalance(aliceLightClient, '0.4')
     await checkBalance(bobLightClient, '0.6')
+
+    const aliceSyncLightClient = await createClientFromPrivateKey(
+      aliceLightClient['wallet']['ethersWallet'].privateKey
+    )
+    const bobSyncLightClient = await createClientFromPrivateKey(
+      bobLightClient['wallet']['ethersWallet'].privateKey
+    )
+    await sleep(20000)
+    expect(await getBalance(aliceSyncLightClient)).toEqual('0.4')
+    expect(await getBalance(bobSyncLightClient)).toEqual('0.6')
+    aliceSyncLightClient.stop()
+    bobSyncLightClient.stop()
 
     await aliceLightClient.startWithdrawal(
       parseUnitsToJsbi('0.4'),
