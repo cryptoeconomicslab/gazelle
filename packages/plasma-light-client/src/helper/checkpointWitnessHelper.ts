@@ -13,7 +13,7 @@ import APIClient from '../APIClient'
 
 type CheckpointWitness = {
   stateUpdate: string
-  transaction: { tx: string; witness: string } | null
+  txs: string[]
   inclusionProof: string | null
 }
 
@@ -58,6 +58,11 @@ export async function prepareCheckpointWitness(
           coder,
           Bytes.fromHexString(witness.inclusionProof)
         )
+        console.log(
+          'store',
+          range.toString(),
+          inclusionProof.intervalInclusionProof.leafIndex.raw
+        )
         await inclusionProofRepository.insertInclusionProof(
           depositContractAddress,
           blockNumber,
@@ -66,8 +71,8 @@ export async function prepareCheckpointWitness(
         )
       }
 
-      if (witness.transaction) {
-        const txBytes = Bytes.fromHexString(witness.transaction.tx)
+      for (const txHexString of witness.txs) {
+        const txBytes = Bytes.fromHexString(txHexString)
         const tx = decodeStructable(SignedTransaction, coder, txBytes)
         await txRepository.insertTransaction(
           depositContractAddress,
@@ -79,7 +84,7 @@ export async function prepareCheckpointWitness(
         await putWitness(
           witnessDb,
           Hint.createSignatureHint(tx.message),
-          Bytes.fromHexString(witness.transaction.witness)
+          tx.signature
         )
       }
     })

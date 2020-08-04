@@ -1,6 +1,7 @@
 import {
   StateUpdate,
   SignedTransaction,
+  IncludedTransaction,
   DepositTransaction,
   verifyTransaction
 } from '@cryptoeconomicslab/plasma'
@@ -163,7 +164,7 @@ export default class StateManager {
     console.log('store tx data')
     // store data in db
     await this.storeTx(
-      tx,
+      IncludedTransaction.fromSignedTransaction(tx, nextBlockNumber),
       nextStateUpdate,
       prevStates.map(s => s.blockNumber)
     )
@@ -274,7 +275,7 @@ export default class StateManager {
     }
   }
 
-  public async getTx(
+  public async getTxs(
     depositContractAddress: Address,
     blockNumber: BigNumber,
     range: Range
@@ -286,14 +287,15 @@ export default class StateManager {
       Bytes.fromHexString(depositContractAddress.data)
     )
     const ranges = await addrBucket.get(range.start.data, range.end.data)
-    if (ranges.length == 0) return null
-    return SignedTransaction.fromStruct(
-      ovmContext.coder.decode(SignedTransaction.getParamType(), ranges[0].value)
+    return ranges.map(r =>
+      SignedTransaction.fromStruct(
+        ovmContext.coder.decode(SignedTransaction.getParamType(), r.value)
+      )
     )
   }
 
   private async storeTx(
-    tx: SignedTransaction,
+    tx: IncludedTransaction,
     su: StateUpdate,
     blockNumberOfDeprecatedStates: BigNumber[]
   ) {

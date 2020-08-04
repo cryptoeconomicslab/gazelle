@@ -228,13 +228,17 @@ export default class LightClient {
     this.commitmentContract.subscribeBlockSubmitted(
       async (blockNumber, root, mainchainBlockNumber, mainchainTimestamp) => {
         console.log('new block submitted event:', root.toHexString())
-        await this.stateSyncer.sync(blockNumber, Address.from(this.address))
-        await this.pendingStateUpdatesVerifier.verify(blockNumber)
+        await this.stateSyncer.sync(
+          blockNumber,
+          root,
+          Address.from(this.address)
+        )
+        // await this.pendingStateUpdatesVerifier.verify(blockNumber)
       }
     )
     this.commitmentContract.startWatchingEvents()
     const blockNumber = await this.commitmentContract.getCurrentBlock()
-    await this.stateSyncer.syncUntil(blockNumber, Address.from(this.address))
+    await this.stateSyncer.syncLatest(blockNumber, Address.from(this.address))
   }
 
   /**

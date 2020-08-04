@@ -194,6 +194,10 @@ export class DoubleLayerTree
   getRoot(): FixedBytes {
     return this.addressTree.getRoot()
   }
+  findIndexByInterval(interval: BigNumber): number | null {
+    const foundIndex = this.leaves.findIndex(l => l.start.equals(interval))
+    return foundIndex >= 0 ? foundIndex : null
+  }
   findIndex(leaf: FixedBytes): number | null {
     const foundIndex = this.leaves.findIndex(
       l => l.getData().toHexString() == leaf.toHexString()

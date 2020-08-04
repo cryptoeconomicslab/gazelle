@@ -82,7 +82,7 @@ export default class Block {
   ): boolean {
     const tree = this.getTree()
     const leaf = Block.generateLeaf(stateUpdate)
-    if (tree.findIndex(leaf.data) === null) {
+    if (tree.findIndexByInterval(leaf.start) === null) {
       return false
     }
     const verifier = new DoubleLayerTreeVerifier()
@@ -99,7 +99,7 @@ export default class Block {
   ): DoubleLayerInclusionProof | null {
     const leaf = Block.generateLeaf(stateUpdate)
     const tree = this.getTree()
-    const i = tree.findIndex(leaf.data)
+    const i = tree.findIndexByInterval(leaf.start)
     if (i === null) return null
 
     const proof = tree.getInclusionProofByAddressAndIndex(

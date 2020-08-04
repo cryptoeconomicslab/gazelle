@@ -118,8 +118,9 @@ export class ExitDispute {
 
     const checkpointChallenge = await this.checkCheckpointChallenge(stateUpdate)
     if (checkpointChallenge) {
-      console.log('do checkpoint challenge', checkpointChallenge)
+      console.log('trying checkpoint challenge', checkpointChallenge)
       await this.contract.challenge(checkpointChallenge)
+      console.log('finished checkpoint challenge')
       return
     }
 

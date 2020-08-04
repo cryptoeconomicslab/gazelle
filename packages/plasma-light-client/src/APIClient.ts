@@ -5,11 +5,24 @@ import { StateUpdate, Transaction } from '@cryptoeconomicslab/plasma'
 class APIClient {
   constructor(readonly endpoint: string) {}
 
-  syncState(address: string, blockNumber: BigNumber) {
+  syncState(address: string, blockNumber?: BigNumber) {
+    if (blockNumber) {
+      return axios.get(
+        `${
+          this.endpoint
+        }/sync_state?address=${address}&blockNumber=${blockNumber.data.toString()}`
+      )
+    } else {
+      return axios.get(`${this.endpoint}/sync_state?address=${address}`)
+    }
+  }
+  spentProof(tokenAddress: Address, blockNumber: BigNumber, range: Range) {
     return axios.get(
-      `${
-        this.endpoint
-      }/sync_state?address=${address}&blockNumber=${blockNumber.data.toString()}`
+      `${this.endpoint}/spent_proof?tokenAddress=${
+        tokenAddress.data
+      }&blockNumber=${blockNumber.data.toString()}&range=${range
+        .toBytes()
+        .toHexString()}`
     )
   }
   inclusionProof(su: StateUpdate) {
