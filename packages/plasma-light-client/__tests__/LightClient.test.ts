@@ -391,28 +391,15 @@ describe('LightClient', () => {
 
     test('startWithdrawal calls claimProperty of adjudicationContract', async () => {
       await client.startWithdrawal(20, erc20Address)
-      const syncRepo = await SyncRepository.init(db)
-      const blockNumber = await syncRepo.getSyncedBlockNumber()
-
-      const exit = new Exit(su1, blockNumber)
 
       expect(mockExitDisputeFunctions.mockClaim).toHaveBeenCalledWith(
-        exit.stateUpdate,
+        su1,
         proof
       )
-
-      const exitRepo = await ExitRepository.init(db)
-      const claims = await exitRepo.getClaimedExits(
-        exit.stateUpdate.depositContractAddress,
-        exit.stateUpdate.range
-      )
-      expect(claims).toEqual([exit])
     })
 
     test('startWithdrawal with multiple range', async () => {
       await client.startWithdrawal(25, erc20Address)
-      const syncRepo = await SyncRepository.init(db)
-      const blockNumber = await syncRepo.getSyncedBlockNumber()
       su2.update({
         range: new Range(
           su2.range.start,
@@ -420,24 +407,14 @@ describe('LightClient', () => {
         )
       })
 
-      const exit1 = new Exit(su1, blockNumber)
-      const exit2 = new Exit(su2, blockNumber)
-
       expect(mockExitDisputeFunctions.mockClaim).toHaveBeenCalledWith(
-        exit1.stateUpdate,
+        su1,
         proof
       )
       expect(mockExitDisputeFunctions.mockClaim).toHaveBeenCalledWith(
-        exit2.stateUpdate,
+        su2,
         proof
       )
-
-      const exitRepo = await ExitRepository.init(db)
-      const claims = await exitRepo.getClaimedExits(
-        exit1.stateUpdate.depositContractAddress,
-        new Range(BigNumber.from(0), BigNumber.from(40))
-      )
-      expect(claims).toEqual([exit1, exit2])
     })
 
     test('startWithdrawal calls fail with unsufficient amount', async () => {
@@ -446,7 +423,7 @@ describe('LightClient', () => {
       )
     })
 
-    test('pendingWithdrawals', async () => {
+    test.skip('pendingWithdrawals', async () => {
       const syncRepo = await SyncRepository.init(db)
       const blockNumber = await syncRepo.getSyncedBlockNumber()
 

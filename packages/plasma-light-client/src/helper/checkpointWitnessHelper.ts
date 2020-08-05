@@ -58,11 +58,6 @@ export async function prepareCheckpointWitness(
           coder,
           Bytes.fromHexString(witness.inclusionProof)
         )
-        console.log(
-          'store',
-          range.toString(),
-          inclusionProof.intervalInclusionProof.leafIndex.raw
-        )
         await inclusionProofRepository.insertInclusionProof(
           depositContractAddress,
           blockNumber,

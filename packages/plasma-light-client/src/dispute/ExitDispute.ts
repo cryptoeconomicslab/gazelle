@@ -1,4 +1,4 @@
-import { Property } from '@cryptoeconomicslab/primitives'
+import { Property, Address } from '@cryptoeconomicslab/primitives'
 import {
   StateUpdate,
   createSpentChallenge,
@@ -18,22 +18,31 @@ import {
   InclusionProofRepository,
   ExitRepository,
   SyncRepository,
-  CheckpointRepository
+  CheckpointRepository,
+  UserActionRepository
 } from '../repository'
 import { verifyCheckpoint } from '../verifier/CheckpointVerifier'
 import { prepareCheckpointWitness } from '../helper/checkpointWitnessHelper'
+import { createExitUserAction } from '../UserAction'
+import TokenManager from '../managers/TokenManager'
+import { getOwner } from '../helper/stateUpdateHelper'
 
 export class ExitDispute {
   constructor(
+    private owner: Address,
     private contract: IExitDisputeContract,
     private witnessDb: KeyValueStore,
     private deciderManager: DeciderManager,
-    private apiClient: APIClient
+    private apiClient: APIClient,
+    private tokenManager: TokenManager
   ) {
     // watch exit contract to handle challenge
     this.contract.subscribeExitClaimed(this.handleExitClaimed.bind(this))
     this.contract.subscribeExitChallenged(this.handleExitChallenged.bind(this))
     this.contract.subscribeExitSettled(this.handleExitSettled.bind(this))
+  }
+
+  public startWatchingEvents() {
     this.contract.startWatchingEvents()
   }
 
@@ -73,12 +82,6 @@ export class ExitDispute {
     } else {
       await this.contract.claim(stateUpdate, inclusionProofs[0])
     }
-
-    const syncRepo = await SyncRepository.init(this.witnessDb)
-    const claimedBlockNumber = await syncRepo.getSyncedBlockNumber()
-    const exit = new Exit(stateUpdate, claimedBlockNumber)
-    const exitRepo = await ExitRepository.init(this.witnessDb)
-    await exitRepo.insertClaimedExit(exit)
   }
 
   /**
@@ -106,6 +109,21 @@ export class ExitDispute {
   async handleExitClaimed(stateUpdate: StateUpdate) {
     console.log('handle exit claimed')
     const suRepo = await StateUpdateRepository.init(this.witnessDb)
+    // sync exit claim
+    if (getOwner(stateUpdate).equals(this.owner)) {
+      const syncRepo = await SyncRepository.init(this.witnessDb)
+      const claimedBlockNumber = await syncRepo.getSyncedBlockNumber()
+      const exit = new Exit(stateUpdate, claimedBlockNumber)
+      const exitRepo = await ExitRepository.init(this.witnessDb)
+      await exitRepo.insertClaimedExit(exit)
+
+      // sync state
+      await suRepo.insertExitStateUpdate(stateUpdate)
+      await suRepo.removeVerifiedStateUpdate(
+        stateUpdate.depositContractAddress,
+        stateUpdate.range
+      )
+    }
 
     // check if claimed stateUpdate is same range and greater blockNumber of owning stateUpdate
     const stateUpdates = await suRepo.getVerifiedStateUpdates(
@@ -120,7 +138,6 @@ export class ExitDispute {
     if (checkpointChallenge) {
       console.log('trying checkpoint challenge', checkpointChallenge)
       await this.contract.challenge(checkpointChallenge)
-      console.log('finished checkpoint challenge')
       return
     }
 
@@ -190,6 +207,9 @@ export class ExitDispute {
       await repository.removeClaimedExit(exit)
       await repository.insertSettledExit(exit.stateUpdate)
     }
+
+    // sync user action
+    // TODO: since exit doesn't have block number, It can't be restored to correct position.
   }
 
   //// Challenge checker

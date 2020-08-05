@@ -2,7 +2,7 @@ import { StateSyncer } from '../../src/usecase/StateSyncer'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import { setupContext } from '@cryptoeconomicslab/context'
-import JsonCoder, { decodeStructable } from '@cryptoeconomicslab/coder'
+import JsonCoder from '@cryptoeconomicslab/coder'
 import {
   Address,
   BigNumber,
@@ -12,12 +12,7 @@ import {
   Range
 } from '@cryptoeconomicslab/primitives'
 import { EventEmitter } from 'events'
-import {
-  StateUpdate,
-  Transaction,
-  UnsignedTransaction,
-  IncludedTransaction
-} from '@cryptoeconomicslab/plasma'
+import { StateUpdate, IncludedTransaction } from '@cryptoeconomicslab/plasma'
 import {
   CheckpointRepository,
   StateUpdateRepository

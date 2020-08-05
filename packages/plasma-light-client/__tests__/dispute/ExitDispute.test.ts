@@ -7,7 +7,11 @@ import {
   Range,
   Property
 } from '@cryptoeconomicslab/primitives'
-import { StateUpdate, EXIT_CHALLENGE_TYPE } from '@cryptoeconomicslab/plasma'
+import {
+  StateUpdate,
+  EXIT_CHALLENGE_TYPE,
+  Exit
+} from '@cryptoeconomicslab/plasma'
 import { setupContext } from '@cryptoeconomicslab/context'
 import Coder from '@cryptoeconomicslab/eth-coder'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
@@ -26,7 +30,10 @@ import { generateRandomWallet } from '../helper/MockWallet'
 import { DeciderManager, DeciderConfig } from '@cryptoeconomicslab/ovm'
 import { Wallet } from '@cryptoeconomicslab/wallet'
 import deciderConfig from '../config.local'
+import { ExitRepository, SyncRepository } from '../../lib'
 setupContext({ coder: Coder })
+
+const tokenAddress = Address.default()
 
 const mockFunctions = {
   mockClaim: jest.fn(),
@@ -68,6 +75,14 @@ const MockApiClient = jest.fn().mockImplementation(() => {
   }
 })
 
+const MockTokenManager = jest
+  .fn()
+  .mockImplementation((addr: Address, eventDb: KeyValueStore) => ({
+    depositContractAddresses: [depositContractAddress],
+    getTokenContractAddress: jest.fn().mockReturnValue(tokenAddress.data),
+    getCurrentBlock: jest.fn().mockResolvedValue(BigNumber.from(1))
+  }))
+
 function clearMocks() {
   MockContractWrapper.mockClear()
   Object.values(mockFunctions).forEach(mock => mock.mockClear())
@@ -96,10 +111,12 @@ describe('ExitDispute', () => {
     deciderManager = new DeciderManager(witnessDb)
     deciderManager.loadJson(deciderConfig as DeciderConfig)
     exitDispute = new ExitDispute(
+      BOB.getAddress(),
       new MockContractWrapper(),
       witnessDb,
       deciderManager,
-      new MockApiClient()
+      new MockApiClient(),
+      new MockTokenManager()
     )
   })
 
@@ -145,6 +162,22 @@ describe('ExitDispute', () => {
       await prepareSU(witnessDb, stateUpdate)
       await prepareTx(witnessDb, stateUpdate, ALICE, ownership(BOB))
       await exitDispute.handleExitClaimed(stateUpdate)
+    })
+
+    test('sore claimed Exit', async () => {
+      const stateUpdate = SU(range, blockNumber, BOB)
+      await prepareSU(witnessDb, stateUpdate)
+      await exitDispute.handleExitClaimed(stateUpdate)
+
+      const syncRepo = await SyncRepository.init(witnessDb)
+      const latestBlockNumber = await syncRepo.getSyncedBlockNumber()
+      const exit = new Exit(stateUpdate, latestBlockNumber)
+      const exitRepo = await ExitRepository.init(witnessDb)
+      const claims = await exitRepo.getClaimedExits(
+        stateUpdate.depositContractAddress,
+        stateUpdate.range
+      )
+      expect(claims).toEqual([exit])
     })
 
     // Trying to exit already spent StateUpdate

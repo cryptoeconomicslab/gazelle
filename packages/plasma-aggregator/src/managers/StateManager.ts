@@ -288,8 +288,8 @@ export default class StateManager {
     )
     const ranges = await addrBucket.get(range.start.data, range.end.data)
     return ranges.map(r =>
-      SignedTransaction.fromStruct(
-        ovmContext.coder.decode(SignedTransaction.getParamType(), r.value)
+      IncludedTransaction.fromStruct(
+        ovmContext.coder.decode(IncludedTransaction.getParamType(), r.value)
       )
     )
   }

@@ -109,10 +109,12 @@ export default class LightClient {
       this.apiClient
     )
     this.exitDispute = new ExitDispute(
+      Address.from(this.address),
       exitDisputeContract,
       witnessDb,
       this.deciderManager,
-      this.apiClient
+      this.apiClient,
+      this.tokenManager
     )
     this.stateSyncer = new StateSyncer(
       this.ee,
@@ -239,6 +241,7 @@ export default class LightClient {
     this.commitmentContract.startWatchingEvents()
     const blockNumber = await this.commitmentContract.getCurrentBlock()
     await this.stateSyncer.syncLatest(blockNumber, Address.from(this.address))
+    this.exitDispute.startWatchingEvents()
   }
 
   /**

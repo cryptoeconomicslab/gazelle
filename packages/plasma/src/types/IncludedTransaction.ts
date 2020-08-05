@@ -76,7 +76,7 @@ export default class IncludedTransaction implements Transaction {
       maxBlockNumber,
       Property.fromStruct(stateObject as Struct),
       from as Address,
-      signature as Bytes,
+      signature,
       includedBlockNumber
     )
   }
