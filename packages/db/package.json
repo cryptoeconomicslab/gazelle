@@ -32,6 +32,7 @@
     "@cryptoeconomicslab/coder": "^0.4.1",
     "@cryptoeconomicslab/context": "^0.4.1",
     "@cryptoeconomicslab/utils": "^0.4.1",
+    "@cryptoeconomicslab/hash": "^0.4.1",
     "abstract-leveldown": "^6.2.2",
     "jsbi": "^3.1.2"
   },

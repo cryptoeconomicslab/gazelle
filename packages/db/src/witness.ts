@@ -1,5 +1,6 @@
 import { Bytes, BigNumber, Range } from '@cryptoeconomicslab/primitives'
 import { BigIntMath } from '@cryptoeconomicslab/utils'
+import { Keccak256 } from '@cryptoeconomicslab/hash'
 import { KeyValueStore, RangeStore, RangeDb } from './'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import JSBI from 'jsbi'
@@ -58,7 +59,9 @@ export async function getWitnesses(
   const [_, type, param] = hint.split(',')
   if (type === TYPES.key) {
     const db = await getBucketByHint(witnessDb, hint)
-    const result = await (db as KeyValueStore).get(Bytes.fromHexString(param))
+    const result = await (db as KeyValueStore).get(
+      Keccak256.hash(Bytes.fromHexString(param))
+    )
     return result === null ? [] : [result]
   } else if (type === TYPES.range) {
     const db = await getBucketByHint(witnessDb, hint)
@@ -113,7 +116,10 @@ export async function putWitness(
   const [_, type, param] = hint.split(',')
   const db = await getBucketByHint(witnessDb, hint)
   if (type === TYPES.key) {
-    await (db as KeyValueStore).put(Bytes.fromHexString(param), value)
+    await (db as KeyValueStore).put(
+      Keccak256.hash(Bytes.fromHexString(param)),
+      value
+    )
   } else if (type === TYPES.range) {
     const range = decodeStructable(
       Range,
