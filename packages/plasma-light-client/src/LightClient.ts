@@ -109,10 +109,12 @@ export default class LightClient {
       this.apiClient
     )
     this.exitDispute = new ExitDispute(
+      Address.from(this.address),
       exitDisputeContract,
       witnessDb,
       this.deciderManager,
-      this.apiClient
+      this.apiClient,
+      this.tokenManager
     )
     this.stateSyncer = new StateSyncer(
       this.ee,
@@ -228,13 +230,18 @@ export default class LightClient {
     this.commitmentContract.subscribeBlockSubmitted(
       async (blockNumber, root, mainchainBlockNumber, mainchainTimestamp) => {
         console.log('new block submitted event:', root.toHexString())
-        await this.stateSyncer.sync(blockNumber, Address.from(this.address))
-        await this.pendingStateUpdatesVerifier.verify(blockNumber)
+        await this.stateSyncer.sync(
+          blockNumber,
+          root,
+          Address.from(this.address)
+        )
+        // await this.pendingStateUpdatesVerifier.verify(blockNumber)
       }
     )
     this.commitmentContract.startWatchingEvents()
     const blockNumber = await this.commitmentContract.getCurrentBlock()
-    await this.stateSyncer.syncUntil(blockNumber, Address.from(this.address))
+    await this.stateSyncer.syncLatest(blockNumber, Address.from(this.address))
+    this.exitDispute.startWatchingEvents()
   }
 
   /**
