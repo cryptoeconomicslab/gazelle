@@ -26,7 +26,7 @@ import config from '../config.local.json'
 
 setupContext({ coder: EthCoder })
 
-jest.setTimeout(120000)
+jest.setTimeout(140000)
 
 function sleep(ms: number) {
   return new Promise(resolve => {
@@ -244,6 +244,7 @@ describe('light client', () => {
 
     const exitList = await bobLightClient.getPendingWithdrawals()
     expect(exitList.length).toBe(1)
+    expect(exitList[0].stateUpdate.amount).toEqual(parseUnitsToJsbi('0.05'))
 
     await increaseBlock()
 
@@ -262,6 +263,8 @@ describe('light client', () => {
     expect(bobActions[1].type).toEqual(ActionType.Exit)
     expect(bobActions[1].amount).toEqual(parseUnitsToJsbi('0.05'))
 
+    console.log('[test] sync')
+
     const aliceSyncLightClient = await createClientFromPrivateKey(
       aliceLightClient['wallet']['ethersWallet'].privateKey
     )
@@ -272,6 +275,12 @@ describe('light client', () => {
     expect(await getBalance(aliceSyncLightClient)).toEqual('0.0')
     expect(await getBalance(bobSyncLightClient)).toEqual('0.05')
 
+    const syncedExitList = await bobSyncLightClient.getPendingWithdrawals()
+    expect(syncedExitList.length).toBe(1)
+    expect(syncedExitList[0].stateUpdate.amount).toEqual(
+      parseUnitsToJsbi('0.05')
+    )
+
     const syncedAliceActions = await aliceSyncLightClient.getAllUserActions()
     const syncedBobActions = await bobSyncLightClient.getAllUserActions()
 
@@ -281,8 +290,6 @@ describe('light client', () => {
     expect(syncedAliceActions[1].amount).toEqual(parseUnitsToJsbi('0.1'))
     expect(syncedBobActions[0].type).toEqual(ActionType.Receive)
     expect(syncedBobActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
-    expect(syncedBobActions[1].type).toEqual(ActionType.Exit)
-    expect(syncedBobActions[1].amount).toEqual(parseUnitsToJsbi('0.05'))
 
     aliceSyncLightClient.stop()
     bobSyncLightClient.stop()
@@ -309,12 +316,24 @@ describe('light client', () => {
 
     const exitList = await aliceLightClient.getPendingWithdrawals()
     expect(exitList.length).toBe(1)
+    expect(exitList[0].stateUpdate.amount).toEqual(parseUnitsToJsbi('0.05'))
 
     await increaseBlock()
 
     expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.0')
     await finalizeExit(aliceLightClient)
     expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.05')
+
+    const aliceSyncLightClient = await createClientFromPrivateKey(
+      aliceLightClient['wallet']['ethersWallet'].privateKey
+    )
+    await sleep(20000)
+
+    const syncedExitList = await aliceSyncLightClient.getPendingWithdrawals()
+    expect(syncedExitList.length).toBe(1)
+    expect(syncedExitList[0].stateUpdate.amount).toEqual(
+      parseUnitsToJsbi('0.05')
+    )
   })
 
   /**
@@ -324,7 +343,7 @@ describe('light client', () => {
    * Bob sends 0.1 ETH to Alice by 1 transaction
    * exit all asset
    */
-  test.skip('multiple transfers in same block', async () => {
+  test('multiple transfers in same block', async () => {
     await depositPETH(aliceLightClient, senderWallet, '0.5')
     await depositPETH(bobLightClient, recieverWallet, '0.5')
 
@@ -600,7 +619,7 @@ describe('light client', () => {
     await increaseBlock()
 
     await expect(finalizeExit(aliceLightClient)).rejects.toEqual(
-      new Error('revert')
+      new Error('VM Exception while processing transaction: revert')
     )
   })
 })
