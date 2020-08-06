@@ -1,6 +1,6 @@
 {
   "name": "@cryptoeconomicslab/db",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "db",
   "author": {
     "name": "Cryptoeconomics Lab",
@@ -29,17 +29,17 @@
     "clean": "rm -rf lib docs"
   },
   "dependencies": {
-    "@cryptoeconomicslab/coder": "^0.4.1",
-    "@cryptoeconomicslab/context": "^0.4.1",
-    "@cryptoeconomicslab/utils": "^0.4.1",
-    "@cryptoeconomicslab/hash": "^0.4.1",
+    "@cryptoeconomicslab/coder": "^0.5.0",
+    "@cryptoeconomicslab/context": "^0.5.0",
+    "@cryptoeconomicslab/hash": "^0.5.0",
+    "@cryptoeconomicslab/utils": "^0.5.0",
     "abstract-leveldown": "^6.2.2",
     "jsbi": "^3.1.2"
   },
   "gitHead": "3da28b833795e0c0f47d0c3142496edc537c311e",
   "devDependencies": {
     "@cryptoeconomicslab/level-kvs": "0.0.6",
-    "@cryptoeconomicslab/primitives": "^0.4.1"
+    "@cryptoeconomicslab/primitives": "^0.5.0"
   },
   "peerDependencies": {
     "@cryptoeconomicslab/primitives": "^0.0.36"
