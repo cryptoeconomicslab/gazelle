@@ -32,6 +32,7 @@ export class DepositContract implements IDepositContract {
     readonly address: Address,
     eventDb: KeyValueStore,
     signer: ethers.Signer,
+    provider?: ethers.providers.Provider,
     eventWatcherOptions?: EventWatcherOptions
   ) {
     this.connection = new ethers.Contract(
@@ -41,7 +42,7 @@ export class DepositContract implements IDepositContract {
     )
     this.gasLimit = 200000
     this.eventWatcher = new EthEventWatcher({
-      provider: this.connection.provider,
+      provider: provider || this.connection.provider,
       kvs: eventDb,
       contractAddress: address.data,
       contractInterface: this.connection.interface,
