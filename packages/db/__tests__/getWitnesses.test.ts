@@ -8,6 +8,7 @@ import {
   RangeDb,
   KeyValueStore
 } from '../src'
+import { Keccak256 } from '@cryptoeconomicslab/hash'
 import Coder from '@cryptoeconomicslab/coder'
 import { setupContext } from '@cryptoeconomicslab/context'
 import JSBI from 'jsbi'
@@ -37,7 +38,9 @@ describe('witness', () => {
       const bucket: KeyValueStore = await (
         await db.bucket(Bytes.fromString('bucket1'))
       ).bucket(Bytes.fromString('bucket2'))
-      const actual = await bucket.get(Bytes.fromHexString('0x6b'))
+      const actual = await bucket.get(
+        Keccak256.hash(Bytes.fromHexString('0x6b'))
+      )
       expect(actual).toEqual(Bytes.fromHexString('0x01'))
     })
   })
@@ -52,7 +55,7 @@ describe('witness', () => {
       const bucket = await db.bucket(Bytes.fromString('bucket1'))
       const k = Bytes.fromString('k')
       const v = Bytes.fromString('v')
-      await bucket.put(k, v)
+      await bucket.put(Keccak256.hash(k), v)
 
       // 0x6b is k
       const hint = 'bucket1,KEY,0x6b'
@@ -66,7 +69,7 @@ describe('witness', () => {
       const bucket2 = await bucket.bucket(Bytes.fromString('bucket2'))
       const k = Bytes.fromString('k')
       const v = Bytes.fromString('v')
-      await bucket2.put(k, v)
+      await bucket2.put(Keccak256.hash(k), v)
 
       const hint = 'bucket1.bucket2,KEY,0x6b'
       const result = await getWitnesses(db, hint)

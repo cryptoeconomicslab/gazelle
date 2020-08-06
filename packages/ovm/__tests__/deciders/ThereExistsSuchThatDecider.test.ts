@@ -15,6 +15,7 @@ import {
 import { FreeVariable, DeciderManager } from '../../src'
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
+import { Keccak256 } from '@cryptoeconomicslab/hash'
 setupContext({ coder: Coder })
 
 describe('ThereExistsSuchThatDecider', () => {
@@ -86,7 +87,7 @@ describe('ThereExistsSuchThatDecider', () => {
       '0x682f001aa66b904779bbcd846e52a62f4cf7d643b91826fdec04441ab604a6d66330609ad20a1a14fb52e3967bd2086c131e634ee4823b8a7ce3be8d91038daa1b'
     )
 
-    await sigBucket.put(message, signature)
+    await sigBucket.put(Keccak256.hash(message), signature)
     const hint = `sig,KEY,${message.toHexString()}`
     const property = new Property(ThereExistsSuchThatDeciderAddress, [
       Bytes.fromString(hint),
