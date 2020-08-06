@@ -60,7 +60,8 @@ export class ExitDisputeContract implements IExitDisputeContract {
     'function challenge(bytes[] inputs, bytes[] challengeInputs, bytes[] witness)',
     'function removeChallenge(bytes[] inputs, bytes[] challengeInputs, bytes[] witness)',
     'function settle(bytes[] inputs)',
-    `function getClaimDecision(${ABI.STATE_UPDATE} su) returns (uint)`
+    `function getClaimDecision(${ABI.STATE_UPDATE} su) returns (uint)`,
+    `function isCompletable(${ABI.STATE_UPDATE} su) returns (bool)`
   ]
 
   constructor(
@@ -145,6 +146,13 @@ export class ExitDisputeContract implements IExitDisputeContract {
       stateUpdateToLog(stateUpdate)
     )
     return decision.value.toNumber()
+  }
+
+  public async isCompletable(stateUpdate: StateUpdate): Promise<boolean> {
+    const isCompletable = await this.connection.isCompletable(
+      stateUpdateToLog(stateUpdate)
+    )
+    return isCompletable
   }
 
   public subscribeExitClaimed(

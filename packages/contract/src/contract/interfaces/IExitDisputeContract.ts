@@ -29,6 +29,8 @@ export interface IExitDisputeContract {
 
   getClaimDecision(stateUpdate: StateUpdate): Promise<number>
 
+  isCompletable(stateUpdate: StateUpdate): Promise<boolean>
+
   subscribeExitClaimed(handler: (stateUpdate: StateUpdate) => void): void
   subscribeExitChallenged(
     handler: (
