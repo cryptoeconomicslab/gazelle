@@ -28,6 +28,7 @@ setupContext({
 
 interface EthLightClientOptions {
   wallet: ethers.Wallet
+  provider?: ethers.providers.Provider
   kvs: KeyValueStore
   config: DeciderConfig & PlasmaContractConfig & EthContractConfig
   aggregatorEndpoint?: string
@@ -41,6 +42,7 @@ export default async function initialize(options: EthLightClientOptions) {
     Address.from(options.config.adjudicationContract),
     eventDb,
     options.wallet,
+    options.provider,
     options.eventWatcherOptions
   )
   function depositContractFactory(address: Address) {
@@ -48,6 +50,7 @@ export default async function initialize(options: EthLightClientOptions) {
       address,
       eventDb,
       options.wallet,
+      options.provider,
       options.eventWatcherOptions
     )
   }
@@ -58,6 +61,7 @@ export default async function initialize(options: EthLightClientOptions) {
     Address.from(options.config.commitment),
     eventDb,
     options.wallet,
+    options.provider,
     options.eventWatcherOptions
   )
   const ownershipPayoutContract = new OwnershipPayoutContract(
@@ -67,12 +71,16 @@ export default async function initialize(options: EthLightClientOptions) {
   const checkpointDisputeContract = new CheckpointDisputeContract(
     Address.from(options.config.checkpointDispute),
     eventDb,
-    options.wallet
+    options.wallet,
+    options.provider,
+    options.eventWatcherOptions
   )
   const exitDisputeContract = new ExitDisputeContract(
     Address.from(options.config.exitDispute),
     eventDb,
-    options.wallet
+    options.wallet,
+    options.provider,
+    options.eventWatcherOptions
   )
   const client = await LightClient.initilize({
     wallet: ethWallet,

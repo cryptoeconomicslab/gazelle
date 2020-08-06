@@ -38,6 +38,7 @@ export class AdjudicationContract implements IAdjudicationContract {
     address: Address,
     eventDb: KeyValueStore,
     signer: ethers.Signer,
+    provider?: ethers.providers.Provider,
     eventWatcherOptions?: EventWatcherOptions
   ) {
     this.connection = new ethers.Contract(
@@ -46,7 +47,7 @@ export class AdjudicationContract implements IAdjudicationContract {
       signer
     )
     this.eventWatcher = new EthEventWatcher({
-      provider: this.connection.provider,
+      provider: provider || this.connection.provider,
       kvs: eventDb,
       contractAddress: address.data,
       contractInterface: this.connection.interface,

@@ -2,7 +2,7 @@ import * as ethers from 'ethers'
 import { Bytes, Address, Codable } from '@cryptoeconomicslab/primitives'
 import { EventLog } from '@cryptoeconomicslab/contract'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
-import EthEventWatcher from '../events'
+import EthEventWatcher, { EventWatcherOptions } from '../events'
 import { StateUpdate } from '@cryptoeconomicslab/plasma'
 import { DoubleLayerInclusionProof } from '@cryptoeconomicslab/merkle-tree'
 import { IExitDisputeContract } from '@cryptoeconomicslab/contract'
@@ -66,7 +66,9 @@ export class ExitDisputeContract implements IExitDisputeContract {
   constructor(
     readonly address: Address,
     eventDb: KeyValueStore,
-    signer: ethers.Signer
+    signer: ethers.Signer,
+    provider?: ethers.providers.Provider,
+    eventWatcherOptions?: EventWatcherOptions
   ) {
     this.connection = new ethers.Contract(
       address.data,
@@ -74,10 +76,11 @@ export class ExitDisputeContract implements IExitDisputeContract {
       signer
     )
     this.eventWatcher = new EthEventWatcher({
-      provider: this.connection.provider,
+      provider: provider || this.connection.provider,
       kvs: eventDb,
       contractAddress: address.data,
-      contractInterface: this.connection.interface
+      contractInterface: this.connection.interface,
+      options: eventWatcherOptions
     })
   }
 

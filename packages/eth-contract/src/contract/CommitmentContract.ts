@@ -24,6 +24,7 @@ export class CommitmentContract implements ICommitmentContract {
     address: Address,
     eventDb: KeyValueStore,
     signer: ethers.Signer,
+    provider?: ethers.providers.Provider,
     eventWatcherOptions?: EventWatcherOptions
   ) {
     this.connection = new ethers.Contract(
@@ -32,7 +33,7 @@ export class CommitmentContract implements ICommitmentContract {
       signer
     )
     this.eventWatcher = new EthEventWatcher({
-      provider: this.connection.provider,
+      provider: provider || this.connection.provider,
       kvs: eventDb,
       contractAddress: address.data,
       contractInterface: this.connection.interface,
