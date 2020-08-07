@@ -263,7 +263,26 @@ describe('light client', () => {
     expect(bobActions[1].type).toEqual(ActionType.Exit)
     expect(bobActions[1].amount).toEqual(parseUnitsToJsbi('0.05'))
 
-    console.log('[test] sync')
+    console.log('[test 1] sync')
+    aliceLightClient.stop()
+    bobLightClient.stop()
+    await aliceLightClient.start()
+    await bobLightClient.start()
+    await sleep(20000)
+    expect(await getBalance(aliceLightClient)).toEqual('0.0')
+    expect(await getBalance(bobLightClient)).toEqual('0.05')
+    const aliceActions2 = await aliceLightClient.getAllUserActions()
+    const bobActions2 = await bobLightClient.getAllUserActions()
+    expect(aliceActions2[0].type).toEqual(ActionType.Deposit)
+    expect(aliceActions2[0].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(aliceActions2[1].type).toEqual(ActionType.Send)
+    expect(aliceActions2[1].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(bobActions2[0].type).toEqual(ActionType.Receive)
+    expect(bobActions2[0].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(bobActions2[1].type).toEqual(ActionType.Exit)
+    expect(bobActions2[1].amount).toEqual(parseUnitsToJsbi('0.05'))
+
+    console.log('[test 1] sync from empty')
 
     const aliceSyncLightClient = await createClientFromPrivateKey(
       aliceLightClient['wallet']['ethersWallet'].privateKey
@@ -318,22 +337,32 @@ describe('light client', () => {
     expect(exitList.length).toBe(1)
     expect(exitList[0].stateUpdate.amount).toEqual(parseUnitsToJsbi('0.05'))
 
-    await increaseBlock()
+    console.log('[test 2] sync test')
+    aliceLightClient.stop()
+    await aliceLightClient.start()
+    await sleep(20000)
+    expect(await getBalance(aliceLightClient)).toEqual('0.05')
+    const exitList2 = await aliceLightClient.getPendingWithdrawals()
+    expect(exitList2.length).toBe(1)
+    expect(exitList2[0].stateUpdate.amount).toEqual(parseUnitsToJsbi('0.05'))
 
-    expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.0')
-    await finalizeExit(aliceLightClient)
-    expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.05')
-
+    console.log('[test 2] sync test from empty')
     const aliceSyncLightClient = await createClientFromPrivateKey(
       aliceLightClient['wallet']['ethersWallet'].privateKey
     )
     await sleep(20000)
-
+    expect(await getBalance(aliceSyncLightClient)).toEqual('0.05')
     const syncedExitList = await aliceSyncLightClient.getPendingWithdrawals()
     expect(syncedExitList.length).toBe(1)
     expect(syncedExitList[0].stateUpdate.amount).toEqual(
       parseUnitsToJsbi('0.05')
     )
+
+    await increaseBlock()
+
+    expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.0')
+    await finalizeExit(aliceLightClient)
+    expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.05')
   })
 
   /**
