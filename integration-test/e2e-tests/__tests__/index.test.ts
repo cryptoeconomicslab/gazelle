@@ -349,8 +349,13 @@ describe('light client', () => {
     const exitList2 = await aliceLightClient.getPendingWithdrawals()
     expect(exitList2.length).toBe(1)
     expect(exitList2[0].stateUpdate.amount).toEqual(parseUnitsToJsbi('0.05'))
+    const aliceActions = await aliceLightClient.getAllUserActions()
+    expect(aliceActions.length).toEqual(1)
+    expect(aliceActions[0].type).toEqual(ActionType.Deposit)
+    expect(aliceActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
 
     console.log('[test 2] sync test from empty')
+    // check pending exits are synced
     const aliceSyncLightClient = await createClientFromPrivateKey(
       aliceLightClient['wallet']['ethersWallet'].privateKey
     )
@@ -368,12 +373,14 @@ describe('light client', () => {
     await finalizeExit(aliceLightClient)
     expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.05')
 
-    const aliceActions = await aliceLightClient.getAllUserActions()
-    expect(aliceActions.length).toEqual(2)
-    expect(aliceActions[0].type).toEqual(ActionType.Deposit)
-    expect(aliceActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
-    expect(aliceActions[1].type).toEqual(ActionType.Exit)
-    expect(aliceActions[1].amount).toEqual(parseUnitsToJsbi('0.05'))
+    const aliceActionsAfterExit = await aliceLightClient.getAllUserActions()
+    expect(aliceActionsAfterExit.length).toEqual(2)
+    expect(aliceActionsAfterExit[0].type).toEqual(ActionType.Deposit)
+    expect(aliceActionsAfterExit[0].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(aliceActionsAfterExit[1].type).toEqual(ActionType.Exit)
+    expect(aliceActionsAfterExit[1].amount).toEqual(parseUnitsToJsbi('0.05'))
+    const exitListAfterCompleted = await aliceLightClient.getPendingWithdrawals()
+    expect(exitListAfterCompleted).toEqual([])
   })
 
   /**
