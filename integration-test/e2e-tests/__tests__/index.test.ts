@@ -273,10 +273,12 @@ describe('light client', () => {
     expect(await getBalance(bobLightClient)).toEqual('0.05')
     const aliceActions2 = await aliceLightClient.getAllUserActions()
     const bobActions2 = await bobLightClient.getAllUserActions()
+    expect(aliceActions2.length).toEqual(2)
     expect(aliceActions2[0].type).toEqual(ActionType.Deposit)
     expect(aliceActions2[0].amount).toEqual(parseUnitsToJsbi('0.1'))
     expect(aliceActions2[1].type).toEqual(ActionType.Send)
     expect(aliceActions2[1].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(bobActions2.length).toEqual(2)
     expect(bobActions2[0].type).toEqual(ActionType.Receive)
     expect(bobActions2[0].amount).toEqual(parseUnitsToJsbi('0.1'))
     expect(bobActions2[1].type).toEqual(ActionType.Exit)
@@ -303,10 +305,12 @@ describe('light client', () => {
     const syncedAliceActions = await aliceSyncLightClient.getAllUserActions()
     const syncedBobActions = await bobSyncLightClient.getAllUserActions()
 
+    expect(syncedAliceActions.length).toEqual(2)
     expect(syncedAliceActions[0].type).toEqual(ActionType.Deposit)
     expect(syncedAliceActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
     expect(syncedAliceActions[1].type).toEqual(ActionType.Send)
     expect(syncedAliceActions[1].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(syncedBobActions.length).toEqual(1)
     expect(syncedBobActions[0].type).toEqual(ActionType.Receive)
     expect(syncedBobActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
 
@@ -363,6 +367,13 @@ describe('light client', () => {
     expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.0')
     await finalizeExit(aliceLightClient)
     expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.05')
+
+    const aliceActions = await aliceLightClient.getAllUserActions()
+    expect(aliceActions.length).toEqual(2)
+    expect(aliceActions[0].type).toEqual(ActionType.Deposit)
+    expect(aliceActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(aliceActions[1].type).toEqual(ActionType.Exit)
+    expect(aliceActions[1].amount).toEqual(parseUnitsToJsbi('0.05'))
   })
 
   /**
