@@ -158,10 +158,11 @@ export class StateSyncer {
       // if aggregator latest state doesn't have client state, client should check spending proof
       // clear verified state updates
       await this.syncTransfers()
+      //  sync root hashes
+      await this.syncRootUntil(blockNumber)
 
       const verifyStateUpdate = async (su: StateUpdate, retryTimes = 5) => {
         try {
-          await this.syncRootUntil(blockNumber)
           await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
           const verified = await verifyCheckpoint(
             this.witnessDb,
@@ -178,6 +179,7 @@ export class StateSyncer {
           }
         } catch (e) {
           console.log(e)
+          return
         }
         await stateUpdateRepository.insertVerifiedStateUpdate(su)
         const tokenContractAddress = this.tokenManager.getTokenContractAddress(
