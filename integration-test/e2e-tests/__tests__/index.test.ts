@@ -47,8 +47,10 @@ describe('light client', () => {
   const aggregatorEndpoint = 'http://aggregator:3000'
   let aliceLightClient: LightClient
   let bobLightClient: LightClient
+  let carolLightClient: LightClient
   let senderWallet: ethers.Wallet
   let recieverWallet: ethers.Wallet
+  let carolWallet: ethers.Wallet
   let operatorWallet: ethers.Wallet
 
   async function createClient(wallet: ethers.Wallet) {
@@ -189,6 +191,7 @@ describe('light client', () => {
     const provider = new ethers.providers.JsonRpcProvider(nodeEndpoint)
     senderWallet = ethers.Wallet.createRandom().connect(provider)
     recieverWallet = ethers.Wallet.createRandom().connect(provider)
+    carolWallet = ethers.Wallet.createRandom().connect(provider)
     operatorWallet = new ethers.Wallet(
       '0xc87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3',
       provider
@@ -202,14 +205,20 @@ describe('light client', () => {
       to: recieverWallet.address,
       value: parseEther('1.0')
     })
+    await operatorWallet.sendTransaction({
+      to: carolWallet.address,
+      value: parseEther('1.0')
+    })
 
     aliceLightClient = await createClient(senderWallet)
     bobLightClient = await createClient(recieverWallet)
+    carolLightClient = await createClient(carolWallet)
   })
 
   afterEach(async () => {
     aliceLightClient.stop()
     bobLightClient.stop()
+    carolLightClient.stop()
   })
 
   /**
@@ -278,9 +287,11 @@ describe('light client', () => {
     expect(aliceActions2[0].amount).toEqual(parseUnitsToJsbi('0.1'))
     expect(aliceActions2[1].type).toEqual(ActionType.Send)
     expect(aliceActions2[1].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(aliceActions2[1].counterParty).toEqual(bobLightClient.address)
     expect(bobActions2.length).toEqual(2)
     expect(bobActions2[0].type).toEqual(ActionType.Receive)
     expect(bobActions2[0].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(bobActions2[0].counterParty).toEqual(bobLightClient.address)
     expect(bobActions2[1].type).toEqual(ActionType.Exit)
     expect(bobActions2[1].amount).toEqual(parseUnitsToJsbi('0.05'))
 
@@ -323,7 +334,7 @@ describe('light client', () => {
    * Alice deposits 0.1 ETH
    * Alice exit 0.05 ETH
    */
-  test('user attempts exit depositted asset', async () => {
+  test.skip('user attempts exit depositted asset', async () => {
     await depositPETH(aliceLightClient, senderWallet, '0.1')
     await sleep(10000)
 
@@ -453,6 +464,73 @@ describe('light client', () => {
     await finalizeExit(bobLightClient)
     expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.4')
     expect(await getL1PETHBalance(bobLightClient)).toEqual('0.6')
+  })
+
+  test('transfers in multiple blocks', async () => {
+    await depositPETH(aliceLightClient, senderWallet, '0.5')
+    await depositPETH(bobLightClient, recieverWallet, '0.5')
+    await depositPETH(carolLightClient, carolWallet, '0.5')
+
+    await sleep(10000)
+
+    await checkBalance(aliceLightClient, '0.5')
+    await checkBalance(bobLightClient, '0.5')
+    await checkBalance(carolLightClient, '0.5')
+
+    await aliceLightClient.transfer(
+      parseUnitsToJsbi('0.2'),
+      config.PlasmaETH,
+      bobLightClient.address
+    )
+    await carolLightClient.transfer(
+      parseUnitsToJsbi('0.2'),
+      config.PlasmaETH,
+      bobLightClient.address
+    )
+
+    await sleep(20000)
+
+    await checkBalance(aliceLightClient, '0.3')
+    await checkBalance(bobLightClient, '0.9')
+    await checkBalance(carolLightClient, '0.3')
+
+    await bobLightClient.transfer(
+      parseUnitsToJsbi('0.8'),
+      config.PlasmaETH,
+      aliceLightClient.address
+    )
+
+    await sleep(20000)
+
+    await checkBalance(aliceLightClient, '1.1')
+    await checkBalance(bobLightClient, '0.1')
+    await checkBalance(carolLightClient, '0.3')
+
+    aliceLightClient.stop()
+    bobLightClient.stop()
+    carolLightClient.stop()
+    await aliceLightClient.start()
+    await bobLightClient.start()
+    await carolLightClient.start()
+
+    await sleep(5000)
+
+    await checkBalance(aliceLightClient, '1.1')
+    await checkBalance(bobLightClient, '0.1')
+    await checkBalance(carolLightClient, '0.3')
+
+    const aliceActions = await aliceLightClient.getAllUserActions()
+    expect(aliceActions.length).toEqual(5)
+    expect(aliceActions[0].type).toEqual(ActionType.Deposit)
+    expect(aliceActions[0].amount).toEqual(parseUnitsToJsbi('0.5'))
+    expect(aliceActions[1].type).toEqual(ActionType.Send)
+    expect(aliceActions[1].amount).toEqual(parseUnitsToJsbi('0.2'))
+    expect(aliceActions[2].type).toEqual(ActionType.Receive)
+    expect(aliceActions[2].amount).toEqual(parseUnitsToJsbi('0.2'))
+    expect(aliceActions[3].type).toEqual(ActionType.Receive)
+    expect(aliceActions[3].amount).toEqual(parseUnitsToJsbi('0.5'))
+    expect(aliceActions[4].type).toEqual(ActionType.Receive)
+    expect(aliceActions[4].amount).toEqual(parseUnitsToJsbi('0.1'))
   })
 
   /**
