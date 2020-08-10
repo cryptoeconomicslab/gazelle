@@ -62,4 +62,8 @@ export default class BigNumber implements Codable {
   public equals(bigNumber: BigNumber): boolean {
     return this.raw === bigNumber.raw
   }
+
+  public increment(): BigNumber {
+    return BigNumber.from(JSBI.add(this.data, JSBI.BigInt(1)))
+  }
 }

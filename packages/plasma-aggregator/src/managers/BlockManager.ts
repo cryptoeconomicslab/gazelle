@@ -66,7 +66,7 @@ export default class BlockManager {
    */
   public async getNextBlockNumber(): Promise<BigNumber> {
     const currentBlock = await this.getCurrentBlockNumber()
-    return BigNumber.from(JSBI.add(currentBlock.data, JSBI.BigInt(1)))
+    return currentBlock.increment()
   }
 
   private async setBlockNumber(blockNumber: BigNumber): Promise<void> {
@@ -74,6 +74,26 @@ export default class BlockManager {
       Bytes.fromString('blockNumber'),
       ovmContext.coder.encode(blockNumber)
     )
+  }
+
+  public async updateSubmittedBlock(blockNumber: BigNumber): Promise<void> {
+    const submittedBlockNumber = await this.getSubmittedBlock()
+    if (JSBI.greaterThan(blockNumber.data, submittedBlockNumber.data)) {
+      await this.setSubmittedBlock(blockNumber)
+    }
+  }
+
+  private async setSubmittedBlock(blockNumber: BigNumber): Promise<void> {
+    await this.kvs.put(
+      Bytes.fromString('submittedBlockNumber'),
+      ovmContext.coder.encode(blockNumber)
+    )
+  }
+
+  public async getSubmittedBlock(): Promise<BigNumber> {
+    const data = await this.kvs.get(Bytes.fromString('submittedBlockNumber'))
+    if (!data) return BigNumber.from(0)
+    return ovmContext.coder.decode(BigNumber.default(), data)
   }
 
   /**
@@ -101,9 +121,7 @@ export default class BlockManager {
    */
   public async generateNextBlock(): Promise<Block | undefined> {
     const blockNumber = await this.getCurrentBlockNumber()
-    const nextBlockNumber = BigNumber.from(
-      JSBI.add(JSBI.BigInt(1), blockNumber.data)
-    )
+    const nextBlockNumber = blockNumber.increment()
 
     const stateUpdatesMap = new Map()
     const sus = await Promise.all(
@@ -137,7 +155,7 @@ export default class BlockManager {
     }
 
     const block = new Block(
-      BigNumber.from(JSBI.add(blockNumber.data, JSBI.BigInt(1))),
+      nextBlockNumber,
       stateUpdatesMap,
       BigNumber.from(0),
       Integer.from(0)
