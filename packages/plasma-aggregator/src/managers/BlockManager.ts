@@ -116,11 +116,20 @@ export default class BlockManager {
   }
 
   /**
-   * create next block with pending state updates in block
-   * store new block and clear all pending updates in block db.
+   * create next block.
    */
   public async generateNextBlock(): Promise<Block | undefined> {
     const blockNumber = await this.getCurrentBlockNumber()
+    return await this.generateBlock(blockNumber)
+  }
+
+  /**
+   * create block of provided blockNumber with pending state updates in block
+   * store new block and clear all pending updates in block db.
+   */
+  private async generateBlock(
+    blockNumber: BigNumber
+  ): Promise<Block | undefined> {
     const nextBlockNumber = blockNumber.increment()
 
     const stateUpdatesMap = new Map()
@@ -144,7 +153,6 @@ export default class BlockManager {
         )
         stateUpdatesMap.set(token.data, stateUpdates)
 
-        await this.clearTokenBucket(blockNumber, token)
         return stateUpdateRanges
       })
     )
