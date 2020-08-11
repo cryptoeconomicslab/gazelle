@@ -41,18 +41,6 @@ export default class BlockManager {
   }
 
   /**
-   * remove all state updates of given token address
-   * @param addr token address which state updates belongs to, will be deleted
-   */
-  private async clearTokenBucket(blockNumber: BigNumber, addr: Address) {
-    const db = await this.tokenBucket(blockNumber, addr)
-    await db.del(
-      JSBI.BigInt(0),
-      JSBI.exponentiate(JSBI.BigInt(2), JSBI.BigInt(256))
-    )
-  }
-
-  /**
    * returns current block number
    */
   public async getCurrentBlockNumber(): Promise<BigNumber> {
@@ -118,7 +106,7 @@ export default class BlockManager {
   /**
    * create next block.
    */
-  public async generateNextBlock(): Promise<Block | undefined> {
+  public async generateNextBlock(): Promise<Block | null> {
     const blockNumber = await this.getCurrentBlockNumber()
     return await this.generateBlock(blockNumber)
   }
@@ -127,9 +115,7 @@ export default class BlockManager {
    * create block of provided blockNumber with pending state updates in block
    * store new block and clear all pending updates in block db.
    */
-  private async generateBlock(
-    blockNumber: BigNumber
-  ): Promise<Block | undefined> {
+  private async generateBlock(blockNumber: BigNumber): Promise<Block | null> {
     const nextBlockNumber = blockNumber.increment()
 
     const stateUpdatesMap = new Map()
@@ -159,7 +145,7 @@ export default class BlockManager {
 
     // In case no stateUpdates have been enqueued, return undefined
     if (sus.every(arr => arr.length === 0)) {
-      return
+      return null
     }
 
     const block = new Block(

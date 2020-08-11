@@ -33,6 +33,7 @@ import { BlockManager, StateManager } from './managers'
 import { sleep } from './utils'
 import cors from 'cors'
 import BlockExplorerController from './BlockExplorer/controller'
+import { TransactionSubmitter } from './TransactionSubmitter'
 
 export default class Aggregator {
   readonly decider: DeciderManager
@@ -45,6 +46,7 @@ export default class Aggregator {
     port: number
     blockInterval: number
   }
+  private submitter: TransactionSubmitter
 
   /**
    * instantiate aggregator
@@ -85,6 +87,11 @@ export default class Aggregator {
       throw new Error('Ownership not found')
     }
     this.ownershipPredicate = ownershipPredicate
+    this.submitter = new TransactionSubmitter(
+      this.blockManager,
+      commitmentContractFactory,
+      config.commitment
+    )
     this.httpServer = express()
     this.httpServer.use(express.json())
     this.httpServer.use(cors())
@@ -518,44 +525,8 @@ export default class Aggregator {
    */
   private async poll() {
     await sleep(this.option.blockInterval)
-    await this.submitNextBlock()
+    await this.submitter.submit()
     await this.poll()
-  }
-
-  /**
-   *  submit block to commitment contract and store new block
-   */
-  private async submitBlock(block: Block) {
-    const root = block.getTree().getRoot()
-    await this.commitmentContract.submit(block.blockNumber, root)
-    // wait to success submitting
-    await this.blockManager.updateSubmittedBlock(block.blockNumber)
-    console.log('submit block: ', block)
-  }
-
-  /**
-   * if there are unsubmitted block, submit most old unsubmitted block, otherwise submit next block.
-   */
-  private async submitNextBlock() {
-    const current = await this.blockManager.getCurrentBlockNumber()
-    const submitted = await this.blockManager.getSubmittedBlock()
-    if (JSBI.greaterThan(current.data, submitted.data)) {
-      const unsubmittedBlock = await this.blockManager.getBlock(
-        submitted.increment()
-      )
-      if (unsubmittedBlock) {
-        this.submitBlock(unsubmittedBlock)
-      }
-    } else if (current.equals(submitted)) {
-      const block = await this.blockManager.generateNextBlock()
-      if (block) {
-        await this.submitBlock(block)
-      }
-    } else {
-      throw new Error(
-        'submitted block number must not be greater than current block'
-      )
-    }
   }
 
   /**
