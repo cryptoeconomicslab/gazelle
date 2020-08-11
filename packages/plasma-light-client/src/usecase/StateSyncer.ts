@@ -108,6 +108,25 @@ export class StateSyncer {
   }
 
   /**
+   * take away exit state updates from verified state updates.
+   */
+  private async removeAlreadyExitStartedStateUpdates() {
+    const stateUpdateRepository = await StateUpdateRepository.init(
+      this.witnessDb
+    )
+    const wholeRange = new Range(BigNumber.from(0), BigNumber.MAX_NUMBER)
+    for (const addr of this.tokenManager.depositContractAddresses) {
+      const exitStateUpdates = await stateUpdateRepository.getExitStateUpdates(
+        addr,
+        wholeRange
+      )
+      for (const su of exitStateUpdates) {
+        await stateUpdateRepository.removeVerifiedStateUpdate(addr, su.range)
+      }
+    }
+  }
+
+  /**
    * sync latest state
    * @param blockNumber
    * @param address
@@ -118,6 +137,12 @@ export class StateSyncer {
     if (!root) {
       // FIXME: check if root is default bytes32 value
       throw new Error('Block root hash is null')
+    }
+    const syncRepository = await SyncRepository.init(this.witnessDb)
+    const synced = await syncRepository.getSyncedBlockNumber()
+    if (JSBI.greaterThanOrEqual(synced.data, blockNumber.data)) {
+      console.log(`already synced: Block{${blockNumber.raw}}`)
+      return
     }
     console.log(`syncing latest state: Block{${blockNumber.raw}}`)
     await this.storeRoot(blockNumber, root)
@@ -133,10 +158,11 @@ export class StateSyncer {
       // if aggregator latest state doesn't have client state, client should check spending proof
       // clear verified state updates
       await this.syncTransfers()
+      //  sync root hashes
+      await this.syncRootUntil(blockNumber)
 
       const verifyStateUpdate = async (su: StateUpdate, retryTimes = 5) => {
         try {
-          await this.syncRootUntil(blockNumber)
           await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
           const verified = await verifyCheckpoint(
             this.witnessDb,
@@ -153,6 +179,7 @@ export class StateSyncer {
           }
         } catch (e) {
           console.log(e)
+          return
         }
         await stateUpdateRepository.insertVerifiedStateUpdate(su)
         const tokenContractAddress = this.tokenManager.getTokenContractAddress(
@@ -173,7 +200,9 @@ export class StateSyncer {
       }
       const promises = stateUpdates.map(async su => verifyStateUpdate(su))
       await Promise.all(promises)
-      const syncRepository = await SyncRepository.init(this.witnessDb)
+
+      this.removeAlreadyExitStartedStateUpdates()
+
       await syncRepository.updateSyncedBlockNumber(blockNumber)
       await syncRepository.insertBlockRoot(blockNumber, root)
 

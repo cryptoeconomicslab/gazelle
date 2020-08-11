@@ -11,13 +11,16 @@ import { LevelKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import initializeLightClient from '@cryptoeconomicslab/eth-plasma-light-client'
 import LightClient, {
   Numberish,
-  StateUpdateRepository
+  StateUpdateRepository,
+  UserActionRepository
 } from '@cryptoeconomicslab/plasma-light-client'
 import JSBI from 'jsbi'
 import parseEther = ethers.utils.parseEther
 import parseUnits = ethers.utils.parseUnits
 import formatUnits = ethers.utils.formatUnits
-import { ActionType } from '@cryptoeconomicslab/plasma-light-client/lib/UserAction'
+import UserAction, {
+  ActionType
+} from '@cryptoeconomicslab/plasma-light-client/lib/UserAction'
 import { EthCoder } from '@cryptoeconomicslab/eth-coder'
 import { Block, StateUpdate } from '@cryptoeconomicslab/plasma'
 import { DateUtils } from '@cryptoeconomicslab/utils'
@@ -47,8 +50,10 @@ describe('light client', () => {
   const aggregatorEndpoint = 'http://aggregator:3000'
   let aliceLightClient: LightClient
   let bobLightClient: LightClient
+  let carolLightClient: LightClient
   let senderWallet: ethers.Wallet
   let recieverWallet: ethers.Wallet
+  let carolWallet: ethers.Wallet
   let operatorWallet: ethers.Wallet
 
   async function createClient(wallet: ethers.Wallet) {
@@ -185,10 +190,20 @@ describe('light client', () => {
     await client['exitDispute']['contract'].claim(stateUpdate, inclusionProof)
   }
 
+  function formatAction(action: UserAction) {
+    return {
+      type: action.type,
+      amount: action.amount,
+      counterParty: action.counterParty
+    }
+  }
+  const defaultAddress = Address.default().data
+
   beforeEach(async () => {
     const provider = new ethers.providers.JsonRpcProvider(nodeEndpoint)
     senderWallet = ethers.Wallet.createRandom().connect(provider)
     recieverWallet = ethers.Wallet.createRandom().connect(provider)
+    carolWallet = ethers.Wallet.createRandom().connect(provider)
     operatorWallet = new ethers.Wallet(
       '0xc87509a1c067bbde78beb793e6fa76530b6382a4c0241e5e4a9ec0a0f44dc0d3',
       provider
@@ -202,14 +217,20 @@ describe('light client', () => {
       to: recieverWallet.address,
       value: parseEther('1.0')
     })
+    await operatorWallet.sendTransaction({
+      to: carolWallet.address,
+      value: parseEther('1.0')
+    })
 
     aliceLightClient = await createClient(senderWallet)
     bobLightClient = await createClient(recieverWallet)
+    carolLightClient = await createClient(carolWallet)
   })
 
   afterEach(async () => {
     aliceLightClient.stop()
     bobLightClient.stop()
+    carolLightClient.stop()
   })
 
   /**
@@ -251,19 +272,43 @@ describe('light client', () => {
     await finalizeExit(bobLightClient)
     expect(await getL1PETHBalance(bobLightClient)).toEqual('0.05')
 
+    console.log('[test 1] sync')
+    aliceLightClient.stop()
+    bobLightClient.stop()
+    await aliceLightClient.start()
+    await bobLightClient.start()
+    await sleep(20000)
+    expect(await getBalance(aliceLightClient)).toEqual('0.0')
+    expect(await getBalance(bobLightClient)).toEqual('0.05')
     const aliceActions = await aliceLightClient.getAllUserActions()
     const bobActions = await bobLightClient.getAllUserActions()
 
-    expect(aliceActions[0].type).toEqual(ActionType.Deposit)
-    expect(aliceActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
-    expect(aliceActions[1].type).toEqual(ActionType.Send)
-    expect(aliceActions[1].amount).toEqual(parseUnitsToJsbi('0.1'))
-    expect(bobActions[0].type).toEqual(ActionType.Receive)
-    expect(bobActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
-    expect(bobActions[1].type).toEqual(ActionType.Exit)
-    expect(bobActions[1].amount).toEqual(parseUnitsToJsbi('0.05'))
+    expect(aliceActions.map(formatAction)).toEqual([
+      {
+        type: ActionType.Deposit,
+        amount: parseUnitsToJsbi('0.1'),
+        counterParty: defaultAddress
+      },
+      {
+        type: ActionType.Send,
+        amount: parseUnitsToJsbi('0.1'),
+        counterParty: bobLightClient.address
+      }
+    ])
+    expect(bobActions.map(formatAction)).toEqual([
+      {
+        type: ActionType.Receive,
+        amount: parseUnitsToJsbi('0.1'),
+        counterParty: bobLightClient.address
+      },
+      {
+        type: ActionType.Exit,
+        amount: parseUnitsToJsbi('0.05'),
+        counterParty: defaultAddress
+      }
+    ])
 
-    console.log('[test] sync')
+    console.log('[test 1] sync from empty')
 
     const aliceSyncLightClient = await createClientFromPrivateKey(
       aliceLightClient['wallet']['ethersWallet'].privateKey
@@ -284,12 +329,25 @@ describe('light client', () => {
     const syncedAliceActions = await aliceSyncLightClient.getAllUserActions()
     const syncedBobActions = await bobSyncLightClient.getAllUserActions()
 
-    expect(syncedAliceActions[0].type).toEqual(ActionType.Deposit)
-    expect(syncedAliceActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
-    expect(syncedAliceActions[1].type).toEqual(ActionType.Send)
-    expect(syncedAliceActions[1].amount).toEqual(parseUnitsToJsbi('0.1'))
-    expect(syncedBobActions[0].type).toEqual(ActionType.Receive)
-    expect(syncedBobActions[0].amount).toEqual(parseUnitsToJsbi('0.1'))
+    expect(syncedAliceActions.map(formatAction)).toEqual([
+      {
+        type: ActionType.Deposit,
+        amount: parseUnitsToJsbi('0.1'),
+        counterParty: defaultAddress
+      },
+      {
+        type: ActionType.Send,
+        amount: parseUnitsToJsbi('0.1'),
+        counterParty: bobLightClient.address
+      }
+    ])
+    expect(syncedBobActions.map(formatAction)).toEqual([
+      {
+        type: ActionType.Receive,
+        amount: parseUnitsToJsbi('0.1'),
+        counterParty: bobLightClient.address
+      }
+    ])
 
     aliceSyncLightClient.stop()
     bobSyncLightClient.stop()
@@ -318,22 +376,57 @@ describe('light client', () => {
     expect(exitList.length).toBe(1)
     expect(exitList[0].stateUpdate.amount).toEqual(parseUnitsToJsbi('0.05'))
 
+    console.log('[test 2] sync test')
+    aliceLightClient.stop()
+    await aliceLightClient.start()
+    await sleep(20000)
+    expect(await getBalance(aliceLightClient)).toEqual('0.05')
+    const exitList2 = await aliceLightClient.getPendingWithdrawals()
+    expect(exitList2.length).toBe(1)
+    expect(exitList2[0].stateUpdate.amount).toEqual(parseUnitsToJsbi('0.05'))
+    const aliceActions = await aliceLightClient.getAllUserActions()
+    expect(aliceActions.map(formatAction)).toEqual([
+      {
+        type: ActionType.Deposit,
+        amount: parseUnitsToJsbi('0.1'),
+        counterParty: defaultAddress
+      }
+    ])
+
+    console.log('[test 2] sync test from empty')
+    // check pending exits are synced
+    const aliceSyncLightClient = await createClientFromPrivateKey(
+      aliceLightClient['wallet']['ethersWallet'].privateKey
+    )
+    await sleep(20000)
+    expect(await getBalance(aliceSyncLightClient)).toEqual('0.05')
+    const syncedExitList = await aliceSyncLightClient.getPendingWithdrawals()
+    expect(syncedExitList.length).toBe(1)
+    expect(syncedExitList[0].stateUpdate.amount).toEqual(
+      parseUnitsToJsbi('0.05')
+    )
+
     await increaseBlock()
 
     expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.0')
     await finalizeExit(aliceLightClient)
     expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.05')
 
-    const aliceSyncLightClient = await createClientFromPrivateKey(
-      aliceLightClient['wallet']['ethersWallet'].privateKey
-    )
-    await sleep(20000)
-
-    const syncedExitList = await aliceSyncLightClient.getPendingWithdrawals()
-    expect(syncedExitList.length).toBe(1)
-    expect(syncedExitList[0].stateUpdate.amount).toEqual(
-      parseUnitsToJsbi('0.05')
-    )
+    const aliceActionsAfterExit = await aliceLightClient.getAllUserActions()
+    expect(aliceActionsAfterExit.map(formatAction)).toEqual([
+      {
+        type: ActionType.Deposit,
+        amount: parseUnitsToJsbi('0.1'),
+        counterParty: defaultAddress
+      },
+      {
+        type: ActionType.Exit,
+        amount: parseUnitsToJsbi('0.05'),
+        counterParty: defaultAddress
+      }
+    ])
+    const exitListAfterCompleted = await aliceLightClient.getPendingWithdrawals()
+    expect(exitListAfterCompleted).toEqual([])
   })
 
   /**
@@ -406,6 +499,90 @@ describe('light client', () => {
     await finalizeExit(bobLightClient)
     expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.4')
     expect(await getL1PETHBalance(bobLightClient)).toEqual('0.6')
+  })
+
+  test('transfers in multiple blocks', async () => {
+    await depositPETH(aliceLightClient, senderWallet, '0.5')
+    await depositPETH(bobLightClient, recieverWallet, '0.5')
+    await depositPETH(carolLightClient, carolWallet, '0.5')
+
+    await sleep(10000)
+
+    await checkBalance(aliceLightClient, '0.5')
+    await checkBalance(bobLightClient, '0.5')
+    await checkBalance(carolLightClient, '0.5')
+
+    await aliceLightClient.transfer(
+      parseUnitsToJsbi('0.2'),
+      config.PlasmaETH,
+      bobLightClient.address
+    )
+    await carolLightClient.transfer(
+      parseUnitsToJsbi('0.2'),
+      config.PlasmaETH,
+      bobLightClient.address
+    )
+
+    await sleep(20000)
+
+    await checkBalance(aliceLightClient, '0.3')
+    await checkBalance(bobLightClient, '0.9')
+    await checkBalance(carolLightClient, '0.3')
+
+    await bobLightClient.transfer(
+      parseUnitsToJsbi('0.8'),
+      config.PlasmaETH,
+      aliceLightClient.address
+    )
+
+    await sleep(20000)
+
+    await checkBalance(aliceLightClient, '1.1')
+    await checkBalance(bobLightClient, '0.1')
+    await checkBalance(carolLightClient, '0.3')
+
+    aliceLightClient.stop()
+    bobLightClient.stop()
+    carolLightClient.stop()
+    await aliceLightClient.start()
+    await bobLightClient.start()
+    await carolLightClient.start()
+
+    await sleep(5000)
+
+    await checkBalance(aliceLightClient, '1.1')
+    await checkBalance(bobLightClient, '0.1')
+    await checkBalance(carolLightClient, '0.3')
+
+    const aliceActions = await aliceLightClient.getAllUserActions()
+
+    expect(aliceActions.map(formatAction)).toEqual([
+      {
+        type: ActionType.Deposit,
+        amount: parseUnitsToJsbi('0.5'),
+        counterParty: defaultAddress
+      },
+      {
+        type: ActionType.Send,
+        amount: parseUnitsToJsbi('0.2'),
+        counterParty: bobLightClient.address
+      },
+      {
+        type: ActionType.Receive,
+        amount: parseUnitsToJsbi('0.2'),
+        counterParty: aliceLightClient.address
+      },
+      {
+        type: ActionType.Receive,
+        amount: parseUnitsToJsbi('0.5'),
+        counterParty: aliceLightClient.address
+      },
+      {
+        type: ActionType.Receive,
+        amount: parseUnitsToJsbi('0.1'),
+        counterParty: aliceLightClient.address
+      }
+    ])
   })
 
   /**
