@@ -430,6 +430,10 @@ export default class LightClient {
     return await this.exitUsecase.getPendingWithdrawals()
   }
 
+  public async isWithdrawalCompletable(exit: Exit): Promise<boolean> {
+    return await this.exitDispute.isCompletable(exit)
+  }
+
   /**
    * get all user actions until currentBlockNumber
    */

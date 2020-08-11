@@ -248,6 +248,10 @@ export class ExitDispute {
     )
   }
 
+  public async isCompletable(exit: Exit) {
+    return this.contract.isCompletable(exit.stateUpdate)
+  }
+
   private async checkCheckpointChallenge(
     stateUpdate: StateUpdate
   ): Promise<CheckpointChallenge | undefined> {
