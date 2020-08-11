@@ -60,8 +60,8 @@ export class ExitDisputeContract implements IExitDisputeContract {
     'function challenge(bytes[] inputs, bytes[] challengeInputs, bytes[] witness)',
     'function removeChallenge(bytes[] inputs, bytes[] challengeInputs, bytes[] witness)',
     'function settle(bytes[] inputs)',
-    `function getClaimDecision(${ABI.STATE_UPDATE} su) returns (uint)`,
-    `function isCompletable(${ABI.STATE_UPDATE} su) returns (bool)`
+    `function getClaimDecision(${ABI.STATE_UPDATE} su) view returns (uint)`,
+    `function isCompletable(${ABI.STATE_UPDATE} su) view returns (bool)`
   ]
 
   constructor(
