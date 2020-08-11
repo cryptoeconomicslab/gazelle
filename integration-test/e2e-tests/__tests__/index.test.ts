@@ -266,9 +266,15 @@ describe('light client', () => {
     const exitList = await bobLightClient.getPendingWithdrawals()
     expect(exitList.length).toBe(1)
     expect(exitList[0].stateUpdate.amount).toEqual(parseUnitsToJsbi('0.05'))
+    expect(
+      await bobLightClient.isWithdrawalCompletable(exitList[0])
+    ).toBeFalsy()
 
     await increaseBlock()
 
+    expect(
+      await bobLightClient.isWithdrawalCompletable(exitList[0])
+    ).toBeTruthy()
     await finalizeExit(bobLightClient)
     expect(await getL1PETHBalance(bobLightClient)).toEqual('0.05')
 
