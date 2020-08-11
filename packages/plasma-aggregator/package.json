@@ -1,6 +1,6 @@
 {
   "name": "@cryptoeconomicslab/plasma-aggregator",
-  "version": "0.5.0",
+  "version": "0.5.2-alpha.1",
   "description": "plasma aggregator",
   "author": {
     "name": "Cryptoeconomics Lab",
@@ -30,7 +30,7 @@
   },
   "dependencies": {
     "@cryptoeconomicslab/coder": "^0.5.0",
-    "@cryptoeconomicslab/contract": "^0.5.0",
+    "@cryptoeconomicslab/contract": "^0.5.2-alpha.1",
     "@cryptoeconomicslab/db": "^0.5.0",
     "@cryptoeconomicslab/merkle-tree": "^0.5.0",
     "@cryptoeconomicslab/ovm": "^0.5.0",
