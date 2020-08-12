@@ -41,18 +41,6 @@ export default class BlockManager {
   }
 
   /**
-   * remove all state updates of given token address
-   * @param addr token address which state updates belongs to, will be deleted
-   */
-  private async clearTokenBucket(blockNumber: BigNumber, addr: Address) {
-    const db = await this.tokenBucket(blockNumber, addr)
-    await db.del(
-      JSBI.BigInt(0),
-      JSBI.exponentiate(JSBI.BigInt(2), JSBI.BigInt(256))
-    )
-  }
-
-  /**
    * returns current block number
    */
   public async getCurrentBlockNumber(): Promise<BigNumber> {
@@ -66,7 +54,7 @@ export default class BlockManager {
    */
   public async getNextBlockNumber(): Promise<BigNumber> {
     const currentBlock = await this.getCurrentBlockNumber()
-    return BigNumber.from(JSBI.add(currentBlock.data, JSBI.BigInt(1)))
+    return currentBlock.increment()
   }
 
   private async setBlockNumber(blockNumber: BigNumber): Promise<void> {
@@ -74,6 +62,26 @@ export default class BlockManager {
       Bytes.fromString('blockNumber'),
       ovmContext.coder.encode(blockNumber)
     )
+  }
+
+  public async updateSubmittedBlock(blockNumber: BigNumber): Promise<void> {
+    const submittedBlockNumber = await this.getSubmittedBlock()
+    if (JSBI.greaterThan(blockNumber.data, submittedBlockNumber.data)) {
+      await this.setSubmittedBlock(blockNumber)
+    }
+  }
+
+  private async setSubmittedBlock(blockNumber: BigNumber): Promise<void> {
+    await this.kvs.put(
+      Bytes.fromString('submittedBlockNumber'),
+      ovmContext.coder.encode(blockNumber)
+    )
+  }
+
+  public async getSubmittedBlock(): Promise<BigNumber> {
+    const data = await this.kvs.get(Bytes.fromString('submittedBlockNumber'))
+    if (!data) return BigNumber.from(0)
+    return ovmContext.coder.decode(BigNumber.default(), data)
   }
 
   /**
@@ -96,14 +104,19 @@ export default class BlockManager {
   }
 
   /**
-   * create next block with pending state updates in block
+   * create next block.
+   */
+  public async generateNextBlock(): Promise<Block | null> {
+    const blockNumber = await this.getCurrentBlockNumber()
+    return await this.generateBlock(blockNumber)
+  }
+
+  /**
+   * create block of provided blockNumber with pending state updates in block
    * store new block and clear all pending updates in block db.
    */
-  public async generateNextBlock(): Promise<Block | undefined> {
-    const blockNumber = await this.getCurrentBlockNumber()
-    const nextBlockNumber = BigNumber.from(
-      JSBI.add(JSBI.BigInt(1), blockNumber.data)
-    )
+  private async generateBlock(blockNumber: BigNumber): Promise<Block | null> {
+    const nextBlockNumber = blockNumber.increment()
 
     const stateUpdatesMap = new Map()
     const sus = await Promise.all(
@@ -126,18 +139,17 @@ export default class BlockManager {
         )
         stateUpdatesMap.set(token.data, stateUpdates)
 
-        await this.clearTokenBucket(blockNumber, token)
         return stateUpdateRanges
       })
     )
 
     // In case no stateUpdates have been enqueued, return undefined
     if (sus.every(arr => arr.length === 0)) {
-      return
+      return null
     }
 
     const block = new Block(
-      BigNumber.from(JSBI.add(blockNumber.data, JSBI.BigInt(1))),
+      nextBlockNumber,
       stateUpdatesMap,
       BigNumber.from(0),
       Integer.from(0)

@@ -19,7 +19,7 @@ import {
   PlasmaContractConfig,
   SignedTransaction
 } from '@cryptoeconomicslab/plasma'
-import { KeyValueStore, getWitnesses } from '@cryptoeconomicslab/db'
+import { KeyValueStore } from '@cryptoeconomicslab/db'
 import {
   ICommitmentContract,
   IDepositContract
@@ -32,8 +32,8 @@ import JSBI from 'jsbi'
 import { BlockManager, StateManager } from './managers'
 import { sleep } from './utils'
 import cors from 'cors'
-import { createSignatureHint } from '@cryptoeconomicslab/ovm/lib/hintString'
 import BlockExplorerController from './BlockExplorer/controller'
+import { TransactionSubmitter } from './TransactionSubmitter'
 
 export default class Aggregator {
   readonly decider: DeciderManager
@@ -46,6 +46,7 @@ export default class Aggregator {
     port: number
     blockInterval: number
   }
+  private submitter: TransactionSubmitter
 
   /**
    * instantiate aggregator
@@ -86,6 +87,11 @@ export default class Aggregator {
       throw new Error('Ownership not found')
     }
     this.ownershipPredicate = ownershipPredicate
+    this.submitter = new TransactionSubmitter(
+      this.blockManager,
+      commitmentContractFactory,
+      config.commitment
+    )
     this.httpServer = express()
     this.httpServer.use(express.json())
     this.httpServer.use(cors())
@@ -519,20 +525,8 @@ export default class Aggregator {
    */
   private async poll() {
     await sleep(this.option.blockInterval)
-    const block = await this.blockManager.generateNextBlock()
-    if (block) {
-      await this.submitBlock(block)
-    }
+    await this.submitter.submit()
     await this.poll()
-  }
-
-  /**
-   *  submit next block to commitment contract and store new block
-   */
-  private async submitBlock(block: Block) {
-    const root = block.getTree().getRoot()
-    await this.commitmentContract.submit(block.blockNumber, root)
-    console.log('submit block: ', block)
   }
 
   /**
