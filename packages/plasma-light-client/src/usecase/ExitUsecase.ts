@@ -39,6 +39,9 @@ export class ExitUsecase {
     amount: Numberish,
     tokenContractAddress: string
   ) {
+    const syncRepo = await SyncRepository.init(this.witnessDb)
+    const claimedBlockNumber = await syncRepo.getNextBlockNumber()
+
     const addr = Address.from(tokenContractAddress)
     const depositContractAddress = this.tokenManager.getDepositContractAddress(
       addr
@@ -65,6 +68,14 @@ export class ExitUsecase {
           stateUpdate.depositContractAddress,
           stateUpdate.range
         )
+        // save exit action
+        const action = createExitUserAction(
+          addr,
+          stateUpdate.range,
+          claimedBlockNumber
+        )
+        const repo = await UserActionRepository.init(this.witnessDb)
+        await repo.insertAction(claimedBlockNumber, stateUpdate.range, action)
       }
     } else {
       throw new Error('Insufficient amount')
@@ -109,21 +120,6 @@ export class ExitUsecase {
       depositedRangeId,
       address
     )
-
-    // save action
-    const syncRepo = await SyncRepository.init(this.witnessDb)
-    const blockNumber = await syncRepo.getNextBlockNumber()
-    const su = exit.stateUpdate
-    const tokenAddress = this.tokenManager.getTokenContractAddress(
-      su.depositContractAddress
-    ) as string
-    const action = createExitUserAction(
-      Address.from(tokenAddress),
-      su.range,
-      blockNumber
-    )
-    const repo = await UserActionRepository.init(this.witnessDb)
-    await repo.insertAction(blockNumber, su.range, action)
 
     this.ee.emit(EmitterEvent.EXIT_FINALIZED, exit.stateUpdate)
   }
