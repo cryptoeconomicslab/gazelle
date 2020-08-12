@@ -133,11 +133,6 @@ export class StateSyncer {
    */
   public async syncLatest(blockNumber: BigNumber, address: Address) {
     const { coder } = ovmContext
-    const root = await this.commitmentContract.getRoot(blockNumber)
-    if (!root) {
-      // FIXME: check if root is default bytes32 value
-      throw new Error('Block root hash is null')
-    }
     const syncRepository = await SyncRepository.init(this.witnessDb)
     const synced = await syncRepository.getSyncedBlockNumber()
     if (JSBI.greaterThanOrEqual(synced.data, blockNumber.data)) {
@@ -145,7 +140,6 @@ export class StateSyncer {
       return
     }
     console.log(`syncing latest state: Block{${blockNumber.raw}}`)
-    await this.storeRoot(blockNumber, root)
     const stateUpdateRepository = await StateUpdateRepository.init(
       this.witnessDb
     )
@@ -162,13 +156,6 @@ export class StateSyncer {
       await this.syncRootUntil(blockNumber)
 
       const verifyStateUpdate = async (su: StateUpdate, retryTimes = 5) => {
-        // retry verification
-        const retry = async () => {
-          if (retryTimes > 0) {
-            await sleep(this.retryInterval)
-            await verifyStateUpdate(su, retryTimes - 1)
-          }
-        }
         try {
           await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
           const verified = await verifyCheckpoint(
@@ -177,12 +164,15 @@ export class StateSyncer {
             su
           )
           if (!verified.decision) {
-            await retry()
+            // retry verification
+            if (retryTimes > 0) {
+              await sleep(this.retryInterval)
+              await verifyStateUpdate(su, retryTimes - 1)
+            }
             return
           }
         } catch (e) {
           console.error(e)
-          await retry()
           return
         }
         await stateUpdateRepository.insertVerifiedStateUpdate(su)
@@ -208,7 +198,6 @@ export class StateSyncer {
       this.removeAlreadyExitStartedStateUpdates()
 
       await syncRepository.updateSyncedBlockNumber(blockNumber)
-      await syncRepository.insertBlockRoot(blockNumber, root)
 
       this.ee.emit(EmitterEvent.SYNC_FINISHED, blockNumber)
     } catch (e) {
@@ -220,7 +209,6 @@ export class StateSyncer {
     const { coder } = ovmContext
     let synced = blockNumber
     while (JSBI.greaterThan(synced.data, JSBI.BigInt(0))) {
-      const next = BigNumber.from(JSBI.subtract(synced.data, JSBI.BigInt(1)))
       const storageDb = await getStorageDb(this.witnessDb)
       const bucket = await storageDb.bucket(
         coder.encode(this.commitmentVerifierAddress)
@@ -232,7 +220,7 @@ export class StateSyncer {
       } else {
         break
       }
-      synced = next
+      synced = BigNumber.from(JSBI.subtract(synced.data, JSBI.BigInt(1)))
     }
   }
 
@@ -249,6 +237,8 @@ export class StateSyncer {
       coder.encode(this.commitmentVerifierAddress)
     )
     await bucket.put(coder.encode(blockNumber), coder.encode(root))
+    const syncRepository = await SyncRepository.init(this.witnessDb)
+    await syncRepository.insertBlockRoot(blockNumber, root)
   }
 
   /**
@@ -321,7 +311,6 @@ export class StateSyncer {
         })
       )
       await syncRepository.updateSyncedBlockNumber(blockNumber)
-      await syncRepository.insertBlockRoot(blockNumber, root)
 
       this.ee.emit(EmitterEvent.SYNC_FINISHED, blockNumber)
     } catch (e) {
