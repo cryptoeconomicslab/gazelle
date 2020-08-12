@@ -121,7 +121,7 @@ export class ExitUsecase {
       address
     )
 
-    this.ee.emit(EmitterEvent.EXIT_FINALIZED, exit.stateUpdate)
+    this.ee.emit(EmitterEvent.EXIT_FINALIZED, exit)
   }
 
   /**
