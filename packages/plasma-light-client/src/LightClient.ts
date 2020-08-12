@@ -482,7 +482,7 @@ export default class LightClient {
     this.ee.on(EmitterEvent.TRANSFER_COMPLETE, handler)
   }
 
-  public subscribeExitFinalized(handler: (su: StateUpdate) => void) {
+  public subscribeExitFinalized(handler: (exit: Exit) => void) {
     this.ee.on(EmitterEvent.EXIT_FINALIZED, handler)
   }
 
@@ -500,7 +500,7 @@ export default class LightClient {
     this.ee.off(EmitterEvent.TRANSFER_COMPLETE, handler)
   }
 
-  public unsubscribeExitFinalized(handler: (su: StateUpdate) => void) {
+  public unsubscribeExitFinalized(handler: (exit: Exit) => void) {
     this.ee.off(EmitterEvent.EXIT_FINALIZED, handler)
   }
 }
