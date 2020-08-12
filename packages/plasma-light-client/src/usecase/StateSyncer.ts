@@ -162,6 +162,13 @@ export class StateSyncer {
       await this.syncRootUntil(blockNumber)
 
       const verifyStateUpdate = async (su: StateUpdate, retryTimes = 5) => {
+        // retry verification
+        const retry = async () => {
+          if (retryTimes > 0) {
+            await sleep(this.retryInterval)
+            await verifyStateUpdate(su, retryTimes - 1)
+          }
+        }
         try {
           await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
           const verified = await verifyCheckpoint(
@@ -170,15 +177,12 @@ export class StateSyncer {
             su
           )
           if (!verified.decision) {
-            // retry verification
-            if (retryTimes > 0) {
-              await sleep(this.retryInterval)
-              await verifyStateUpdate(su, retryTimes - 1)
-            }
+            await retry()
             return
           }
         } catch (e) {
-          console.log(e)
+          console.error(e)
+          await retry()
           return
         }
         await stateUpdateRepository.insertVerifiedStateUpdate(su)
