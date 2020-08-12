@@ -72,7 +72,7 @@ describe('Transaction Submitter', () => {
     MockSubmit.mockClear()
   })
 
-  describe('succeed', () => {
+  describe('succeed to submit', () => {
     beforeEach(async () => {
       function commitmentContractFactory(address: Address) {
         return new MockCommitmentContract(address)
@@ -101,7 +101,7 @@ describe('Transaction Submitter', () => {
     })
   })
 
-  describe('succeed', () => {
+  describe('retry submit', () => {
     beforeEach(async () => {
       function failCommitmentContractFactory(address: Address) {
         return new MockFailCommitmentContract(address)
