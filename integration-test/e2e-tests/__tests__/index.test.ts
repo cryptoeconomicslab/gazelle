@@ -396,6 +396,11 @@ describe('light client', () => {
         type: ActionType.Deposit,
         amount: parseUnitsToJsbi('0.1'),
         counterParty: defaultAddress
+      },
+      {
+        type: ActionType.Exit,
+        amount: parseUnitsToJsbi('0.05'),
+        counterParty: defaultAddress
       }
     ])
 
@@ -415,9 +420,6 @@ describe('light client', () => {
     await increaseBlock()
 
     expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.0')
-    await finalizeExit(aliceLightClient)
-    expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.05')
-
     const aliceActionsAfterExit = await aliceLightClient.getAllUserActions()
     expect(aliceActionsAfterExit.map(formatAction)).toEqual([
       {
@@ -431,6 +433,10 @@ describe('light client', () => {
         counterParty: defaultAddress
       }
     ])
+
+    await finalizeExit(aliceLightClient)
+    expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.05')
+
     const exitListAfterCompleted = await aliceLightClient.getPendingWithdrawals()
     expect(exitListAfterCompleted).toEqual([])
   })
