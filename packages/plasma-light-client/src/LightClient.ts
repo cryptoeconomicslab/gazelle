@@ -235,12 +235,11 @@ export default class LightClient {
           root,
           Address.from(this.address)
         )
-        // await this.pendingStateUpdatesVerifier.verify(blockNumber)
       }
     )
-    this.commitmentContract.startWatchingEvents()
     const blockNumber = await this.commitmentContract.getCurrentBlock()
     await this.stateSyncer.syncLatest(blockNumber, Address.from(this.address))
+    this.commitmentContract.startWatchingEvents()
     this.exitDispute.startWatchingEvents()
   }
 
