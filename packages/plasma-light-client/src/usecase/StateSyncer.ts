@@ -206,20 +206,10 @@ export class StateSyncer {
   }
 
   public async syncRootUntil(blockNumber: BigNumber) {
-    const { coder } = ovmContext
     let synced = blockNumber
     while (JSBI.greaterThan(synced.data, JSBI.BigInt(0))) {
-      const storageDb = await getStorageDb(this.witnessDb)
-      const bucket = await storageDb.bucket(
-        coder.encode(this.commitmentVerifierAddress)
-      )
-      const encodedRoot = await bucket.get(coder.encode(blockNumber))
-      if (encodedRoot === null) {
-        const root = await this.commitmentContract.getRoot(blockNumber)
-        await this.storeRoot(blockNumber, root)
-      } else {
-        break
-      }
+      const root = await this.commitmentContract.getRoot(synced)
+      await this.storeRoot(synced, root)
       synced = BigNumber.from(JSBI.subtract(synced.data, JSBI.BigInt(1)))
     }
   }
