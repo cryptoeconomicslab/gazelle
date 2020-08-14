@@ -153,7 +153,7 @@ export class StateSyncer {
       // clear verified state updates
       await this.syncTransfers()
       //  sync root hashes from `synced+1` to `blockNumber`
-      await this.syncRootUntil(synced.increment(), blockNumber)
+      await this.syncRoots(synced.increment(), blockNumber)
 
       const verifyStateUpdate = async (su: StateUpdate, retryTimes = 5) => {
         try {
@@ -210,13 +210,12 @@ export class StateSyncer {
    * @param from
    * @param to
    */
-  private async syncRootUntil(from: BigNumber, to: BigNumber) {
-    let b = to
-    const synced = JSBI.subtract(from.data, JSBI.BigInt(1))
-    while (JSBI.greaterThan(b.data, synced)) {
+  private async syncRoots(from: BigNumber, to: BigNumber) {
+    let b = from
+    while (JSBI.lessThanOrEqual(b.data, to.data)) {
       const root = await this.commitmentContract.getRoot(b)
       await this.storeRoot(b, root)
-      b = BigNumber.from(JSBI.subtract(b.data, JSBI.BigInt(1)))
+      b = b.increment()
     }
   }
 
