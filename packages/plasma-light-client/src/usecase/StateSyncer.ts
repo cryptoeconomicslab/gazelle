@@ -140,6 +140,7 @@ export class StateSyncer {
       return
     }
     console.log(`syncing latest state: Block{${blockNumber.raw}}`)
+    this.ee.emit(EmitterEvent.SYNC_STARTED, blockNumber)
     const stateUpdateRepository = await StateUpdateRepository.init(
       this.witnessDb
     )
