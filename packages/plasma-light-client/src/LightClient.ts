@@ -409,6 +409,7 @@ export default class LightClient {
       this.handleCheckpointFinalized.bind(this)
     )
 
+    // wait until syncing checkpoints events
     await depositContract.startWatchingEvents()
   }
 

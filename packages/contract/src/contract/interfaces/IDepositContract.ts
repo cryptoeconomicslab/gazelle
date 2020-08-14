@@ -48,6 +48,9 @@ export interface IDepositContract {
 
   subscribeDepositedRangeRemoved(handler: (range: Range) => Promise<void>): void
 
+  /**
+   * startWatchingEvents wait until fetch latest events
+   */
   startWatchingEvents(): Promise<void>
 
   unsubscribeAll(): void
