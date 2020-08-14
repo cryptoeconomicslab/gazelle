@@ -566,6 +566,23 @@ describe('light client', () => {
     await checkBalance(bobLightClient, '0.1')
     await checkBalance(carolLightClient, '0.3')
 
+    const aliceSyncLightClient = await createClientFromPrivateKey(
+      aliceLightClient['wallet']['ethersWallet'].privateKey
+    )
+    const bobSyncLightClient = await createClientFromPrivateKey(
+      bobLightClient['wallet']['ethersWallet'].privateKey
+    )
+    const carolSyncLightClient = await createClientFromPrivateKey(
+      carolLightClient['wallet']['ethersWallet'].privateKey
+    )
+    await sleep(20000)
+    expect(await getBalance(aliceSyncLightClient)).toEqual('1.1')
+    expect(await getBalance(bobSyncLightClient)).toEqual('0.1')
+    expect(await getBalance(carolSyncLightClient)).toEqual('0.3')
+    aliceSyncLightClient.stop()
+    bobSyncLightClient.stop()
+    carolSyncLightClient.stop()
+
     const aliceActions = await aliceLightClient.getAllUserActions()
 
     expect(aliceActions.map(formatAction)).toEqual([
