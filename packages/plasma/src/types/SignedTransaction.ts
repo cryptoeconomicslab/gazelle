@@ -4,7 +4,8 @@ import {
   BigNumber,
   Bytes,
   Struct,
-  Property
+  Property,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import { Transaction, UnsignedTransaction } from './'
 
@@ -14,7 +15,7 @@ export default class SignedTransaction implements Transaction {
     readonly range: Range,
     readonly maxBlockNumber: BigNumber,
     readonly stateObject: Property,
-    readonly chunkId: Bytes,
+    readonly chunkId: FixedBytes,
     readonly from: Address,
     readonly signature: Bytes
   ) {}
@@ -28,7 +29,7 @@ export default class SignedTransaction implements Transaction {
       new Range(BigNumber.default(), BigNumber.default()),
       BigNumber.default(),
       new Property(Address.default(), []),
-      Bytes.default(),
+      FixedBytes.default(32),
       Address.default(),
       Bytes.default()
     )
@@ -40,7 +41,7 @@ export default class SignedTransaction implements Transaction {
       { key: 'range', value: Range.getParamType() },
       { key: 'maxBlockNumber', value: BigNumber.default() },
       { key: 'stateObject', value: Property.getParamType() },
-      { key: 'chunkId', value: Bytes.default() },
+      { key: 'chunkId', value: FixedBytes.default(32) },
       { key: 'from', value: Address.default() },
       { key: 'signature', value: Bytes.default() }
     ])
@@ -51,7 +52,7 @@ export default class SignedTransaction implements Transaction {
     const range = struct.data[1].value as Struct
     const maxBlockNumber = struct.data[2].value as BigNumber
     const stateObject = struct.data[3].value as Struct
-    const chunkId = struct.data[4].value as Bytes
+    const chunkId = struct.data[4].value as FixedBytes
     const from = struct.data[5].value as Address
     const signature = struct.data[6].value as Bytes
 

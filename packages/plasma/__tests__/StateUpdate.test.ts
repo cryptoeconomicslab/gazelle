@@ -3,7 +3,8 @@ import {
   Bytes,
   BigNumber,
   Property,
-  Range
+  Range,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import { StateUpdate, StateUpdateRecord } from '../src'
 import Coder from '@cryptoeconomicslab/coder'
@@ -16,7 +17,7 @@ describe('StateUpdate', () => {
     new Range(BigNumber.from(0), BigNumber.from(10)),
     BigNumber.from(1),
     new Property(Address.default(), [Bytes.fromHexString('0x01')]),
-    Bytes.default()
+    FixedBytes.default(32)
   )
 
   test('toRecord()', () => {
@@ -26,7 +27,7 @@ describe('StateUpdate', () => {
         Address.default(),
         BigNumber.from(1),
         new Property(Address.default(), [Bytes.fromHexString('0x01')]),
-        Bytes.default()
+        FixedBytes.default(32)
       )
     )
   })
@@ -36,7 +37,7 @@ describe('StateUpdate', () => {
       Address.default(),
       BigNumber.from(1),
       new Property(Address.default(), [Bytes.fromHexString('0x01')]),
-      Bytes.default()
+      FixedBytes.default(32)
     )
     const range = new Range(BigNumber.from(0), BigNumber.from(10))
 
@@ -55,7 +56,7 @@ describe('StateUpdate', () => {
       new Range(BigNumber.from(0), BigNumber.from(10)),
       BigNumber.from(1),
       new Property(Address.default(), [Bytes.fromHexString('0x01')]),
-      Bytes.default()
+      FixedBytes.default(32)
     )
     stateUpdate.update({
       range: new Range(BigNumber.from(5), BigNumber.from(10))

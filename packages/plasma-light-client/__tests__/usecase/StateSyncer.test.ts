@@ -50,7 +50,7 @@ function createTransaction(
     new Range(BigNumber.from(start), BigNumber.from(end)),
     BigNumber.from(blockNumber),
     new Property(Address.default(), [ovmContext.coder.encode(owner)]),
-    Bytes.default(),
+    FixedBytes.default(32),
     from,
     Bytes.default(),
     BigNumber.from(blockNumber)
@@ -68,7 +68,7 @@ function createStateUpdate(
     new Range(BigNumber.from(start), BigNumber.from(end)),
     BigNumber.from(blockNumber),
     new Property(Address.default(), [ovmContext.coder.encode(owner)]),
-    Bytes.default()
+    FixedBytes.default(32)
   )
 }
 

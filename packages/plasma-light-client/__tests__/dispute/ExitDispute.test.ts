@@ -5,7 +5,8 @@ import {
   Address,
   BigNumber,
   Range,
-  Property
+  Property,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import {
   StateUpdate,
@@ -131,7 +132,7 @@ describe('ExitDispute', () => {
       range,
       blockNumber,
       ownership(owner),
-      Bytes.default()
+      FixedBytes.default(32)
     )
   }
 

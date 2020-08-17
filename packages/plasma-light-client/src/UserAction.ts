@@ -3,7 +3,8 @@ import {
   Bytes,
   Range,
   Struct,
-  Address
+  Address,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import JSBI from 'jsbi'
 
@@ -18,7 +19,7 @@ export function createDepositUserAction(
   tokenAddress: Address,
   range: Range,
   blockNumber: BigNumber,
-  chunkId: Bytes
+  chunkId: FixedBytes
 ): UserAction {
   return new UserAction(
     ActionType.Deposit,
@@ -34,7 +35,7 @@ export function createExitUserAction(
   tokenAddress: Address,
   range: Range,
   blockNumber: BigNumber,
-  chunkId: Bytes
+  chunkId: FixedBytes
 ): UserAction {
   return new UserAction(
     ActionType.Exit,
@@ -51,7 +52,7 @@ export function createSendUserAction(
   range: Range,
   to: Address,
   blockNumber: BigNumber,
-  chunkId: Bytes
+  chunkId: FixedBytes
 ): UserAction {
   return new UserAction(
     ActionType.Send,
@@ -68,7 +69,7 @@ export function createReceiveUserAction(
   range: Range,
   from: Address,
   blockNumber: BigNumber,
-  chunkId: Bytes
+  chunkId: FixedBytes
 ): UserAction {
   return new UserAction(
     ActionType.Receive,
@@ -90,7 +91,7 @@ export default class UserAction {
     private _range: Range,
     private _counterParty: Address,
     private _blockNumber: BigNumber,
-    private _chunkId: Bytes
+    private _chunkId: FixedBytes
   ) {}
 
   public toStruct(): Struct {
@@ -134,7 +135,7 @@ export default class UserAction {
       },
       {
         key: 'chunkId',
-        value: Bytes.default()
+        value: FixedBytes.default(32)
       }
     ])
   }
@@ -145,7 +146,7 @@ export default class UserAction {
     const range = struct.data[2].value as Struct
     const counterParty = struct.data[3].value as Address
     const blockNumber = struct.data[4].value as BigNumber
-    const chunkId = struct.data[5].value as Bytes
+    const chunkId = struct.data[5].value as FixedBytes
     return new UserAction(
       type,
       tokenAddress,

@@ -1,4 +1,9 @@
-import { Bytes, BigNumber, Property } from '@cryptoeconomicslab/primitives'
+import {
+  FixedBytes,
+  Bytes,
+  BigNumber,
+  Property
+} from '@cryptoeconomicslab/primitives'
 import { KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
 import {
   StateUpdate,
@@ -40,7 +45,7 @@ export async function prepareTx(
     range,
     BigNumber.from(100),
     stateObject,
-    Bytes.default(),
+    FixedBytes.default(32),
     from.getAddress(),
     Bytes.default()
   )

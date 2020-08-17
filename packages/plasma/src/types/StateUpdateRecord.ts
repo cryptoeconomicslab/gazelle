@@ -1,9 +1,9 @@
 import {
   Address,
-  Bytes,
   Struct,
   BigNumber,
-  Property
+  Property,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 
 export default class StateUpdateRecord {
@@ -11,7 +11,7 @@ export default class StateUpdateRecord {
     readonly depositContractAddress: Address,
     readonly blockNumber: BigNumber,
     readonly stateObject: Property,
-    readonly chunkId: Bytes
+    readonly chunkId: FixedBytes
   ) {}
 
   /**
@@ -22,7 +22,7 @@ export default class StateUpdateRecord {
       Address.default(),
       BigNumber.default(),
       new Property(Address.default(), []),
-      Bytes.default()
+      FixedBytes.default(32)
     )
   }
 
@@ -31,7 +31,7 @@ export default class StateUpdateRecord {
       { key: 'depositContractAddress', value: Address.default() },
       { key: 'blockNumber', value: BigNumber.default() },
       { key: 'stateObject', value: Property.getParamType() },
-      { key: 'chunkId', value: Bytes.default() }
+      { key: 'chunkId', value: FixedBytes.default(32) }
     ])
   }
 
@@ -40,7 +40,7 @@ export default class StateUpdateRecord {
       struct.data[0].value as Address,
       struct.data[1].value as BigNumber,
       Property.fromStruct(struct.data[2].value as Struct),
-      struct.data[3].value as Bytes
+      struct.data[3].value as FixedBytes
     )
   }
 

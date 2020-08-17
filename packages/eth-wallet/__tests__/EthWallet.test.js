@@ -7,7 +7,8 @@ const {
   BigNumber,
   Bytes,
   Property,
-  Range
+  Range,
+  FixedBytes
 } = require('@cryptoeconomicslab/primitives')
 const { setupContext } = require('@cryptoeconomicslab/context')
 const JsonCoder = require('@cryptoeconomicslab/coder')
@@ -83,7 +84,7 @@ describe('EthWallet', () => {
       range,
       BigNumber.from(0),
       stateObject,
-      Bytes.default(),
+      FixedBytes.default(32),
       Address.default()
     )
     return tx

@@ -3,6 +3,7 @@ import { RangeDb } from '@cryptoeconomicslab/db'
 import { InMemoryKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import {
   Bytes,
+  FixedBytes,
   Address,
   BigNumber,
   Range
@@ -73,7 +74,7 @@ describe('StateManager', () => {
       range,
       blockNumber,
       ownershipPredicate.makeProperty([Coder.encode(address)]),
-      Bytes.default()
+      FixedBytes.default(32)
     )
   }
 
@@ -185,7 +186,7 @@ describe('StateManager', () => {
         new Range(BigNumber.from(0), BigNumber.from(5)),
         BigNumber.from(3),
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
-        Bytes.default(),
+        FixedBytes.default(32),
         ALIS_ADDRESS
       )
       const signedTx = await tx.sign(ALIS_WALLET)
@@ -210,7 +211,7 @@ describe('StateManager', () => {
         new Range(BigNumber.from(0), BigNumber.from(3)),
         BigNumber.from(2),
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
-        Bytes.default(),
+        FixedBytes.default(32),
         ALIS_ADDRESS
       )
       const signedTx = await tx.sign(ALIS_WALLET)
@@ -235,7 +236,7 @@ describe('StateManager', () => {
         new Range(BigNumber.from(0), BigNumber.from(10)),
         BigNumber.from(2),
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
-        Bytes.default(),
+        FixedBytes.default(32),
         ALIS_ADDRESS
       )
       const signedTx = await tx.sign(ALIS_WALLET)
@@ -260,7 +261,7 @@ describe('StateManager', () => {
         new Range(BigNumber.from(2), BigNumber.from(7)),
         BigNumber.from(2),
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
-        Bytes.default(),
+        FixedBytes.default(32),
         ALIS_ADDRESS
       )
       const signedTx = await tx.sign(ALIS_WALLET)
@@ -285,7 +286,7 @@ describe('StateManager', () => {
         new Range(BigNumber.from(0), BigNumber.from(3)),
         BigNumber.from(2),
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
-        Bytes.default(),
+        FixedBytes.default(32),
         ALIS_ADDRESS
       )
       const signedTx = await tx.sign(BOB_WALLET)
@@ -304,7 +305,7 @@ describe('StateManager', () => {
         new Range(BigNumber.from(20), BigNumber.from(25)),
         BigNumber.from(2),
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
-        Bytes.default(),
+        FixedBytes.default(32),
         ALIS_ADDRESS
       )
       const signedTx = await tx.sign(ALIS_WALLET)
@@ -323,7 +324,7 @@ describe('StateManager', () => {
         new Range(BigNumber.from(0), BigNumber.from(15)),
         BigNumber.from(2),
         ownershipPredicate.makeProperty([Coder.encode(BOB_ADDRESS)]),
-        Bytes.default(),
+        FixedBytes.default(32),
         ALIS_ADDRESS
       )
       const signedTx = await tx.sign(ALIS_WALLET)

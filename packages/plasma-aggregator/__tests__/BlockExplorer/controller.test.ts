@@ -6,7 +6,8 @@ import {
   BigNumber,
   Integer,
   Property,
-  Range
+  Range,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import Coder from '@cryptoeconomicslab/coder'
 import { setupContext } from '@cryptoeconomicslab/context'
@@ -24,7 +25,7 @@ const su = (bn: number, start: number, end: number) => {
     new Range(BigNumber.from(start), BigNumber.from(end)),
     BigNumber.from(bn),
     new Property(Address.default(), [Bytes.fromHexString(testAddr)]),
-    Bytes.default()
+    FixedBytes.default(32)
   )
 }
 const TIME_STAMP = DateUtils.getCurrentDate()

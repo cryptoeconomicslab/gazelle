@@ -4,7 +4,8 @@ import {
   BigNumber,
   Range,
   Property,
-  Struct
+  Struct,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { RangeRecord } from '@cryptoeconomicslab/db'
@@ -23,7 +24,7 @@ export default class StateUpdate {
     public range: Range,
     public blockNumber: BigNumber,
     public stateObject: Property,
-    public chunkId: Bytes
+    public chunkId: FixedBytes
   ) {}
 
   public get amount(): JSBI {
@@ -41,7 +42,7 @@ export default class StateUpdate {
     range?: Range
     blockNumber?: BigNumber
     stateObject?: Property
-    chunkId?: Bytes
+    chunkId?: FixedBytes
   }) {
     if (depositContractAddress) {
       this.depositContractAddress = depositContractAddress
@@ -105,7 +106,7 @@ export default class StateUpdate {
       { key: 'range', value: Range.getParamType() },
       { key: 'blockNumber', value: BigNumber.default() },
       { key: 'stateObject', value: Property.getParamType() },
-      { key: 'chunkId', value: Bytes.default() }
+      { key: 'chunkId', value: FixedBytes.default(32) }
     ])
   }
 
@@ -114,7 +115,7 @@ export default class StateUpdate {
     const range = struct.data[1].value as Struct
     const blockNumber = struct.data[2].value as BigNumber
     const stateObject = struct.data[3].value as Struct
-    const chunkId = struct.data[4].value as Bytes
+    const chunkId = struct.data[4].value as FixedBytes
 
     return new StateUpdate(
       depositContractAddress,

@@ -17,7 +17,8 @@ import {
   BigNumber,
   Integer,
   Property,
-  Range
+  Range,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import deciderConfig from './config.local'
 import { DeciderConfig } from '@cryptoeconomicslab/ovm'
@@ -304,7 +305,7 @@ describe('LightClient', () => {
         new Range(BigNumber.from(0), BigNumber.from(20)),
         BigNumber.from(0),
         client.ownershipProperty(Address.from(client.address)),
-        Bytes.default()
+        FixedBytes.default(32)
       )
     })
 
@@ -342,14 +343,14 @@ describe('LightClient', () => {
         new Range(BigNumber.from(0), BigNumber.from(20)),
         BigNumber.from(0),
         client.ownershipProperty(Address.from(client.address)),
-        Bytes.default()
+        FixedBytes.default(32)
       )
       su2 = new StateUpdate(
         Address.from(depositContractAddress),
         new Range(BigNumber.from(30), BigNumber.from(40)),
         BigNumber.from(1),
         client.ownershipProperty(Address.from(client.address)),
-        Bytes.default()
+        FixedBytes.default(32)
       )
 
       proof = new DoubleLayerInclusionProof(
@@ -458,7 +459,7 @@ describe('LightClient', () => {
         tokenContractAddress,
         range,
         blockNumber,
-        Bytes.default()
+        FixedBytes.default(32)
       )
       const repository = await UserActionRepository.init(db)
       await repository.insertAction(blockNumber, range, action)
@@ -474,7 +475,7 @@ describe('LightClient', () => {
         new Range(BigNumber.from(0), BigNumber.from(20)),
         BigNumber.from(0),
         client.ownershipProperty(Address.from(client.address)),
-        Bytes.default()
+        FixedBytes.default(32)
       )
     )
     expect(owner).toEqual(Address.from(client.address))

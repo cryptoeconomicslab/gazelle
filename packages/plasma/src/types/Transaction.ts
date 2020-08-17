@@ -4,7 +4,8 @@ import {
   Range,
   BigNumber,
   Struct,
-  Property
+  Property,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 
 export default interface Transaction {
@@ -14,7 +15,7 @@ export default interface Transaction {
   stateObject: Property
   from: Address
   message: Bytes
-  chunkId: Bytes
+  chunkId: FixedBytes
   toStruct(): Struct
   toString(): string
 }
