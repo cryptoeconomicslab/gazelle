@@ -152,8 +152,8 @@ export class StateSyncer {
       // if aggregator latest state doesn't have client state, client should check spending proof
       // clear verified state updates
       await this.syncTransfers()
-      //  sync root hashes
-      await this.syncRootUntil(blockNumber)
+      //  sync root hashes from `synced+1` to `blockNumber`
+      await this.syncRoots(synced.increment(), blockNumber)
 
       const verifyStateUpdate = async (su: StateUpdate, retryTimes = 5) => {
         try {
@@ -205,16 +205,21 @@ export class StateSyncer {
     }
   }
 
-  public async syncRootUntil(blockNumber: BigNumber) {
-    let synced = blockNumber
-    while (JSBI.greaterThan(synced.data, JSBI.BigInt(0))) {
-      const root = await this.commitmentContract.getRoot(synced)
-      await this.storeRoot(synced, root)
-      synced = BigNumber.from(JSBI.subtract(synced.data, JSBI.BigInt(1)))
+  /**
+   * sync Merkle Root from `from` number to `to` number.
+   * @param from
+   * @param to
+   */
+  private async syncRoots(from: BigNumber, to: BigNumber) {
+    let b = from
+    while (JSBI.lessThanOrEqual(b.data, to.data)) {
+      const root = await this.commitmentContract.getRoot(b)
+      await this.storeRoot(b, root)
+      b = b.increment()
     }
   }
 
-  public async storeRoot(blockNumber: BigNumber, root: FixedBytes) {
+  private async storeRoot(blockNumber: BigNumber, root: FixedBytes) {
     const { coder } = ovmContext
     const rootHint = Hint.createRootHint(
       blockNumber,
