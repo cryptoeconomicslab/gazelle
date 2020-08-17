@@ -364,7 +364,8 @@ export default class LightClient {
       const action = createDepositUserAction(
         Address.from(tokenContractAddress),
         checkpoint.range,
-        checkpoint.blockNumber
+        checkpoint.blockNumber,
+        checkpoint.paymentId
       )
 
       const actionRepository = await UserActionRepository.init(this.witnessDb)

@@ -17,28 +17,32 @@ export enum ActionType {
 export function createDepositUserAction(
   tokenAddress: Address,
   range: Range,
-  blockNumber: BigNumber
+  blockNumber: BigNumber,
+  paymentId: Bytes
 ): UserAction {
   return new UserAction(
     ActionType.Deposit,
     tokenAddress,
     range,
     Address.default(),
-    blockNumber
+    blockNumber,
+    paymentId
   )
 }
 
 export function createExitUserAction(
   tokenAddress: Address,
   range: Range,
-  blockNumber: BigNumber
+  blockNumber: BigNumber,
+  paymentId: Bytes
 ): UserAction {
   return new UserAction(
     ActionType.Exit,
     tokenAddress,
     range,
     Address.default(),
-    blockNumber
+    blockNumber,
+    paymentId
   )
 }
 
@@ -46,23 +50,33 @@ export function createSendUserAction(
   tokenAddress: Address,
   range: Range,
   to: Address,
-  blockNumber: BigNumber
+  blockNumber: BigNumber,
+  paymentId: Bytes
 ): UserAction {
-  return new UserAction(ActionType.Send, tokenAddress, range, to, blockNumber)
+  return new UserAction(
+    ActionType.Send,
+    tokenAddress,
+    range,
+    to,
+    blockNumber,
+    paymentId
+  )
 }
 
 export function createReceiveUserAction(
   tokenAddress: Address,
   range: Range,
   from: Address,
-  blockNumber: BigNumber
+  blockNumber: BigNumber,
+  paymentId: Bytes
 ): UserAction {
   return new UserAction(
     ActionType.Receive,
     tokenAddress,
     range,
     from,
-    blockNumber
+    blockNumber,
+    paymentId
   )
 }
 
@@ -75,7 +89,8 @@ export default class UserAction {
     private _tokenContractAddress: Address,
     private _range: Range,
     private _counterParty: Address,
-    private _blockNumber: BigNumber
+    private _blockNumber: BigNumber,
+    private _paymentId: Bytes
   ) {}
 
   public toStruct(): Struct {
@@ -93,6 +108,10 @@ export default class UserAction {
       {
         key: 'blockNumber',
         value: this._blockNumber
+      },
+      {
+        key: 'paymentId',
+        value: this._paymentId
       }
     ])
   }
@@ -112,6 +131,10 @@ export default class UserAction {
       {
         key: 'blockNumber',
         value: BigNumber.default()
+      },
+      {
+        key: 'paymentId',
+        value: Bytes.default()
       }
     ])
   }
@@ -122,12 +145,14 @@ export default class UserAction {
     const range = struct.data[2].value as Struct
     const counterParty = struct.data[3].value as Address
     const blockNumber = struct.data[4].value as BigNumber
+    const paymentId = struct.data[5].value as Bytes
     return new UserAction(
       type,
       tokenAddress,
       Range.fromStruct(range),
       counterParty,
-      blockNumber
+      blockNumber,
+      paymentId
     )
   }
 
@@ -149,6 +174,10 @@ export default class UserAction {
 
   public get blockNumber(): JSBI {
     return this._blockNumber.data
+  }
+
+  public get paymentId(): string {
+    return this._paymentId.toHexString()
   }
 
   public get range(): { start: string; end: string } {

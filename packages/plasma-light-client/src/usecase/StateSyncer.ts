@@ -92,7 +92,8 @@ export class StateSyncer {
             Address.from(tokenContractAddress),
             includedTx.range,
             StateObjectHelper.getOwner(includedTx.stateObject),
-            sentBlockNumber
+            sentBlockNumber,
+            includedTx.paymentId
           )
           await actionRepository.insertAction(
             sentBlockNumber,
@@ -191,7 +192,8 @@ export class StateSyncer {
           Address.from(tokenContractAddress),
           su.range,
           getOwner(su),
-          su.blockNumber
+          su.blockNumber,
+          su.paymentId
         )
         const actionRepository = await UserActionRepository.init(this.witnessDb)
         await actionRepository.insertAction(su.blockNumber, su.range, action)
@@ -306,7 +308,8 @@ export class StateSyncer {
             Address.from(tokenContractAddress),
             range,
             getOwner(su), // FIXME: this is same as client's owner
-            su.blockNumber
+            su.blockNumber,
+            su.paymentId
           )
           const actionRepository = await UserActionRepository.init(
             this.witnessDb

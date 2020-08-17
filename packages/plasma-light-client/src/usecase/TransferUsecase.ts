@@ -21,7 +21,6 @@ import { Numberish } from '../types'
 import { Wallet } from '@cryptoeconomicslab/wallet'
 import APIClient from '../APIClient'
 import { createSendUserAction } from '../UserAction'
-import { Keccak256 } from '@cryptoeconomicslab/hash'
 import { getPaymentId } from '../helper/stateUpdateHelper'
 
 export class TransferUsecase {
@@ -116,7 +115,8 @@ export class TransferUsecase {
               Address.from(tokenContractAddress),
               su.range,
               coder.decode(Address.default(), su.stateObject.inputs[0]),
-              nextBlock
+              nextBlock,
+              paymentId
             )
             await userActionRepo.insertAction(nextBlock, su.range, action)
           }

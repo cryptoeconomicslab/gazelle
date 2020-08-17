@@ -34,7 +34,8 @@ describe('UserActionRepository', () => {
       tokenAddress,
       range,
       Address.default(),
-      blockNumber
+      blockNumber,
+      Bytes.default()
     )
 
     await repository.insertAction(blockNumber, range, action)
@@ -48,12 +49,18 @@ describe('UserActionRepository', () => {
     const blockNumber = BigNumber.from(1)
     const blockNumber2 = BigNumber.from(5)
 
-    const action = createDepositUserAction(tokenAddress, range, blockNumber)
+    const action = createDepositUserAction(
+      tokenAddress,
+      range,
+      blockNumber,
+      Bytes.default()
+    )
     const action2 = createSendUserAction(
       tokenAddress,
       range,
       Address.default(),
-      blockNumber2
+      blockNumber2,
+      Bytes.default()
     )
 
     await repository.insertAction(blockNumber, range, action)

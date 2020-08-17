@@ -108,7 +108,8 @@ export class PendingStateUpdatesVerifier {
             Address.from(tokenContractAddress),
             range,
             owner,
-            su.blockNumber
+            su.blockNumber,
+            su.paymentId
           )
           await actionRepository.insertAction(su.blockNumber, range, action)
 

@@ -457,7 +457,8 @@ describe('LightClient', () => {
       const action = createDepositUserAction(
         tokenContractAddress,
         range,
-        blockNumber
+        blockNumber,
+        Bytes.default()
       )
       const repository = await UserActionRepository.init(db)
       await repository.insertAction(blockNumber, range, action)
