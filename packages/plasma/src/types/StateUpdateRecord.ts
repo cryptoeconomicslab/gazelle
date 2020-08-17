@@ -11,7 +11,7 @@ export default class StateUpdateRecord {
     readonly depositContractAddress: Address,
     readonly blockNumber: BigNumber,
     readonly stateObject: Property,
-    readonly paymentId: Bytes
+    readonly chunkId: Bytes
   ) {}
 
   /**
@@ -31,7 +31,7 @@ export default class StateUpdateRecord {
       { key: 'depositContractAddress', value: Address.default() },
       { key: 'blockNumber', value: BigNumber.default() },
       { key: 'stateObject', value: Property.getParamType() },
-      { key: 'paymentId', value: Bytes.default() }
+      { key: 'chunkId', value: Bytes.default() }
     ])
   }
 
@@ -49,7 +49,7 @@ export default class StateUpdateRecord {
       { key: 'depositContractAddress', value: this.depositContractAddress },
       { key: 'blockNumber', value: this.blockNumber },
       { key: 'stateObject', value: this.stateObject.toStruct() },
-      { key: 'paymentId', value: this.paymentId }
+      { key: 'chunkId', value: this.chunkId }
     ])
   }
 }

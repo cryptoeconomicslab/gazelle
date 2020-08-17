@@ -64,8 +64,8 @@ export class TransferUsecase {
     const syncRepository = await SyncRepository.init(this.witnessDb)
     const latestBlock = await syncRepository.getSyncedBlockNumber()
 
-    // extract to helper: create paymentId from block number and range of first stateUpdate
-    const paymentId = getPaymentId(latestBlock, stateUpdates[0].range.start)
+    // extract to helper: create chunkId from block number and range of first stateUpdate
+    const chunkId = getPaymentId(latestBlock, stateUpdates[0].range.start)
 
     const transactions = await Promise.all(
       stateUpdates.map(async su => {
@@ -74,7 +74,7 @@ export class TransferUsecase {
           su.range,
           BigNumber.from(JSBI.add(latestBlock.data, JSBI.BigInt(5))),
           stateObject,
-          paymentId,
+          chunkId,
           this.wallet.getAddress()
         )
         return await tx.sign(this.wallet)
@@ -116,7 +116,7 @@ export class TransferUsecase {
               su.range,
               coder.decode(Address.default(), su.stateObject.inputs[0]),
               nextBlock,
-              paymentId
+              chunkId
             )
             await userActionRepo.insertAction(nextBlock, su.range, action)
           }

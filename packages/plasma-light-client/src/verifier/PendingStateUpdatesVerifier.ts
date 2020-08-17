@@ -109,7 +109,7 @@ export class PendingStateUpdatesVerifier {
             range,
             owner,
             su.blockNumber,
-            su.paymentId
+            su.chunkId
           )
           await actionRepository.insertAction(su.blockNumber, range, action)
 

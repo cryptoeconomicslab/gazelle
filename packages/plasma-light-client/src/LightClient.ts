@@ -365,7 +365,7 @@ export default class LightClient {
         Address.from(tokenContractAddress),
         checkpoint.range,
         checkpoint.blockNumber,
-        checkpoint.paymentId
+        checkpoint.chunkId
       )
 
       const actionRepository = await UserActionRepository.init(this.witnessDb)

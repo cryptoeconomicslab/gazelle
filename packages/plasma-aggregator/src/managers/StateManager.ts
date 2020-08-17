@@ -159,7 +159,7 @@ export default class StateManager {
       tx.range,
       nextBlockNumber,
       tx.stateObject,
-      tx.paymentId
+      tx.chunkId
     )
 
     console.log('store tx data')

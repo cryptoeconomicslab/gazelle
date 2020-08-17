@@ -16,7 +16,7 @@ export default class UnsignedTransaction implements Transaction {
     readonly range: Range,
     readonly maxBlockNumber: BigNumber,
     readonly stateObject: Property,
-    readonly paymentId: Bytes,
+    readonly chunkId: Bytes,
     readonly from: Address
   ) {}
 
@@ -40,7 +40,7 @@ export default class UnsignedTransaction implements Transaction {
       { key: 'range', value: Range.getParamType() },
       { key: 'maxBlockNumber', value: BigNumber.default() },
       { key: 'stateObject', value: Property.getParamType() },
-      { key: 'paymentId', value: Bytes.default() },
+      { key: 'chunkId', value: Bytes.default() },
       { key: 'from', value: Address.default() }
     ])
   }
@@ -50,7 +50,7 @@ export default class UnsignedTransaction implements Transaction {
     const range = struct.data[1].value as Struct
     const maxBlockNumber = struct.data[2].value as BigNumber
     const stateObject = struct.data[3].value as Struct
-    const paymentId = struct.data[4].value as Bytes
+    const chunkId = struct.data[4].value as Bytes
     const from = struct.data[5].value as Address
 
     return new UnsignedTransaction(
@@ -58,7 +58,7 @@ export default class UnsignedTransaction implements Transaction {
       Range.fromStruct(range),
       maxBlockNumber,
       Property.fromStruct(stateObject),
-      paymentId,
+      chunkId,
       from
     )
   }
@@ -69,7 +69,7 @@ export default class UnsignedTransaction implements Transaction {
       { key: 'range', value: this.range.toStruct() },
       { key: 'maxBlockNumber', value: this.maxBlockNumber },
       { key: 'stateObject', value: this.stateObject.toStruct() },
-      { key: 'paymentId', value: this.paymentId },
+      { key: 'chunkId', value: this.chunkId },
       { key: 'from', value: this.from }
     ])
   }
@@ -84,7 +84,7 @@ export default class UnsignedTransaction implements Transaction {
       this.range,
       this.maxBlockNumber,
       this.stateObject,
-      this.paymentId,
+      this.chunkId,
       this.from,
       signature
     )
@@ -101,7 +101,7 @@ export default class UnsignedTransaction implements Transaction {
       this.maxBlockNumber.raw
     }, range: ${this.range.toString()}, so: ${
       this.stateObject.deciderAddress.data
-    }, paymentId: ${this.paymentId.toHexString()}, from: ${this.from.raw})`
+    }, chunkId: ${this.chunkId.toHexString()}, from: ${this.from.raw})`
   }
 
   public get message(): Bytes {

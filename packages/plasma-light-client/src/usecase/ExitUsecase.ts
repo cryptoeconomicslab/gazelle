@@ -73,7 +73,7 @@ export class ExitUsecase {
           addr,
           stateUpdate.range,
           claimedBlockNumber,
-          stateUpdate.paymentId
+          stateUpdate.chunkId
         )
         const repo = await UserActionRepository.init(this.witnessDb)
         await repo.insertAction(claimedBlockNumber, stateUpdate.range, action)

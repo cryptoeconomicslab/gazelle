@@ -14,7 +14,7 @@ export default interface Transaction {
   stateObject: Property
   from: Address
   message: Bytes
-  paymentId: Bytes
+  chunkId: Bytes
   toStruct(): Struct
   toString(): string
 }
