@@ -825,7 +825,9 @@ describe('light client', () => {
     await increaseBlock()
 
     await expect(finalizeExit(aliceLightClient)).rejects.toEqual(
-      new Error('VM Exception while processing transaction: revert')
+      new Error(
+        'VM Exception while processing transaction: revert undecided challenge exists'
+      )
     )
   })
 })

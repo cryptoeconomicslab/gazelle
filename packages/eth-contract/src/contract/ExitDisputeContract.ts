@@ -30,7 +30,7 @@ function createChallengeInputAndWitness(
     return {
       challengeInput: [
         Bytes.fromString(challenge.type).toHexString(),
-        coder.encode(challenge.stateUpdate.toStruct()).toHexString()
+        coder.encode(challenge.challengeStateUpdate.toStruct()).toHexString()
       ],
       witness: [coder.encode(challenge.inclusionProof.toStruct()).toHexString()]
     }
