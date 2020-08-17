@@ -65,7 +65,11 @@ export class TransferUsecase {
     const latestBlock = await syncRepository.getSyncedBlockNumber()
 
     // extract to helper: create chunkId from block number and range of first stateUpdate
-    const chunkId = getPaymentId(latestBlock, stateUpdates[0].range.start)
+    const chunkId = getPaymentId(
+      Address.from(depositContractAddress),
+      latestBlock,
+      stateUpdates[0].range.start
+    )
 
     const transactions = await Promise.all(
       stateUpdates.map(async su => {

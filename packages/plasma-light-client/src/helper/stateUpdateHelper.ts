@@ -1,8 +1,8 @@
 import {
   Address,
-  Bytes,
   BigNumber,
-  FixedBytes
+  FixedBytes,
+  Struct
 } from '@cryptoeconomicslab/primitives'
 import { StateUpdate } from '@cryptoeconomicslab/plasma'
 import * as StateObjectHelper from './stateObjectHelper'
@@ -13,13 +13,31 @@ export function getOwner(stateUpdate: StateUpdate): Address {
 }
 
 export function getPaymentId(
+  depositContractAddress: Address,
   blockNumber: BigNumber,
   start: BigNumber
 ): FixedBytes {
   const { coder } = ovmContext
   return FixedBytes.from(
     32,
-    Keccak256.hash(Bytes.concat(coder.encode(blockNumber), coder.encode(start)))
-      .data
+    Keccak256.hash(
+      coder.encode(
+        new Struct([
+          {
+            key: 'depositContractAddress',
+            value: depositContractAddress
+          },
+          {
+            key: 'blockNumber',
+            value: blockNumber
+          },
+
+          {
+            key: 'start',
+            value: start
+          }
+        ])
+      )
+    ).data
   )
 }
