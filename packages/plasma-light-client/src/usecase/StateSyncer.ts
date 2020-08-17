@@ -139,8 +139,12 @@ export class StateSyncer {
       console.log(`already synced: Block{${blockNumber.raw}}`)
       return
     }
+    const from = synced.increment()
     console.log(`syncing latest state: Block{${blockNumber.raw}}`)
-    this.ee.emit(EmitterEvent.SYNC_STARTED, blockNumber)
+    this.ee.emit(EmitterEvent.SYNC_BLOCKS_STARTED, {
+      from,
+      to: blockNumber
+    })
     const stateUpdateRepository = await StateUpdateRepository.init(
       this.witnessDb
     )
@@ -154,7 +158,7 @@ export class StateSyncer {
       // clear verified state updates
       await this.syncTransfers()
       //  sync root hashes from `synced+1` to `blockNumber`
-      await this.syncRoots(synced.increment(), blockNumber)
+      await this.syncRoots(from, blockNumber)
 
       const verifyStateUpdate = async (su: StateUpdate, retryTimes = 5) => {
         try {
@@ -200,7 +204,7 @@ export class StateSyncer {
 
       await syncRepository.updateSyncedBlockNumber(blockNumber)
 
-      this.ee.emit(EmitterEvent.SYNC_FINISHED, blockNumber)
+      this.ee.emit(EmitterEvent.SYNC_BLOCKS_FINISHED, { from, to: blockNumber })
     } catch (e) {
       console.error(`Failed syncing state: Block{${blockNumber.raw}}`, e)
     }
@@ -256,7 +260,7 @@ export class StateSyncer {
       return
     }
     console.log(`syncing state: Block{${blockNumber.raw}}`)
-    this.ee.emit(EmitterEvent.SYNC_STARTED, blockNumber)
+    this.ee.emit(EmitterEvent.SYNC_BLOCK_STARTED, blockNumber)
     const stateUpdateRepository = await StateUpdateRepository.init(
       this.witnessDb
     )
@@ -308,7 +312,7 @@ export class StateSyncer {
       )
       await syncRepository.updateSyncedBlockNumber(blockNumber)
 
-      this.ee.emit(EmitterEvent.SYNC_FINISHED, blockNumber)
+      this.ee.emit(EmitterEvent.SYNC_BLOCK_FINISHED, blockNumber)
     } catch (e) {
       console.error(`Failed syncing state: Block{${blockNumber.raw}}`, e)
     }
