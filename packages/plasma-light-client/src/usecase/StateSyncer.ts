@@ -131,19 +131,19 @@ export class StateSyncer {
    * @param blockNumber
    * @param address
    */
-  public async syncLatest(blockNumber: BigNumber, address: Address) {
+  public async syncLatest(to: BigNumber, address: Address) {
     const { coder } = ovmContext
     const syncRepository = await SyncRepository.init(this.witnessDb)
     const synced = await syncRepository.getSyncedBlockNumber()
-    if (JSBI.greaterThanOrEqual(synced.data, blockNumber.data)) {
-      console.log(`already synced: Block{${blockNumber.raw}}`)
+    if (JSBI.greaterThanOrEqual(synced.data, to.data)) {
+      console.log(`already synced: Block{${to.raw}}`)
       return
     }
     const from = synced.increment()
-    console.log(`syncing latest state: Block{${blockNumber.raw}}`)
+    console.log(`syncing latest state: Block{${to.raw}}`)
     this.ee.emit(EmitterEvent.SYNC_BLOCKS_STARTED, {
       from,
-      to: blockNumber
+      to
     })
     const stateUpdateRepository = await StateUpdateRepository.init(
       this.witnessDb
@@ -157,8 +157,8 @@ export class StateSyncer {
       // if aggregator latest state doesn't have client state, client should check spending proof
       // clear verified state updates
       await this.syncTransfers()
-      //  sync root hashes from `synced+1` to `blockNumber`
-      await this.syncRoots(from, blockNumber)
+      //  sync root hashes from `from` to `to`
+      await this.syncRoots(from, to)
 
       const verifyStateUpdate = async (su: StateUpdate, retryTimes = 5) => {
         try {
@@ -202,11 +202,11 @@ export class StateSyncer {
 
       this.removeAlreadyExitStartedStateUpdates()
 
-      await syncRepository.updateSyncedBlockNumber(blockNumber)
+      await syncRepository.updateSyncedBlockNumber(to)
 
-      this.ee.emit(EmitterEvent.SYNC_BLOCKS_FINISHED, { from, to: blockNumber })
+      this.ee.emit(EmitterEvent.SYNC_BLOCKS_FINISHED, { from, to })
     } catch (e) {
-      console.error(`Failed syncing state: Block{${blockNumber.raw}}`, e)
+      console.error(`Failed syncing state: Block{${to.raw}}`, e)
     }
   }
 
