@@ -12,7 +12,7 @@ export function getOwner(stateUpdate: StateUpdate): Address {
   return StateObjectHelper.getOwner(stateUpdate.stateObject)
 }
 
-export function getPaymentId(
+export function getChunkId(
   depositContractAddress: Address,
   blockNumber: BigNumber,
   start: BigNumber

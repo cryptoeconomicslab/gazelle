@@ -21,7 +21,7 @@ import { Numberish } from '../types'
 import { Wallet } from '@cryptoeconomicslab/wallet'
 import APIClient from '../APIClient'
 import { createSendUserAction } from '../UserAction'
-import { getPaymentId } from '../helper/stateUpdateHelper'
+import { getChunkId } from '../helper/stateUpdateHelper'
 
 export class TransferUsecase {
   constructor(
@@ -65,7 +65,7 @@ export class TransferUsecase {
     const latestBlock = await syncRepository.getSyncedBlockNumber()
 
     // extract to helper: create chunkId from block number and range of first stateUpdate
-    const chunkId = getPaymentId(
+    const chunkId = getChunkId(
       Address.from(depositContractAddress),
       latestBlock,
       stateUpdates[0].range.start
