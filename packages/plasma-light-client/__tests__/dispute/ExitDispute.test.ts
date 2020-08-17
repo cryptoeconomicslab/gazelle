@@ -25,7 +25,6 @@ import {
   prepareValidSU,
   prepareValidTxAndSig
 } from '../helper/prepare'
-import APIClient from '../../src/APIClient'
 import { generateRandomWallet } from '../helper/MockWallet'
 import { DeciderManager, DeciderConfig } from '@cryptoeconomicslab/ovm'
 import { Wallet } from '@cryptoeconomicslab/wallet'
@@ -131,7 +130,8 @@ describe('ExitDispute', () => {
       depositContractAddress,
       range,
       blockNumber,
-      ownership(owner)
+      ownership(owner),
+      Bytes.default()
     )
   }
 

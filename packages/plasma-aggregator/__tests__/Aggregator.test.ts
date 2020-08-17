@@ -142,7 +142,8 @@ describe('Aggregator integration', () => {
       depositContractAddress,
       new Range(BigNumber.from(0), BigNumber.from(10)),
       BigNumber.from(0),
-      ownershipPredicate.makeProperty([coder.encode(ALIS_ADDRESS)])
+      ownershipPredicate.makeProperty([coder.encode(ALIS_ADDRESS)]),
+      Bytes.default()
     )
     const depositTx = new DepositTransaction(
       depositContractAddress,
@@ -176,7 +177,8 @@ describe('Aggregator integration', () => {
       depositContractAddress,
       new Range(BigNumber.from(0), BigNumber.from(10)),
       BigNumber.from(0),
-      ownershipPredicate.makeProperty([coder.encode(ALIS_ADDRESS)])
+      ownershipPredicate.makeProperty([coder.encode(ALIS_ADDRESS)]),
+      Bytes.default()
     )
     const depositTx = new DepositTransaction(
       depositContractAddress,
@@ -196,6 +198,7 @@ describe('Aggregator integration', () => {
       new Range(BigNumber.from(0), BigNumber.from(5)),
       BigNumber.from(5),
       nextStateObject,
+      Bytes.default(),
       ALIS_ADDRESS
     )
     const signedTx = await tx.sign(ALIS_WALLET)
@@ -214,13 +217,15 @@ describe('Aggregator integration', () => {
         depositContractAddress,
         new Range(BigNumber.from(0), BigNumber.from(5)),
         BigNumber.from(1),
-        ownershipPredicate.makeProperty([coder.encode(BOB_ADDRESS)])
+        ownershipPredicate.makeProperty([coder.encode(BOB_ADDRESS)]),
+        Bytes.default()
       ),
       new StateUpdate(
         depositContractAddress,
         new Range(BigNumber.from(5), BigNumber.from(10)),
         BigNumber.from(0),
-        ownershipPredicate.makeProperty([coder.encode(ALIS_ADDRESS)])
+        ownershipPredicate.makeProperty([coder.encode(ALIS_ADDRESS)]),
+        Bytes.default()
       )
     ])
   })

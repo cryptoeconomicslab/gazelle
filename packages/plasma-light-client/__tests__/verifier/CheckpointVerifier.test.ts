@@ -46,7 +46,8 @@ describe('CheckpointDispute', () => {
       TOKEN_ADDRESS,
       range,
       blockNumber,
-      ownershipSO(owner)
+      ownershipSO(owner),
+      Bytes.default()
     )
   }
 

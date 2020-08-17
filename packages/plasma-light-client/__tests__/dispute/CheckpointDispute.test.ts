@@ -101,7 +101,13 @@ describe('CheckpointDispute', () => {
   }
 
   function SU(range: Range, blockNumber: BigNumber, owner: Wallet) {
-    return new StateUpdate(TOKEN_ADDRESS, range, blockNumber, ownership(owner))
+    return new StateUpdate(
+      TOKEN_ADDRESS,
+      range,
+      blockNumber,
+      ownership(owner),
+      Bytes.default()
+    )
   }
 
   describe('handleCheckpointClaimed', () => {

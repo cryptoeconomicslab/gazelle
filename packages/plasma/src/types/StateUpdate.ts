@@ -22,7 +22,8 @@ export default class StateUpdate {
     public depositContractAddress: Address,
     public range: Range,
     public blockNumber: BigNumber,
-    public stateObject: Property
+    public stateObject: Property,
+    public paymentId: Bytes
   ) {}
 
   public get amount(): JSBI {
@@ -33,12 +34,14 @@ export default class StateUpdate {
     depositContractAddress,
     range,
     blockNumber,
-    stateObject
+    stateObject,
+    paymentId
   }: {
     depositContractAddress?: Address
     range?: Range
     blockNumber?: BigNumber
     stateObject?: Property
+    paymentId?: Bytes
   }) {
     if (depositContractAddress) {
       this.depositContractAddress = depositContractAddress
@@ -51,6 +54,9 @@ export default class StateUpdate {
     }
     if (stateObject) {
       this.stateObject = stateObject
+    }
+    if (paymentId) {
+      this.paymentId = paymentId
     }
   }
 
@@ -69,7 +75,8 @@ export default class StateUpdate {
       record.depositContractAddress,
       range,
       record.blockNumber,
-      record.stateObject
+      record.stateObject,
+      record.paymentId
     )
   }
 
@@ -81,14 +88,15 @@ export default class StateUpdate {
     return new StateUpdateRecord(
       this.depositContractAddress,
       this.blockNumber,
-      this.stateObject
+      this.stateObject,
+      this.paymentId
     )
   }
 
   public toString(): string {
     return `StateUpdate(depositContractAddress: ${this.depositContractAddress.toString()}, blockNumber: ${this.blockNumber.toString()}, range: ${this.range.toString()}, so: ${
       this.stateObject.deciderAddress.data
-    })`
+    }, paymentId: ${this.paymentId.toHexString()})`
   }
 
   public static getParamType(): Struct {
@@ -96,7 +104,8 @@ export default class StateUpdate {
       { key: 'depositContractAddress', value: Address.default() },
       { key: 'range', value: Range.getParamType() },
       { key: 'blockNumber', value: BigNumber.default() },
-      { key: 'stateObject', value: Property.getParamType() }
+      { key: 'stateObject', value: Property.getParamType() },
+      { key: 'paymentId', value: Bytes.default() }
     ])
   }
 
@@ -105,12 +114,14 @@ export default class StateUpdate {
     const range = struct.data[1].value as Struct
     const blockNumber = struct.data[2].value as BigNumber
     const stateObject = struct.data[3].value as Struct
+    const paymentId = struct.data[4].value as Bytes
 
     return new StateUpdate(
       depositContractAddress,
       Range.fromStruct(range),
       blockNumber,
-      Property.fromStruct(stateObject)
+      Property.fromStruct(stateObject),
+      paymentId
     )
   }
 
@@ -119,7 +130,8 @@ export default class StateUpdate {
       { key: 'depositContractAddress', value: this.depositContractAddress },
       { key: 'range', value: this.range.toStruct() },
       { key: 'blockNumber', value: this.blockNumber },
-      { key: 'stateObject', value: this.stateObject.toStruct() }
+      { key: 'stateObject', value: this.stateObject.toStruct() },
+      { key: 'paymentId', value: this.paymentId }
     ])
   }
 }

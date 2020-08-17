@@ -15,7 +15,8 @@ describe('StateUpdate', () => {
     Address.default(),
     new Range(BigNumber.from(0), BigNumber.from(10)),
     BigNumber.from(1),
-    new Property(Address.default(), [Bytes.fromHexString('0x01')])
+    new Property(Address.default(), [Bytes.fromHexString('0x01')]),
+    Bytes.default()
   )
 
   test('toRecord()', () => {
@@ -24,7 +25,8 @@ describe('StateUpdate', () => {
       new StateUpdateRecord(
         Address.default(),
         BigNumber.from(1),
-        new Property(Address.default(), [Bytes.fromHexString('0x01')])
+        new Property(Address.default(), [Bytes.fromHexString('0x01')]),
+        Bytes.default()
       )
     )
   })
@@ -33,7 +35,8 @@ describe('StateUpdate', () => {
     const record = new StateUpdateRecord(
       Address.default(),
       BigNumber.from(1),
-      new Property(Address.default(), [Bytes.fromHexString('0x01')])
+      new Property(Address.default(), [Bytes.fromHexString('0x01')]),
+      Bytes.default()
     )
     const range = new Range(BigNumber.from(0), BigNumber.from(10))
 
@@ -51,7 +54,8 @@ describe('StateUpdate', () => {
       Address.default(),
       new Range(BigNumber.from(0), BigNumber.from(10)),
       BigNumber.from(1),
-      new Property(Address.default(), [Bytes.fromHexString('0x01')])
+      new Property(Address.default(), [Bytes.fromHexString('0x01')]),
+      Bytes.default()
     )
     stateUpdate.update({
       range: new Range(BigNumber.from(5), BigNumber.from(10))

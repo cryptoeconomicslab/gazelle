@@ -21,7 +21,8 @@ const su = (start: number, end: number): StateUpdate => {
     Address.default(),
     new Range(BigNumber.from(start), BigNumber.from(end)),
     BigNumber.from(1),
-    new Property(Address.default(), [Bytes.fromHexString('0x01')])
+    new Property(Address.default(), [Bytes.fromHexString('0x01')]),
+    Bytes.default()
   )
 }
 

@@ -4,7 +4,6 @@ import {
   UserActionRepository,
   SyncRepository,
   InclusionProofRepository,
-  ExitRepository,
   DepositedRangeRepository
 } from '../src/repository'
 import { setupContext } from '@cryptoeconomicslab/context'
@@ -304,7 +303,8 @@ describe('LightClient', () => {
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(20)),
         BigNumber.from(0),
-        client.ownershipProperty(Address.from(client.address))
+        client.ownershipProperty(Address.from(client.address)),
+        Bytes.default()
       )
     })
 
@@ -341,13 +341,15 @@ describe('LightClient', () => {
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(20)),
         BigNumber.from(0),
-        client.ownershipProperty(Address.from(client.address))
+        client.ownershipProperty(Address.from(client.address)),
+        Bytes.default()
       )
       su2 = new StateUpdate(
         Address.from(depositContractAddress),
         new Range(BigNumber.from(30), BigNumber.from(40)),
         BigNumber.from(1),
-        client.ownershipProperty(Address.from(client.address))
+        client.ownershipProperty(Address.from(client.address)),
+        Bytes.default()
       )
 
       proof = new DoubleLayerInclusionProof(
@@ -470,7 +472,8 @@ describe('LightClient', () => {
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(20)),
         BigNumber.from(0),
-        client.ownershipProperty(Address.from(client.address))
+        client.ownershipProperty(Address.from(client.address)),
+        Bytes.default()
       )
     )
     expect(owner).toEqual(Address.from(client.address))

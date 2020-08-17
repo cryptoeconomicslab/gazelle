@@ -34,6 +34,7 @@ describe('TypedDataVerifier', () => {
       range,
       BigNumber.from(0),
       stateObject,
+      Bytes.default(),
       Address.default()
     )
     return tx.message

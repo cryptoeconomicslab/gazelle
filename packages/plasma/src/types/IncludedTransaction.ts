@@ -14,6 +14,7 @@ export default class IncludedTransaction implements Transaction {
     readonly range: Range,
     readonly maxBlockNumber: BigNumber,
     readonly stateObject: Property,
+    readonly paymentId: Bytes,
     readonly from: Address,
     readonly signature: Bytes,
     readonly includedBlockNumber: BigNumber
@@ -28,6 +29,7 @@ export default class IncludedTransaction implements Transaction {
       new Range(BigNumber.default(), BigNumber.default()),
       BigNumber.default(),
       new Property(Address.default(), []),
+      Bytes.default(),
       Address.default(),
       Bytes.default(),
       BigNumber.default()
@@ -40,6 +42,7 @@ export default class IncludedTransaction implements Transaction {
       { key: 'range', value: Range.getParamType() },
       { key: 'maxBlockNumber', value: BigNumber.default() },
       { key: 'stateObject', value: Property.getParamType() },
+      { key: 'paymentId', value: Bytes.default() },
       { key: 'from', value: Address.default() },
       { key: 'signature', value: Bytes.default() },
       { key: 'includedBlockNumber', value: BigNumber.default() }
@@ -55,6 +58,7 @@ export default class IncludedTransaction implements Transaction {
       tx.range,
       tx.maxBlockNumber,
       tx.stateObject,
+      tx.paymentId,
       tx.from,
       tx.signature,
       includedBlockNumber
@@ -66,16 +70,18 @@ export default class IncludedTransaction implements Transaction {
     const range = struct.data[1].value as Struct
     const maxBlockNumber = struct.data[2].value as BigNumber
     const stateObject = struct.data[3].value as Struct
-    const from = struct.data[4].value as Address
-    const signature = struct.data[5].value as Bytes
-    const includedBlockNumber = struct.data[6].value as BigNumber
+    const paymentId = struct.data[4].value as Bytes
+    const from = struct.data[5].value as Address
+    const signature = struct.data[6].value as Bytes
+    const includedBlockNumber = struct.data[7].value as BigNumber
 
     return new IncludedTransaction(
-      depositContractAddress as Address,
-      Range.fromStruct(range as Struct),
+      depositContractAddress,
+      Range.fromStruct(range),
       maxBlockNumber,
-      Property.fromStruct(stateObject as Struct),
-      from as Address,
+      Property.fromStruct(stateObject),
+      paymentId,
+      from,
       signature,
       includedBlockNumber
     )
@@ -87,6 +93,7 @@ export default class IncludedTransaction implements Transaction {
       { key: 'range', value: this.range.toStruct() },
       { key: 'maxBlockNumber', value: this.maxBlockNumber },
       { key: 'stateObject', value: this.stateObject.toStruct() },
+      { key: 'paymentId', value: this.paymentId },
       { key: 'from', value: this.from },
       { key: 'signature', value: this.signature },
       { key: 'includedBlockNumber', value: this.includedBlockNumber }
@@ -99,6 +106,7 @@ export default class IncludedTransaction implements Transaction {
       this.range,
       this.maxBlockNumber,
       this.stateObject,
+      this.paymentId,
       this.from
     )
   }
@@ -109,6 +117,7 @@ export default class IncludedTransaction implements Transaction {
       this.range,
       this.maxBlockNumber,
       this.stateObject,
+      this.paymentId,
       this.from,
       this.signature
     )
@@ -121,7 +130,9 @@ export default class IncludedTransaction implements Transaction {
       this.maxBlockNumber.raw
     }, range: ${this.range.toString()}, so: ${
       this.stateObject.deciderAddress.data
-    }, from: ${this.from.raw}, included)`
+    }, paymentId: ${this.paymentId.toHexString()}, from: ${
+      this.from.raw
+    }, included)`
   }
 
   public getHash(): Bytes {

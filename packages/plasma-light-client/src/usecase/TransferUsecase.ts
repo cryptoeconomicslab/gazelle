@@ -21,6 +21,8 @@ import { Numberish } from '../types'
 import { Wallet } from '@cryptoeconomicslab/wallet'
 import APIClient from '../APIClient'
 import { createSendUserAction } from '../UserAction'
+import { Keccak256 } from '@cryptoeconomicslab/hash'
+import { getPaymentId } from '../helper/stateUpdateHelper'
 
 export class TransferUsecase {
   constructor(
@@ -63,6 +65,9 @@ export class TransferUsecase {
     const syncRepository = await SyncRepository.init(this.witnessDb)
     const latestBlock = await syncRepository.getSyncedBlockNumber()
 
+    // extract to helper: create paymentId from block number and range of first stateUpdate
+    const paymentId = getPaymentId(latestBlock, stateUpdates[0].range.start)
+
     const transactions = await Promise.all(
       stateUpdates.map(async su => {
         const tx = new UnsignedTransaction(
@@ -70,6 +75,7 @@ export class TransferUsecase {
           su.range,
           BigNumber.from(JSBI.add(latestBlock.data, JSBI.BigInt(5))),
           stateObject,
+          paymentId,
           this.wallet.getAddress()
         )
         return await tx.sign(this.wallet)

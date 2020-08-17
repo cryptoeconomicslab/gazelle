@@ -123,6 +123,7 @@ describe('IsValidSignatureDecider', () => {
       range,
       BigNumber.from(0),
       stateObject,
+      Bytes.default(),
       Address.default()
     )
     const txBytes = ovmContext.coder.encode(tx.toStruct())

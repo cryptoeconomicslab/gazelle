@@ -23,7 +23,8 @@ const su = (bn: number, start: number, end: number) => {
     Address.default(),
     new Range(BigNumber.from(start), BigNumber.from(end)),
     BigNumber.from(bn),
-    new Property(Address.default(), [Bytes.fromHexString(testAddr)])
+    new Property(Address.default(), [Bytes.fromHexString(testAddr)]),
+    Bytes.default()
   )
 }
 const TIME_STAMP = DateUtils.getCurrentDate()

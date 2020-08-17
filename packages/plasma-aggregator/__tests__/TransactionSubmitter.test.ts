@@ -60,7 +60,8 @@ describe('Transaction Submitter', () => {
       depositContractAddress,
       new Range(BigNumber.from(0), BigNumber.from(10)),
       BigNumber.from(0),
-      new Property(predicateAddress, [])
+      new Property(predicateAddress, []),
+      Bytes.default()
     )
 
     kvs = new InMemoryKeyValueStore(Bytes.fromString('test-db'))

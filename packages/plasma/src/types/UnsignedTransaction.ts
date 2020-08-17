@@ -16,6 +16,7 @@ export default class UnsignedTransaction implements Transaction {
     readonly range: Range,
     readonly maxBlockNumber: BigNumber,
     readonly stateObject: Property,
+    readonly paymentId: Bytes,
     readonly from: Address
   ) {}
 
@@ -28,6 +29,7 @@ export default class UnsignedTransaction implements Transaction {
       new Range(BigNumber.default(), BigNumber.default()),
       BigNumber.default(),
       new Property(Address.default(), []),
+      Bytes.default(),
       Address.default()
     )
   }
@@ -38,6 +40,7 @@ export default class UnsignedTransaction implements Transaction {
       { key: 'range', value: Range.getParamType() },
       { key: 'maxBlockNumber', value: BigNumber.default() },
       { key: 'stateObject', value: Property.getParamType() },
+      { key: 'paymentId', value: Bytes.default() },
       { key: 'from', value: Address.default() }
     ])
   }
@@ -47,14 +50,16 @@ export default class UnsignedTransaction implements Transaction {
     const range = struct.data[1].value as Struct
     const maxBlockNumber = struct.data[2].value as BigNumber
     const stateObject = struct.data[3].value as Struct
-    const from = struct.data[4].value as Address
+    const paymentId = struct.data[4].value as Bytes
+    const from = struct.data[5].value as Address
 
     return new UnsignedTransaction(
-      depositContractAddress as Address,
-      Range.fromStruct(range as Struct),
+      depositContractAddress,
+      Range.fromStruct(range),
       maxBlockNumber,
-      Property.fromStruct(stateObject as Struct),
-      from as Address
+      Property.fromStruct(stateObject),
+      paymentId,
+      from
     )
   }
 
@@ -64,6 +69,7 @@ export default class UnsignedTransaction implements Transaction {
       { key: 'range', value: this.range.toStruct() },
       { key: 'maxBlockNumber', value: this.maxBlockNumber },
       { key: 'stateObject', value: this.stateObject.toStruct() },
+      { key: 'paymentId', value: this.paymentId },
       { key: 'from', value: this.from }
     ])
   }
@@ -78,6 +84,7 @@ export default class UnsignedTransaction implements Transaction {
       this.range,
       this.maxBlockNumber,
       this.stateObject,
+      this.paymentId,
       this.from,
       signature
     )
@@ -94,7 +101,7 @@ export default class UnsignedTransaction implements Transaction {
       this.maxBlockNumber.raw
     }, range: ${this.range.toString()}, so: ${
       this.stateObject.deciderAddress.data
-    }, from: ${this.from.raw})`
+    }, paymentId: ${this.paymentId.toHexString()}, from: ${this.from.raw})`
   }
 
   public get message(): Bytes {

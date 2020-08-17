@@ -19,7 +19,8 @@ describe('Block', () => {
       Address.default(),
       new Range(BigNumber.from(0), BigNumber.from(10)),
       BigNumber.from(1),
-      new Property(Address.default(), [Bytes.fromHexString('0x01')])
+      new Property(Address.default(), [Bytes.fromHexString('0x01')]),
+      Bytes.default()
     )
 
     const map = new Map()
@@ -45,7 +46,8 @@ describe('Block', () => {
       Address.default(),
       new Range(BigNumber.from(0), BigNumber.from(10)),
       BigNumber.from(1),
-      new Property(Address.default(), [Bytes.fromHexString('0x01')])
+      new Property(Address.default(), [Bytes.fromHexString('0x01')]),
+      Bytes.default()
     )
 
     const map = new Map()

@@ -40,6 +40,7 @@ export async function prepareTx(
     range,
     BigNumber.from(100),
     stateObject,
+    Bytes.default(),
     from.getAddress(),
     Bytes.default()
   )

@@ -14,6 +14,7 @@ export default class SignedTransaction implements Transaction {
     readonly range: Range,
     readonly maxBlockNumber: BigNumber,
     readonly stateObject: Property,
+    readonly paymentId: Bytes,
     readonly from: Address,
     readonly signature: Bytes
   ) {}
@@ -27,6 +28,7 @@ export default class SignedTransaction implements Transaction {
       new Range(BigNumber.default(), BigNumber.default()),
       BigNumber.default(),
       new Property(Address.default(), []),
+      Bytes.default(),
       Address.default(),
       Bytes.default()
     )
@@ -38,6 +40,7 @@ export default class SignedTransaction implements Transaction {
       { key: 'range', value: Range.getParamType() },
       { key: 'maxBlockNumber', value: BigNumber.default() },
       { key: 'stateObject', value: Property.getParamType() },
+      { key: 'paymentId', value: Bytes.default() },
       { key: 'from', value: Address.default() },
       { key: 'signature', value: Bytes.default() }
     ])
@@ -48,16 +51,18 @@ export default class SignedTransaction implements Transaction {
     const range = struct.data[1].value as Struct
     const maxBlockNumber = struct.data[2].value as BigNumber
     const stateObject = struct.data[3].value as Struct
-    const from = struct.data[4].value as Address
-    const signature = struct.data[5].value as Bytes
+    const paymentId = struct.data[4].value as Bytes
+    const from = struct.data[5].value as Address
+    const signature = struct.data[6].value as Bytes
 
     return new SignedTransaction(
-      depositContractAddress as Address,
-      Range.fromStruct(range as Struct),
+      depositContractAddress,
+      Range.fromStruct(range),
       maxBlockNumber,
-      Property.fromStruct(stateObject as Struct),
-      from as Address,
-      signature as Bytes
+      Property.fromStruct(stateObject),
+      paymentId,
+      from,
+      signature
     )
   }
 
@@ -67,6 +72,7 @@ export default class SignedTransaction implements Transaction {
       { key: 'range', value: this.range.toStruct() },
       { key: 'maxBlockNumber', value: this.maxBlockNumber },
       { key: 'stateObject', value: this.stateObject.toStruct() },
+      { key: 'paymentId', value: this.paymentId },
       { key: 'from', value: this.from },
       { key: 'signature', value: this.signature }
     ])
@@ -78,6 +84,7 @@ export default class SignedTransaction implements Transaction {
       this.range,
       this.maxBlockNumber,
       this.stateObject,
+      this.paymentId,
       this.from
     )
   }
@@ -89,7 +96,9 @@ export default class SignedTransaction implements Transaction {
       this.maxBlockNumber.raw
     }, range: ${this.range.toString()}, so: ${
       this.stateObject.deciderAddress.data
-    }, from: ${this.from.raw}, signed)`
+    }, paymentId: ${this.paymentId.toHexString()}, from: ${
+      this.from.raw
+    }, signed)`
   }
 
   public getHash(): Bytes {
