@@ -553,6 +553,24 @@ describe('light client', () => {
     await checkBalance(bobLightClient, '0.1')
     await checkBalance(carolLightClient, '0.3')
 
+    await aliceLightClient.transfer(
+      parseUnitsToJsbi('1.1'),
+      config.PlasmaETH,
+      carolLightClient.address
+    )
+
+    await bobLightClient.transfer(
+      parseUnitsToJsbi('0.1'),
+      config.PlasmaETH,
+      carolLightClient.address
+    )
+
+    await sleep(20000)
+
+    expect(await getBalance(aliceLightClient)).toEqual('0.0')
+    expect(await getBalance(bobLightClient)).toEqual('0.0')
+    expect(await getBalance(carolLightClient)).toEqual('1.5')
+
     aliceLightClient.stop()
     bobLightClient.stop()
     carolLightClient.stop()
@@ -562,9 +580,9 @@ describe('light client', () => {
 
     await sleep(5000)
 
-    await checkBalance(aliceLightClient, '1.1')
-    await checkBalance(bobLightClient, '0.1')
-    await checkBalance(carolLightClient, '0.3')
+    expect(await getBalance(aliceLightClient)).toEqual('0.0')
+    expect(await getBalance(bobLightClient)).toEqual('0.0')
+    expect(await getBalance(carolLightClient)).toEqual('1.5')
 
     const aliceSyncLightClient = await createClientFromPrivateKey(
       aliceLightClient['wallet']['ethersWallet'].privateKey
@@ -576,9 +594,9 @@ describe('light client', () => {
       carolLightClient['wallet']['ethersWallet'].privateKey
     )
     await sleep(20000)
-    expect(await getBalance(aliceSyncLightClient)).toEqual('1.1')
-    expect(await getBalance(bobSyncLightClient)).toEqual('0.1')
-    expect(await getBalance(carolSyncLightClient)).toEqual('0.3')
+    expect(await getBalance(aliceSyncLightClient)).toEqual('0.0')
+    expect(await getBalance(bobSyncLightClient)).toEqual('0.0')
+    expect(await getBalance(carolSyncLightClient)).toEqual('1.5')
     aliceSyncLightClient.stop()
     bobSyncLightClient.stop()
     carolSyncLightClient.stop()
@@ -605,6 +623,11 @@ describe('light client', () => {
         type: ActionType.Receive,
         amount: parseUnitsToJsbi('0.6'),
         counterParty: aliceLightClient.address
+      }
+      {
+        type: ActionType.Send,
+        amount: parseUnitsToJsbi('1.1'),
+        counterParty: carolLightClient.address
       }
     ])
   })
