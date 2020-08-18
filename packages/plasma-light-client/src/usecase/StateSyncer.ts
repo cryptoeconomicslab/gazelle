@@ -168,8 +168,7 @@ export class StateSyncer {
           su
         )
         if (!verified.decision) {
-          console.error('invalid history detected')
-          return
+          throw new Error(`invalid history detected at ${su.toString()}`)
         }
         await stateUpdateRepository.insertVerifiedStateUpdate(su)
         const tokenContractAddress = this.tokenManager.getTokenContractAddress(
@@ -262,43 +261,38 @@ export class StateSyncer {
       )
       await this.syncTransfers()
 
-      await Promise.all(
-        stateUpdates.map(async su => {
-          try {
-            await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
-            const verified = await verifyCheckpoint(
-              this.witnessDb,
-              this.deciderManager,
-              su
-            )
-            if (!verified.decision) return
-          } catch (e) {
-            console.log(e)
-          }
+      for (const su of stateUpdates) {
+        await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
+        const verified = await verifyCheckpoint(
+          this.witnessDb,
+          this.deciderManager,
+          su
+        )
+        if (!verified.decision) {
+          throw new Error(`invalid history detected at ${su.toString()}`)
+        }
 
-          await stateUpdateRepository.insertVerifiedStateUpdate(su)
-          // store receive user action
-          const { range } = su
-          const tokenContractAddress = this.tokenManager.getTokenContractAddress(
-            su.depositContractAddress
-          )
-          if (!tokenContractAddress)
-            throw new Error('Token Contract Address not found')
+        await stateUpdateRepository.insertVerifiedStateUpdate(su)
+        // store receive user action
+        const { range } = su
+        const tokenContractAddress = this.tokenManager.getTokenContractAddress(
+          su.depositContractAddress
+        )
+        if (!tokenContractAddress)
+          throw new Error('Token Contract Address not found')
 
-          const action = createReceiveUserAction(
-            Address.from(tokenContractAddress),
-            range,
-            getOwner(su), // FIXME: this is same as client's owner
-            su.blockNumber
-          )
-          const actionRepository = await UserActionRepository.init(
-            this.witnessDb
-          )
-          await actionRepository.insertAction(su.blockNumber, range, action)
+        const action = createReceiveUserAction(
+          Address.from(tokenContractAddress),
+          range,
+          getOwner(su), // FIXME: this is same as client's owner
+          su.blockNumber
+        )
+        const actionRepository = await UserActionRepository.init(this.witnessDb)
+        await actionRepository.insertAction(su.blockNumber, range, action)
 
-          this.ee.emit(UserActionEvent.RECIEVE, action)
-        })
-      )
+        this.ee.emit(UserActionEvent.RECIEVE, action)
+      }
+
       await syncRepository.updateSyncedBlockNumber(blockNumber)
 
       this.ee.emit(EmitterEvent.SYNC_BLOCK_FINISHED, blockNumber)
