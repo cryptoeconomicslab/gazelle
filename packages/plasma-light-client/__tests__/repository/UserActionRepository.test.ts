@@ -5,7 +5,8 @@ import {
   Address,
   Bytes,
   BigNumber,
-  Range
+  Range,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import { setupContext } from '@cryptoeconomicslab/context'
 import { EthCoder } from '@cryptoeconomicslab/eth-coder'
@@ -35,7 +36,7 @@ describe('UserActionRepository', () => {
       range,
       Address.default(),
       blockNumber,
-      Bytes.default()
+      FixedBytes.default(32)
     )
 
     await repository.insertAction(blockNumber, range, action)
@@ -53,14 +54,14 @@ describe('UserActionRepository', () => {
       tokenAddress,
       range,
       blockNumber,
-      Bytes.default()
+      FixedBytes.default(32)
     )
     const action2 = createSendUserAction(
       tokenAddress,
       range,
       Address.default(),
       blockNumber2,
-      Bytes.default()
+      FixedBytes.default(32)
     )
 
     await repository.insertAction(blockNumber, range, action)

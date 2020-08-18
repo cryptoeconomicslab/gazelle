@@ -5,7 +5,8 @@ import {
   Bytes,
   Range,
   BigNumber,
-  Property
+  Property,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import { setupContext } from '@cryptoeconomicslab/context'
 import Coder from '@cryptoeconomicslab/eth-coder'
@@ -106,7 +107,7 @@ describe('CheckpointDispute', () => {
       range,
       blockNumber,
       ownership(owner),
-      Bytes.default()
+      FixedBytes.default(32)
     )
   }
 
