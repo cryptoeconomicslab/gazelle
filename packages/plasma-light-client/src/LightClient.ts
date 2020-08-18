@@ -235,12 +235,11 @@ export default class LightClient {
           root,
           Address.from(this.address)
         )
-        // await this.pendingStateUpdatesVerifier.verify(blockNumber)
       }
     )
-    this.commitmentContract.startWatchingEvents()
     const blockNumber = await this.commitmentContract.getCurrentBlock()
     await this.stateSyncer.syncLatest(blockNumber, Address.from(this.address))
+    this.commitmentContract.startWatchingEvents()
     this.exitDispute.startWatchingEvents()
   }
 
@@ -411,7 +410,8 @@ export default class LightClient {
       this.handleCheckpointFinalized.bind(this)
     )
 
-    depositContract.startWatchingEvents()
+    // wait until syncing checkpoints events
+    await depositContract.startWatchingEvents()
   }
 
   // Exit Usecase
@@ -471,12 +471,24 @@ export default class LightClient {
     this.ee.on(EmitterEvent.CHECKPOINT_FINALIZED, handler)
   }
 
-  public subscribeSyncStarted(handler: (blockNumber: BigNumber) => void) {
-    this.ee.on(EmitterEvent.SYNC_STARTED, handler)
+  public subscribeSyncBlockStarted(handler: (blockNumber: BigNumber) => void) {
+    this.ee.on(EmitterEvent.SYNC_BLOCK_STARTED, handler)
   }
 
-  public subscribeSyncFinished(handler: (blockNumber: BigNumber) => void) {
-    this.ee.on(EmitterEvent.SYNC_FINISHED, handler)
+  public subscribeSyncBlockFinished(handler: (blockNumber: BigNumber) => void) {
+    this.ee.on(EmitterEvent.SYNC_BLOCK_FINISHED, handler)
+  }
+
+  public subscribeSyncBlocksStarted(
+    handler: ({ from, to: BigNumber }) => void
+  ) {
+    this.ee.on(EmitterEvent.SYNC_BLOCKS_STARTED, handler)
+  }
+
+  public subscribeSyncBlocksFinished(
+    handler: ({ from, to: BigNumber }) => void
+  ) {
+    this.ee.on(EmitterEvent.SYNC_BLOCKS_FINISHED, handler)
   }
 
   public subscribeTransferComplete(handler: (su: StateUpdate) => void) {
@@ -493,8 +505,28 @@ export default class LightClient {
     this.ee.off(EmitterEvent.CHECKPOINT_FINALIZED, handler)
   }
 
-  public unsubscribeSyncFinished(handler: (blockNumber: BigNumber) => void) {
-    this.ee.off(EmitterEvent.SYNC_FINISHED, handler)
+  public unsubscribeSyncBlockStarted(
+    handler: (blockNumber: BigNumber) => void
+  ) {
+    this.ee.off(EmitterEvent.SYNC_BLOCK_STARTED, handler)
+  }
+
+  public unsubscribeSyncBlockFinished(
+    handler: (blockNumber: BigNumber) => void
+  ) {
+    this.ee.off(EmitterEvent.SYNC_BLOCK_FINISHED, handler)
+  }
+
+  public unsubscribeSyncBlocksStarted(
+    handler: ({ from, to: BigNumber }) => void
+  ) {
+    this.ee.off(EmitterEvent.SYNC_BLOCKS_STARTED, handler)
+  }
+
+  public unsubscribeSyncBlocksFinished(
+    handler: ({ from, to: BigNumber }) => void
+  ) {
+    this.ee.off(EmitterEvent.SYNC_BLOCKS_FINISHED, handler)
   }
 
   public unsubscribeTransferComplete(handler: (su: StateUpdate) => void) {

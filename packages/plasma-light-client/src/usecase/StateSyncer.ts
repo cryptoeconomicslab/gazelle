@@ -132,21 +132,20 @@ export class StateSyncer {
    * @param blockNumber
    * @param address
    */
-  public async syncLatest(blockNumber: BigNumber, address: Address) {
+  public async syncLatest(to: BigNumber, address: Address) {
     const { coder } = ovmContext
-    const root = await this.commitmentContract.getRoot(blockNumber)
-    if (!root) {
-      // FIXME: check if root is default bytes32 value
-      throw new Error('Block root hash is null')
-    }
     const syncRepository = await SyncRepository.init(this.witnessDb)
     const synced = await syncRepository.getSyncedBlockNumber()
-    if (JSBI.greaterThanOrEqual(synced.data, blockNumber.data)) {
-      console.log(`already synced: Block{${blockNumber.raw}}`)
+    if (JSBI.greaterThanOrEqual(synced.data, to.data)) {
+      console.log(`already synced: Block{${to.raw}}`)
       return
     }
-    console.log(`syncing latest state: Block{${blockNumber.raw}}`)
-    await this.storeRoot(blockNumber, root)
+    const from = synced.increment()
+    console.log(`syncing latest state: Block{${to.raw}}`)
+    this.ee.emit(EmitterEvent.SYNC_BLOCKS_STARTED, {
+      from,
+      to
+    })
     const stateUpdateRepository = await StateUpdateRepository.init(
       this.witnessDb
     )
@@ -159,28 +158,18 @@ export class StateSyncer {
       // if aggregator latest state doesn't have client state, client should check spending proof
       // clear verified state updates
       await this.syncTransfers()
-      //  sync root hashes
-      await this.syncRootUntil(blockNumber)
+      //  sync root hashes from `from` to `to`
+      await this.syncRoots(from, to)
 
-      const verifyStateUpdate = async (su: StateUpdate, retryTimes = 5) => {
-        try {
-          await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
-          const verified = await verifyCheckpoint(
-            this.witnessDb,
-            this.deciderManager,
-            su
-          )
-          if (!verified.decision) {
-            // retry verification
-            if (retryTimes > 0) {
-              await sleep(this.retryInterval)
-              await verifyStateUpdate(su, retryTimes - 1)
-            }
-            return
-          }
-        } catch (e) {
-          console.log(e)
-          return
+      for (const su of stateUpdates) {
+        await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
+        const verified = await verifyCheckpoint(
+          this.witnessDb,
+          this.deciderManager,
+          su
+        )
+        if (!verified.decision) {
+          throw new Error(`invalid history detected at ${su.toString()}`)
         }
         await stateUpdateRepository.insertVerifiedStateUpdate(su)
         const tokenContractAddress = this.tokenManager.getTokenContractAddress(
@@ -200,41 +189,32 @@ export class StateSyncer {
 
         this.ee.emit(UserActionEvent.RECIEVE, action)
       }
-      const promises = stateUpdates.map(async su => verifyStateUpdate(su))
-      await Promise.all(promises)
 
       this.removeAlreadyExitStartedStateUpdates()
 
-      await syncRepository.updateSyncedBlockNumber(blockNumber)
-      await syncRepository.insertBlockRoot(blockNumber, root)
+      await syncRepository.updateSyncedBlockNumber(to)
 
-      this.ee.emit(EmitterEvent.SYNC_FINISHED, blockNumber)
+      this.ee.emit(EmitterEvent.SYNC_BLOCKS_FINISHED, { from, to })
     } catch (e) {
-      console.error(`Failed syncing state: Block{${blockNumber.raw}}`, e)
+      console.error(`Failed syncing state: Block{${to.raw}}`, e)
     }
   }
 
-  public async syncRootUntil(blockNumber: BigNumber) {
-    const { coder } = ovmContext
-    let synced = blockNumber
-    while (JSBI.greaterThan(synced.data, JSBI.BigInt(0))) {
-      const next = BigNumber.from(JSBI.subtract(synced.data, JSBI.BigInt(1)))
-      const storageDb = await getStorageDb(this.witnessDb)
-      const bucket = await storageDb.bucket(
-        coder.encode(this.commitmentVerifierAddress)
-      )
-      const encodedRoot = await bucket.get(coder.encode(blockNumber))
-      if (encodedRoot === null) {
-        const root = await this.commitmentContract.getRoot(blockNumber)
-        await this.storeRoot(blockNumber, root)
-      } else {
-        break
-      }
-      synced = next
+  /**
+   * sync Merkle Root from `from` number to `to` number.
+   * @param from
+   * @param to
+   */
+  private async syncRoots(from: BigNumber, to: BigNumber) {
+    let b = from
+    while (JSBI.lessThanOrEqual(b.data, to.data)) {
+      const root = await this.commitmentContract.getRoot(b)
+      await this.storeRoot(b, root)
+      b = b.increment()
     }
   }
 
-  public async storeRoot(blockNumber: BigNumber, root: FixedBytes) {
+  private async storeRoot(blockNumber: BigNumber, root: FixedBytes) {
     const { coder } = ovmContext
     const rootHint = Hint.createRootHint(
       blockNumber,
@@ -247,6 +227,8 @@ export class StateSyncer {
       coder.encode(this.commitmentVerifierAddress)
     )
     await bucket.put(coder.encode(blockNumber), coder.encode(root))
+    const syncRepository = await SyncRepository.init(this.witnessDb)
+    await syncRepository.insertBlockRoot(blockNumber, root)
   }
 
   /**
@@ -268,7 +250,7 @@ export class StateSyncer {
       return
     }
     console.log(`syncing state: Block{${blockNumber.raw}}`)
-    this.ee.emit(EmitterEvent.SYNC_STARTED, blockNumber)
+    this.ee.emit(EmitterEvent.SYNC_BLOCK_STARTED, blockNumber)
     const stateUpdateRepository = await StateUpdateRepository.init(
       this.witnessDb
     )
@@ -281,48 +263,41 @@ export class StateSyncer {
       )
       await this.syncTransfers()
 
-      await Promise.all(
-        stateUpdates.map(async su => {
-          try {
-            await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
-            const verified = await verifyCheckpoint(
-              this.witnessDb,
-              this.deciderManager,
-              su
-            )
-            if (!verified.decision) return
-          } catch (e) {
-            console.log(e)
-          }
+      for (const su of stateUpdates) {
+        await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
+        const verified = await verifyCheckpoint(
+          this.witnessDb,
+          this.deciderManager,
+          su
+        )
+        if (!verified.decision) {
+          throw new Error(`invalid history detected at ${su.toString()}`)
+        }
 
-          await stateUpdateRepository.insertVerifiedStateUpdate(su)
-          // store receive user action
-          const { range } = su
-          const tokenContractAddress = this.tokenManager.getTokenContractAddress(
-            su.depositContractAddress
-          )
-          if (!tokenContractAddress)
-            throw new Error('Token Contract Address not found')
+        await stateUpdateRepository.insertVerifiedStateUpdate(su)
+        // store receive user action
+        const { range } = su
+        const tokenContractAddress = this.tokenManager.getTokenContractAddress(
+          su.depositContractAddress
+        )
+        if (!tokenContractAddress)
+          throw new Error('Token Contract Address not found')
 
-          const action = createReceiveUserAction(
-            Address.from(tokenContractAddress),
-            range,
-            getOwner(su), // FIXME: this is same as client's owner
-            su.blockNumber,
-            su.chunkId
-          )
-          const actionRepository = await UserActionRepository.init(
-            this.witnessDb
-          )
-          await actionRepository.insertAction(su.blockNumber, range, action)
+        const action = createReceiveUserAction(
+          Address.from(tokenContractAddress),
+          range,
+          getOwner(su), // FIXME: this is same as client's owner
+          su.blockNumber,
+          su.chunkId
+        )
+        const actionRepository = await UserActionRepository.init(this.witnessDb)
+        await actionRepository.insertAction(su.blockNumber, range, action)
+        this.ee.emit(UserActionEvent.RECIEVE, action)
+      }
 
-          this.ee.emit(UserActionEvent.RECIEVE, action)
-        })
-      )
       await syncRepository.updateSyncedBlockNumber(blockNumber)
-      await syncRepository.insertBlockRoot(blockNumber, root)
 
-      this.ee.emit(EmitterEvent.SYNC_FINISHED, blockNumber)
+      this.ee.emit(EmitterEvent.SYNC_BLOCK_FINISHED, blockNumber)
     } catch (e) {
       console.error(`Failed syncing state: Block{${blockNumber.raw}}`, e)
     }
