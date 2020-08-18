@@ -603,12 +603,7 @@ describe('light client', () => {
       },
       {
         type: ActionType.Receive,
-        amount: parseUnitsToJsbi('0.5'),
-        counterParty: aliceLightClient.address
-      },
-      {
-        type: ActionType.Receive,
-        amount: parseUnitsToJsbi('0.1'),
+        amount: parseUnitsToJsbi('0.6'),
         counterParty: aliceLightClient.address
       }
     ])
