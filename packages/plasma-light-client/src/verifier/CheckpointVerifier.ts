@@ -1,4 +1,4 @@
-import { BigNumber } from '@cryptoeconomicslab/primitives'
+import { BigNumber, Range } from '@cryptoeconomicslab/primitives'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import {
   StateUpdate,
@@ -74,7 +74,7 @@ export async function verifyCheckpoint(
         const inclusionProof = await inclusionProofRepo.getInclusionProofs(
           depositContractAddress,
           su.blockNumber,
-          range
+          su.range
         )
         if (inclusionProof.length !== 1) {
           return { decision: false, challenge: su }
@@ -93,30 +93,43 @@ export async function verifyCheckpoint(
           return { decision: true }
         }
 
+        /**
+         * validate deprecation of `su`'s all range.
+         */
         const txWitnesses = await txRepo.getTransactions(
           depositContractAddress,
           blockNumber,
-          range
+          su.range
         )
-        if (txWitnesses.length !== 1) {
+        if (txWitnesses.length === 0) {
           return { decision: false, challenge: su }
         }
-        // validate transaction
-        const tx = txWitnesses[0]
-        const verified = verifyTransaction(su, tx)
-        if (!verified) {
+        console.log('txWitnesses', txWitnesses.length)
+        // transactions satisfies su.range
+        const concatenatedRange = Range.concat(txWitnesses.map(tx => tx.range))
+        if (
+          concatenatedRange === null ||
+          !concatenatedRange.contains(su.range)
+        ) {
           return { decision: false, challenge: su }
         }
-
-        // validate stateObject
-        const stateObject = su.stateObject.appendInput([tx.message])
-        try {
-          const decision = await deciderManager.decide(stateObject)
-          if (!decision.outcome) {
+        for (const tx of txWitnesses) {
+          // validate transaction
+          const verified = verifyTransaction(su, tx)
+          if (!verified) {
             return { decision: false, challenge: su }
           }
-        } catch (e) {
-          return { decision: false, challenge: su }
+
+          // validate stateObject
+          const stateObject = su.stateObject.appendInput([tx.message])
+          try {
+            const decision = await deciderManager.decide(stateObject)
+            if (!decision.outcome) {
+              return { decision: false, challenge: su }
+            }
+          } catch (e) {
+            return { decision: false, challenge: su }
+          }
         }
 
         return { decision: true }
