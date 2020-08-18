@@ -160,24 +160,15 @@ export class StateSyncer {
       //  sync root hashes from `from` to `to`
       await this.syncRoots(from, to)
 
-      const verifyStateUpdate = async (su: StateUpdate, retryTimes = 5) => {
-        try {
-          await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
-          const verified = await verifyCheckpoint(
-            this.witnessDb,
-            this.deciderManager,
-            su
-          )
-          if (!verified.decision) {
-            // retry verification
-            if (retryTimes > 0) {
-              await sleep(this.retryInterval)
-              await verifyStateUpdate(su, retryTimes - 1)
-            }
-            return
-          }
-        } catch (e) {
-          console.error(e)
+      for (const su of stateUpdates) {
+        await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
+        const verified = await verifyCheckpoint(
+          this.witnessDb,
+          this.deciderManager,
+          su
+        )
+        if (!verified.decision) {
+          console.error('invalid history detected')
           return
         }
         await stateUpdateRepository.insertVerifiedStateUpdate(su)
@@ -197,8 +188,6 @@ export class StateSyncer {
 
         this.ee.emit(UserActionEvent.RECIEVE, action)
       }
-      const promises = stateUpdates.map(async su => verifyStateUpdate(su))
-      await Promise.all(promises)
 
       this.removeAlreadyExitStartedStateUpdates()
 
