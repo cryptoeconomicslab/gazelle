@@ -93,6 +93,14 @@ export async function verifyCheckpoint(
           return { decision: true }
         }
 
+        if (
+          ovmContext.coder
+            .encode(stateUpdate.stateObject.toStruct())
+            .equals(ovmContext.coder.encode(su.stateObject.toStruct()))
+        ) {
+          return { decision: true }
+        }
+
         /**
          * validate deprecation of `su`'s all range.
          */
@@ -104,12 +112,14 @@ export async function verifyCheckpoint(
         if (txWitnesses.length === 0) {
           return { decision: false, challenge: su }
         }
-        console.log('txWitnesses', txWitnesses.length)
+
         // transactions satisfies su.range
         const concatenatedRange = Range.concat(txWitnesses.map(tx => tx.range))
+        const requiredRange = Range.getIntersection(su.range, range)
         if (
           concatenatedRange === null ||
-          !concatenatedRange.contains(su.range)
+          requiredRange === null ||
+          !concatenatedRange.contains(requiredRange)
         ) {
           return { decision: false, challenge: su }
         }
