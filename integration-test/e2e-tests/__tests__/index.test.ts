@@ -5,7 +5,8 @@ import {
   BigNumber,
   Integer,
   Range,
-  Property
+  Property,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import { LevelKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import initializeLightClient from '@cryptoeconomicslab/eth-plasma-light-client'
@@ -32,7 +33,7 @@ setupContext({ coder: EthCoder })
 jest.setTimeout(140000)
 
 function sleep(ms: number) {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     setTimeout(resolve, ms)
   })
 }
@@ -162,7 +163,8 @@ describe('light client', () => {
       depositContractAddress,
       stateUpdates[0].range,
       blockNumber,
-      new Property(OwnershipPredicateAddress, [EthCoder.encode(owner)])
+      new Property(OwnershipPredicateAddress, [EthCoder.encode(owner)]),
+      FixedBytes.default(32)
     )
   }
 
@@ -781,10 +783,7 @@ describe('light client', () => {
       )
       await connection.submitRoot(
         blockNumber.raw,
-        block
-          .getTree()
-          .getRoot()
-          .toHexString()
+        block.getTree().getRoot().toHexString()
       )
     }
 
