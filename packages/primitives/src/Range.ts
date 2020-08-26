@@ -51,6 +51,39 @@ export default class Range {
     return this.start.equals(range.start) && this.end.equals(range.end)
   }
 
+  public static getIntersection(a: Range, b: Range): Range | null {
+    if (a.contains(b)) {
+      return b
+    } else if (b.contains(a)) {
+      return a
+    } else if (a.intersect(b)) {
+      if (JSBI.greaterThanOrEqual(a.start.data, b.start.data)) {
+        return new Range(a.start, b.end)
+      } else {
+        return new Range(b.start, a.end)
+      }
+    } else {
+      return null
+    }
+  }
+
+  public static concat(ranges: Range[]): Range | null {
+    const concatRange = (a: Range, b: Range) => {
+      if (a.end.equals(b.start)) {
+        return new Range(a.start, b.end)
+      } else {
+        return null
+      }
+    }
+    return ranges.reduce<Range | null>((concatenated, r) => {
+      if (concatenated) {
+        return concatRange(concatenated, r)
+      } else {
+        return r
+      }
+    }, null)
+  }
+
   /**
    * checks if this range contains given range
    * @param range range to be checked if its contained
