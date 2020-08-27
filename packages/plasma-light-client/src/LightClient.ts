@@ -362,7 +362,7 @@ export default class LightClient {
 
       const action = createDepositUserAction(
         Address.from(tokenContractAddress),
-        checkpoint.range,
+        [checkpoint.range],
         checkpoint.blockNumber,
         checkpoint.chunkId
       )

@@ -90,7 +90,7 @@ export class StateSyncer {
           const sentBlockNumber = includedTx.includedBlockNumber
           const action = createSendUserAction(
             Address.from(tokenContractAddress),
-            includedTx.range,
+            [includedTx.range],
             StateObjectHelper.getOwner(includedTx.stateObject),
             sentBlockNumber,
             includedTx.chunkId
@@ -179,7 +179,7 @@ export class StateSyncer {
           throw new Error('Token Contract Address not found')
         const action = createReceiveUserAction(
           Address.from(tokenContractAddress),
-          su.range,
+          [su.range],
           getOwner(su),
           su.blockNumber,
           su.chunkId
@@ -285,7 +285,7 @@ export class StateSyncer {
 
         const action = createReceiveUserAction(
           Address.from(tokenContractAddress),
-          range,
+          [range],
           getOwner(su), // FIXME: this is same as client's owner
           su.blockNumber,
           su.chunkId

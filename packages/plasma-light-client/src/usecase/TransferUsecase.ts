@@ -138,7 +138,7 @@ export class TransferUsecase {
             )
             const action = createSendUserAction(
               Address.from(tokenContractAddress),
-              su.range,
+              [su.range],
               coder.decode(Address.default(), su.stateObject.inputs[0]),
               nextBlock,
               chunkId

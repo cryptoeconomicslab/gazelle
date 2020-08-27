@@ -165,8 +165,6 @@ const MockTokenManager = jest
 const MockCheckpointDispute = jest.fn().mockImplementation(() => ({}))
 
 describe('StateSyncer', () => {
-  beforeEach(async () => {})
-
   test('sync latest checkpoint state 0-100', async () => {
     const witnessDb = new InMemoryKeyValueStore(Bytes.default())
     const checkpointRepository = await CheckpointRepository.init(witnessDb)

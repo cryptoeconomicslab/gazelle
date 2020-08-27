@@ -106,7 +106,7 @@ export class PendingStateUpdatesVerifier {
           )
           const action = createSendUserAction(
             Address.from(tokenContractAddress),
-            range,
+            [range],
             owner,
             su.blockNumber,
             su.chunkId
