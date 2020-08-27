@@ -3,11 +3,13 @@ import {
   Address,
   Bytes,
   BigNumber,
-  Property
+  Property,
+  Range
 } from '@cryptoeconomicslab/primitives'
 import {
   UnsignedTransaction,
-  TransactionReceipt
+  TransactionReceipt,
+  StateUpdate
 } from '@cryptoeconomicslab/plasma'
 import { KeyValueStore } from '@cryptoeconomicslab/db'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
@@ -30,6 +32,25 @@ export class TransferUsecase {
     private apiClient: APIClient,
     private tokenManager: TokenManager
   ) {}
+
+  private mergeStateUpdates(stateUpdates: StateUpdate[]) {
+    return stateUpdates.reduce(
+      (mergedStateUpdates: StateUpdate[], su: StateUpdate) => {
+        const lastSu = mergedStateUpdates.pop()
+        if (lastSu === undefined) return [su]
+        // resolveStateUpdate always returns StateUpdates in ascending order, so lastSu.end is less than su.start.
+        if (lastSu.range.end.equals(su.range.start)) {
+          lastSu.update({
+            range: new Range(lastSu.range.start, su.range.end)
+          })
+          return mergedStateUpdates.concat([lastSu])
+        } else {
+          return mergedStateUpdates.concat([lastSu, su])
+        }
+      },
+      []
+    )
+  }
 
   /**
    * send plasma transaction with amount, Deposit Contract address and StateObject.
@@ -72,7 +93,7 @@ export class TransferUsecase {
     )
 
     const transactions = await Promise.all(
-      stateUpdates.map(async su => {
+      this.mergeStateUpdates(stateUpdates).map(async su => {
         const tx = new UnsignedTransaction(
           Address.from(depositContractAddress),
           su.range,

@@ -515,6 +515,10 @@ describe('light client', () => {
     expect(await getL1PETHBalance(bobLightClient)).toEqual('0.6')
   })
 
+  /**
+   * test for syncing and checkpoint verification of multiple blocks.
+   * these blocks has merged and splitted ranges.
+   */
   test('transfers in multiple blocks', async () => {
     await depositPETH(aliceLightClient, senderWallet, '0.5')
     await depositPETH(bobLightClient, recieverWallet, '0.5')
@@ -537,7 +541,7 @@ describe('light client', () => {
       bobLightClient.address
     )
 
-    await sleep(20000)
+    await sleep(18000)
 
     await checkBalance(aliceLightClient, '0.3')
     await checkBalance(bobLightClient, '0.9')
@@ -548,12 +552,34 @@ describe('light client', () => {
       config.PlasmaETH,
       aliceLightClient.address
     )
+    await bobLightClient.transfer(
+      parseUnitsToJsbi('0.1'),
+      config.PlasmaETH,
+      carolLightClient.address
+    )
 
-    await sleep(20000)
+    await sleep(18000)
 
     await checkBalance(aliceLightClient, '1.1')
-    await checkBalance(bobLightClient, '0.1')
-    await checkBalance(carolLightClient, '0.3')
+    await checkBalance(bobLightClient, '0.0')
+    await checkBalance(carolLightClient, '0.4')
+
+    await aliceLightClient.transfer(
+      parseUnitsToJsbi('1.1'),
+      config.PlasmaETH,
+      bobLightClient.address
+    )
+    await carolLightClient.transfer(
+      parseUnitsToJsbi('0.4'),
+      config.PlasmaETH,
+      bobLightClient.address
+    )
+
+    await sleep(18000)
+
+    expect(await getBalance(aliceLightClient)).toEqual('0.0')
+    expect(await getBalance(bobLightClient)).toEqual('1.5')
+    expect(await getBalance(carolLightClient)).toEqual('0.0')
 
     aliceLightClient.stop()
     bobLightClient.stop()
@@ -564,9 +590,9 @@ describe('light client', () => {
 
     await sleep(5000)
 
-    await checkBalance(aliceLightClient, '1.1')
-    await checkBalance(bobLightClient, '0.1')
-    await checkBalance(carolLightClient, '0.3')
+    expect(await getBalance(aliceLightClient)).toEqual('0.0')
+    expect(await getBalance(bobLightClient)).toEqual('1.5')
+    expect(await getBalance(carolLightClient)).toEqual('0.0')
 
     const aliceSyncLightClient = await createClientFromPrivateKey(
       aliceLightClient['wallet']['ethersWallet'].privateKey
@@ -578,9 +604,9 @@ describe('light client', () => {
       carolLightClient['wallet']['ethersWallet'].privateKey
     )
     await sleep(20000)
-    expect(await getBalance(aliceSyncLightClient)).toEqual('1.1')
-    expect(await getBalance(bobSyncLightClient)).toEqual('0.1')
-    expect(await getBalance(carolSyncLightClient)).toEqual('0.3')
+    expect(await getBalance(aliceSyncLightClient)).toEqual('0.0')
+    expect(await getBalance(bobSyncLightClient)).toEqual('1.5')
+    expect(await getBalance(carolSyncLightClient)).toEqual('0.0')
     aliceSyncLightClient.stop()
     bobSyncLightClient.stop()
     carolSyncLightClient.stop()
@@ -605,13 +631,13 @@ describe('light client', () => {
       },
       {
         type: ActionType.Receive,
-        amount: parseUnitsToJsbi('0.5'),
+        amount: parseUnitsToJsbi('0.6'),
         counterParty: aliceLightClient.address
       },
       {
-        type: ActionType.Receive,
-        amount: parseUnitsToJsbi('0.1'),
-        counterParty: aliceLightClient.address
+        type: ActionType.Send,
+        amount: parseUnitsToJsbi('1.1'),
+        counterParty: bobLightClient.address
       }
     ])
   })

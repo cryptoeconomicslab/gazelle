@@ -72,7 +72,7 @@ export async function prepareCheckpointWitness(
         await txRepository.insertTransaction(
           depositContractAddress,
           blockNumber,
-          range,
+          tx.range,
           tx
         )
 
