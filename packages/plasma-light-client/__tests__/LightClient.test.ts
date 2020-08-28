@@ -457,7 +457,7 @@ describe('LightClient', () => {
       const blockNumber = BigNumber.from(1)
       const action = createDepositUserAction(
         tokenContractAddress,
-        range,
+        [range],
         blockNumber,
         FixedBytes.default(32)
       )

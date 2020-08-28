@@ -71,7 +71,7 @@ export class ExitUsecase {
         // save exit action
         const action = createExitUserAction(
           addr,
-          stateUpdate.range,
+          [stateUpdate.range],
           claimedBlockNumber,
           stateUpdate.chunkId
         )

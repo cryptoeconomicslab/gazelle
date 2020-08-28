@@ -33,7 +33,7 @@ describe('UserActionRepository', () => {
     const blockNumber = BigNumber.from(1)
     const action = createSendUserAction(
       tokenAddress,
-      range,
+      [range],
       Address.default(),
       blockNumber,
       FixedBytes.default(32)
@@ -52,13 +52,13 @@ describe('UserActionRepository', () => {
 
     const action = createDepositUserAction(
       tokenAddress,
-      range,
+      [range],
       blockNumber,
       FixedBytes.default(32)
     )
     const action2 = createSendUserAction(
       tokenAddress,
-      range,
+      [range],
       Address.default(),
       blockNumber2,
       FixedBytes.default(32)

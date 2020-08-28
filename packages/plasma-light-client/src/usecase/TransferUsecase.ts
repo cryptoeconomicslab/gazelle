@@ -132,23 +132,23 @@ export class TransferUsecase {
               su.range
             )
             await stateUpdateRepository.insertPendingStateUpdate(su)
-
-            const userActionRepo = await UserActionRepository.init(
-              this.witnessDb
-            )
-            const action = createSendUserAction(
-              Address.from(tokenContractAddress),
-              su.range,
-              coder.decode(Address.default(), su.stateObject.inputs[0]),
-              nextBlock,
-              chunkId
-            )
-            await userActionRepo.insertAction(nextBlock, su.range, action)
           }
         } else {
           throw new Error('Invalid transaction')
         }
       }
+
+      const ranges = stateUpdates.map(su => su.range)
+      const to = stateUpdates[0].stateObject.inputs[0]
+      const userActionRepo = await UserActionRepository.init(this.witnessDb)
+      const action = createSendUserAction(
+        Address.from(tokenContractAddress),
+        ranges,
+        coder.decode(Address.default(), to),
+        nextBlock,
+        chunkId
+      )
+      await userActionRepo.insertAction(nextBlock, ranges[0], action)
     }
   }
 }

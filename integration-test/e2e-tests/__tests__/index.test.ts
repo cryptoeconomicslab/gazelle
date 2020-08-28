@@ -12,8 +12,7 @@ import { LevelKeyValueStore } from '@cryptoeconomicslab/level-kvs'
 import initializeLightClient from '@cryptoeconomicslab/eth-plasma-light-client'
 import LightClient, {
   Numberish,
-  StateUpdateRepository,
-  UserActionRepository
+  StateUpdateRepository
 } from '@cryptoeconomicslab/plasma-light-client'
 import JSBI from 'jsbi'
 import parseEther = ethers.utils.parseEther
@@ -234,7 +233,6 @@ describe('light client', () => {
     bobLightClient.stop()
     carolLightClient.stop()
   })
-
   /**
    * basic scenario
    * Alice deposit 0.1 ETH
@@ -511,6 +509,7 @@ describe('light client', () => {
     expect(await getL1PETHBalance(bobLightClient)).toEqual('0.0')
     await finalizeExit(aliceLightClient)
     await finalizeExit(bobLightClient)
+    await sleep(10000)
     expect(await getL1PETHBalance(aliceLightClient)).toEqual('0.4')
     expect(await getL1PETHBalance(bobLightClient)).toEqual('0.6')
   })
@@ -626,12 +625,7 @@ describe('light client', () => {
       },
       {
         type: ActionType.Receive,
-        amount: parseUnitsToJsbi('0.2'),
-        counterParty: aliceLightClient.address
-      },
-      {
-        type: ActionType.Receive,
-        amount: parseUnitsToJsbi('0.6'),
+        amount: parseUnitsToJsbi('0.8'),
         counterParty: aliceLightClient.address
       },
       {
@@ -854,5 +848,55 @@ describe('light client', () => {
         'VM Exception while processing transaction: revert undecided challenge exists'
       )
     )
+  })
+
+  /**
+   * Alice deposit 0.1ETH two times
+   * Alice sends 0.2ETH to Bob
+   * Check if only one action is created for Send and Receive
+   */
+  test('transfer multiple ranges', async () => {
+    await depositPETH(aliceLightClient, senderWallet, '0.1')
+    await depositPETH(aliceLightClient, senderWallet, '0.1')
+    await sleep(10000)
+
+    expect(await getBalance(aliceLightClient)).toEqual('0.2')
+
+    await aliceLightClient.transfer(
+      parseUnitsToJsbi('0.2'),
+      config.PlasmaETH,
+      bobLightClient.address
+    )
+    await sleep(30000)
+
+    expect(await getBalance(aliceLightClient)).toEqual('0.0')
+    expect(await getBalance(bobLightClient)).toEqual('0.2')
+
+    const aliceActions = await aliceLightClient.getAllUserActions()
+    const bobActions = await bobLightClient.getAllUserActions()
+    expect(aliceActions.map(formatAction)).toEqual([
+      {
+        type: ActionType.Deposit,
+        amount: parseUnitsToJsbi('0.1'),
+        counterParty: defaultAddress
+      },
+      {
+        type: ActionType.Deposit,
+        amount: parseUnitsToJsbi('0.1'),
+        counterParty: defaultAddress
+      },
+      {
+        type: ActionType.Send,
+        amount: parseUnitsToJsbi('0.2'),
+        counterParty: bobLightClient.address
+      }
+    ])
+    expect(bobActions.map(formatAction)).toEqual([
+      {
+        type: ActionType.Receive,
+        amount: parseUnitsToJsbi('0.2'),
+        counterParty: bobLightClient.address
+      }
+    ])
   })
 })
