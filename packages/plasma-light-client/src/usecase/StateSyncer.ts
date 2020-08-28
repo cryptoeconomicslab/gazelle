@@ -85,8 +85,12 @@ export class StateSyncer {
           // push to chunkId=>su map
           const chunkKey = includedTx.chunkId.toHexString()
           const txList = chunkTxMap.get(chunkKey) || []
-          txList.push(includedTx)
-          chunkTxMap.set(chunkKey, txList)
+          if (
+            txList.findIndex(tx => tx.range.equals(includedTx.range)) === -1
+          ) {
+            txList.push(includedTx)
+            chunkTxMap.set(chunkKey, txList)
+          }
         }
       }
       const actionRepository = await UserActionRepository.init(this.witnessDb)
