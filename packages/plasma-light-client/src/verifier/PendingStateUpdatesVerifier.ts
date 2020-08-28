@@ -111,6 +111,7 @@ export class PendingStateUpdatesVerifier {
             su.blockNumber,
             su.chunkId
           )
+          console.log('insert send action at pendingStateUpdatesVerifier')
           await actionRepository.insertAction(su.blockNumber, range, action)
 
           this.ee.emit(UserActionEvent.SEND, action)
