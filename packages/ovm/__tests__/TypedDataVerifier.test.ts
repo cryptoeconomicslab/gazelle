@@ -3,7 +3,8 @@ import {
   Address,
   Range,
   BigNumber,
-  Property
+  Property,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import { UnsignedTransaction } from '@cryptoeconomicslab/plasma'
 import EthCoder from '@cryptoeconomicslab/eth-coder'
@@ -34,6 +35,7 @@ describe('TypedDataVerifier', () => {
       range,
       BigNumber.from(0),
       stateObject,
+      FixedBytes.default(32),
       Address.default()
     )
     return tx.message

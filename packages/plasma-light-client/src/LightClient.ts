@@ -39,7 +39,6 @@ import {
 import { StateSyncer } from './usecase/StateSyncer'
 import { ExitUsecase } from './usecase/ExitUsecase'
 import { TransferUsecase } from './usecase/TransferUsecase'
-import { PendingStateUpdatesVerifier } from './verifier/PendingStateUpdatesVerifier'
 import APIClient from './APIClient'
 import TokenManager from './managers/TokenManager'
 import { UserActionEvent, EmitterEvent } from './ClientEvent'
@@ -72,7 +71,6 @@ export default class LightClient {
   private stateSyncer: StateSyncer
   private exitUsecase: ExitUsecase
   private transferUsecase: TransferUsecase
-  private pendingStateUpdatesVerifier: PendingStateUpdatesVerifier
   private checkpointDispute: CheckpointDispute
   private exitDispute: ExitDispute
 
@@ -136,12 +134,6 @@ export default class LightClient {
     this.transferUsecase = new TransferUsecase(
       this.witnessDb,
       this.wallet,
-      this.apiClient,
-      this.tokenManager
-    )
-    this.pendingStateUpdatesVerifier = new PendingStateUpdatesVerifier(
-      this.ee,
-      this.witnessDb,
       this.apiClient,
       this.tokenManager
     )
@@ -338,7 +330,6 @@ export default class LightClient {
     checkpointId: Bytes,
     checkpoint: StateUpdate
   ) {
-    console.log('handle checkpoint finalized', checkpointId.toHexString())
     this.ee.emit(EmitterEvent.CHECKPOINT_FINALIZED, checkpointId, checkpoint)
     const checkpointRepo = await CheckpointRepository.init(this.witnessDb)
     await checkpointRepo.insertSettledCheckpoint(checkpoint)
@@ -362,8 +353,9 @@ export default class LightClient {
 
       const action = createDepositUserAction(
         Address.from(tokenContractAddress),
-        checkpoint.range,
-        checkpoint.blockNumber
+        [checkpoint.range],
+        checkpoint.blockNumber,
+        checkpoint.chunkId
       )
 
       const actionRepository = await UserActionRepository.init(this.witnessDb)

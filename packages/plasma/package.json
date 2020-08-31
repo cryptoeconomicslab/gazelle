@@ -1,6 +1,6 @@
 {
   "name": "@cryptoeconomicslab/plasma",
-  "version": "0.5.2-alpha.3",
+  "version": "0.6.0-alpha.0",
   "description": "plasma module",
   "author": {
     "name": "Cryptoeconomics Lab",
@@ -37,18 +37,18 @@
     "url": "https://github.com/cryptoeconomicslab/gazelle/issues"
   },
   "dependencies": {
-    "@cryptoeconomicslab/db": "^0.5.2-alpha.3",
-    "@cryptoeconomicslab/hash": "^0.5.2-alpha.3",
-    "@cryptoeconomicslab/merkle-tree": "^0.5.2-alpha.3",
-    "@cryptoeconomicslab/wallet": "^0.5.2-alpha.3",
+    "@cryptoeconomicslab/db": "^0.6.0-alpha.0",
+    "@cryptoeconomicslab/hash": "^0.6.0-alpha.0",
+    "@cryptoeconomicslab/merkle-tree": "^0.6.0-alpha.0",
+    "@cryptoeconomicslab/wallet": "^0.6.0-alpha.0",
     "jsbi": "^3.1.2"
   },
   "devDependencies": {
-    "@cryptoeconomicslab/coder": "^0.5.2-alpha.3",
-    "@cryptoeconomicslab/context": "^0.5.2-alpha.3",
-    "@cryptoeconomicslab/eth-coder": "^0.5.2-alpha.3",
-    "@cryptoeconomicslab/primitives": "^0.5.2-alpha.3",
-    "@cryptoeconomicslab/utils": "^0.5.2-alpha.3"
+    "@cryptoeconomicslab/coder": "^0.6.0-alpha.0",
+    "@cryptoeconomicslab/context": "^0.6.0-alpha.0",
+    "@cryptoeconomicslab/eth-coder": "^0.6.0-alpha.0",
+    "@cryptoeconomicslab/primitives": "^0.6.0-alpha.0",
+    "@cryptoeconomicslab/utils": "^0.6.0-alpha.0"
   },
   "peerDependencies": {
     "@cryptoeconomicslab/primitives": "^0.0.36"

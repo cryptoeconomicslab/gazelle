@@ -9,7 +9,8 @@ import {
   Bytes,
   BigNumber,
   Address,
-  Property
+  Property,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import { setupContext } from '@cryptoeconomicslab/context'
 import JsonCoder from '@cryptoeconomicslab/coder'
@@ -24,7 +25,8 @@ function su(start: JSBI, end: JSBI): StateUpdate {
     Address.default(),
     new Range(BigNumber.from(start), BigNumber.from(end)),
     BigNumber.from(1),
-    new Property(Address.default(), [Bytes.fromHexString('0x01')])
+    new Property(Address.default(), [Bytes.fromHexString('0x01')]),
+    FixedBytes.default(32)
   )
 }
 

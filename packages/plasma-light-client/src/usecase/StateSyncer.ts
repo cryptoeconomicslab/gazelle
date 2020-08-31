@@ -27,7 +27,6 @@ import TokenManager from '../managers/TokenManager'
 import { CheckpointDispute } from '../dispute/CheckpointDispute'
 import { verifyCheckpoint } from '../verifier/CheckpointVerifier'
 import { prepareCheckpointWitness } from '../helper/checkpointWitnessHelper'
-import { sleep } from '../utils'
 
 export class StateSyncer {
   constructor(
@@ -58,6 +57,9 @@ export class StateSyncer {
         addr,
         wholeRange
       )
+
+      const chunkTxMap = new Map<string, Array<IncludedTransaction>>()
+
       for (const su of sus.concat(pendingStateUpdates)) {
         const res = await this.apiClient.spentProof(
           su.depositContractAddress,
@@ -72,37 +74,49 @@ export class StateSyncer {
             )
           )
         )
+
         for (const includedTx of spentProofs) {
           // TODO: verify that the tx spent state update
           await stateUpdateRepository.removeVerifiedStateUpdate(
             addr,
             includedTx.range
           )
-          const tokenContractAddress = this.tokenManager.getTokenContractAddress(
-            addr
-          )
-          if (tokenContractAddress === undefined) {
-            throw new Error('token address not found')
-          }
-          const actionRepository = await UserActionRepository.init(
-            this.witnessDb
-          )
-          const sentBlockNumber = includedTx.includedBlockNumber
-          const action = createSendUserAction(
-            Address.from(tokenContractAddress),
-            includedTx.range,
-            StateObjectHelper.getOwner(includedTx.stateObject),
-            sentBlockNumber
-          )
-          await actionRepository.insertAction(
-            sentBlockNumber,
-            includedTx.range,
-            action
-          )
 
-          this.ee.emit(UserActionEvent.SEND, action)
-          this.ee.emit(EmitterEvent.TRANSFER_COMPLETE, su)
+          // push to chunkId=>su map
+          const chunkKey = includedTx.chunkId.toHexString()
+          const txList = chunkTxMap.get(chunkKey) || []
+          if (
+            txList.findIndex(tx => tx.range.equals(includedTx.range)) === -1
+          ) {
+            txList.push(includedTx)
+            chunkTxMap.set(chunkKey, txList)
+          }
         }
+      }
+      const actionRepository = await UserActionRepository.init(this.witnessDb)
+      const tokenContractAddress = this.tokenManager.getTokenContractAddress(
+        addr
+      )
+      if (!tokenContractAddress) {
+        throw new Error('token address not found')
+      }
+      for (const chunkId of chunkTxMap.keys()) {
+        const txs = chunkTxMap.get(chunkId)
+        if (!txs) continue
+        const tx = txs[0]
+
+        const sentBlockNumber = tx.includedBlockNumber
+        const action = createSendUserAction(
+          Address.from(tokenContractAddress),
+          txs.map(tx => tx.range),
+          StateObjectHelper.getOwner(tx.stateObject),
+          sentBlockNumber,
+          tx.chunkId
+        )
+
+        await actionRepository.insertAction(sentBlockNumber, tx.range, action)
+
+        this.ee.emit(UserActionEvent.SEND, action)
       }
     }
   }
@@ -160,6 +174,7 @@ export class StateSyncer {
       //  sync root hashes from `from` to `to`
       await this.syncRoots(from, to)
 
+      const incomingStateUpdatesMap = new Map<string, Array<StateUpdate>>()
       for (const su of stateUpdates) {
         await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
         const verified = await verifyCheckpoint(
@@ -171,16 +186,29 @@ export class StateSyncer {
           throw new Error(`invalid history detected at ${su.toString()}`)
         }
         await stateUpdateRepository.insertVerifiedStateUpdate(su)
+        const key = su.chunkId.toHexString()
+        const chunkList = incomingStateUpdatesMap.get(key) || []
+        chunkList.push(su)
+        incomingStateUpdatesMap.set(key, chunkList)
+      }
+
+      for (const chunkId of incomingStateUpdatesMap.keys()) {
+        const sus = incomingStateUpdatesMap.get(chunkId)
+        if (!sus) continue
+        const su = sus[0]
+
         const tokenContractAddress = this.tokenManager.getTokenContractAddress(
           su.depositContractAddress
         )
         if (!tokenContractAddress)
           throw new Error('Token Contract Address not found')
+
         const action = createReceiveUserAction(
           Address.from(tokenContractAddress),
-          su.range,
+          sus.map(su => su.range),
           getOwner(su),
-          su.blockNumber
+          su.blockNumber,
+          su.chunkId
         )
         const actionRepository = await UserActionRepository.init(this.witnessDb)
         await actionRepository.insertAction(su.blockNumber, su.range, action)
@@ -261,6 +289,9 @@ export class StateSyncer {
       )
       await this.syncTransfers()
 
+      // map from chunkId to array of stateUpdate
+      const incomingStateUpdatesMap = new Map<string, Array<StateUpdate>>()
+
       for (const su of stateUpdates) {
         await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
         const verified = await verifyCheckpoint(
@@ -274,7 +305,24 @@ export class StateSyncer {
 
         await stateUpdateRepository.insertVerifiedStateUpdate(su)
         // store receive user action
-        const { range } = su
+        const tokenContractAddress = this.tokenManager.getTokenContractAddress(
+          su.depositContractAddress
+        )
+        if (!tokenContractAddress)
+          throw new Error('Token Contract Address not found')
+
+        const key = su.chunkId.toHexString()
+        const chunkList = incomingStateUpdatesMap.get(key) || []
+        chunkList.push(su)
+        incomingStateUpdatesMap.set(key, chunkList)
+      }
+
+      const actionRepository = await UserActionRepository.init(this.witnessDb)
+
+      for (const chunkId of incomingStateUpdatesMap.keys()) {
+        const sus = incomingStateUpdatesMap.get(chunkId)
+        if (!sus) continue
+        const su = sus[0]
         const tokenContractAddress = this.tokenManager.getTokenContractAddress(
           su.depositContractAddress
         )
@@ -283,13 +331,13 @@ export class StateSyncer {
 
         const action = createReceiveUserAction(
           Address.from(tokenContractAddress),
-          range,
+          sus.map(su => su.range),
           getOwner(su), // FIXME: this is same as client's owner
-          su.blockNumber
+          su.blockNumber,
+          su.chunkId
         )
-        const actionRepository = await UserActionRepository.init(this.witnessDb)
-        await actionRepository.insertAction(su.blockNumber, range, action)
 
+        await actionRepository.insertAction(su.blockNumber, su.range, action)
         this.ee.emit(UserActionEvent.RECIEVE, action)
       }
 

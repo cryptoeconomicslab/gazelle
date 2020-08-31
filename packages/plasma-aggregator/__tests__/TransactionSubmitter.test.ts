@@ -10,7 +10,8 @@ import {
   Bytes,
   BigNumber,
   Range,
-  Property
+  Property,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import { EthCoder as Coder } from '@cryptoeconomicslab/eth-coder'
 import { setupContext } from '@cryptoeconomicslab/context'
@@ -60,7 +61,8 @@ describe('Transaction Submitter', () => {
       depositContractAddress,
       new Range(BigNumber.from(0), BigNumber.from(10)),
       BigNumber.from(0),
-      new Property(predicateAddress, [])
+      new Property(predicateAddress, []),
+      FixedBytes.default(32)
     )
 
     kvs = new InMemoryKeyValueStore(Bytes.fromString('test-db'))

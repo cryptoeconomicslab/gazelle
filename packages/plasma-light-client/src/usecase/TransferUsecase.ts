@@ -23,6 +23,7 @@ import { Numberish } from '../types'
 import { Wallet } from '@cryptoeconomicslab/wallet'
 import APIClient from '../APIClient'
 import { createSendUserAction } from '../UserAction'
+import { getChunkId } from '../helper/stateUpdateHelper'
 
 export class TransferUsecase {
   constructor(
@@ -84,6 +85,13 @@ export class TransferUsecase {
     const syncRepository = await SyncRepository.init(this.witnessDb)
     const latestBlock = await syncRepository.getSyncedBlockNumber()
 
+    // extract to helper: create chunkId from block number and range of first stateUpdate
+    const chunkId = getChunkId(
+      Address.from(depositContractAddress),
+      latestBlock,
+      stateUpdates[0].range.start
+    )
+
     const transactions = await Promise.all(
       this.mergeStateUpdates(stateUpdates).map(async su => {
         const tx = new UnsignedTransaction(
@@ -91,6 +99,7 @@ export class TransferUsecase {
           su.range,
           BigNumber.from(JSBI.add(latestBlock.data, JSBI.BigInt(5))),
           stateObject,
+          chunkId,
           this.wallet.getAddress()
         )
         return await tx.sign(this.wallet)
@@ -123,22 +132,23 @@ export class TransferUsecase {
               su.range
             )
             await stateUpdateRepository.insertPendingStateUpdate(su)
-
-            const userActionRepo = await UserActionRepository.init(
-              this.witnessDb
-            )
-            const action = createSendUserAction(
-              Address.from(tokenContractAddress),
-              su.range,
-              coder.decode(Address.default(), su.stateObject.inputs[0]),
-              nextBlock
-            )
-            await userActionRepo.insertAction(nextBlock, su.range, action)
           }
         } else {
           throw new Error('Invalid transaction')
         }
       }
+
+      const ranges = stateUpdates.map(su => su.range)
+      const to = stateUpdates[0].stateObject.inputs[0]
+      const userActionRepo = await UserActionRepository.init(this.witnessDb)
+      const action = createSendUserAction(
+        Address.from(tokenContractAddress),
+        ranges,
+        coder.decode(Address.default(), to),
+        nextBlock,
+        chunkId
+      )
+      await userActionRepo.insertAction(nextBlock, ranges[0], action)
     }
   }
 }

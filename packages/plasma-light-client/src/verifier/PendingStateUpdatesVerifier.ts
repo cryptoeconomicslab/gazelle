@@ -106,10 +106,12 @@ export class PendingStateUpdatesVerifier {
           )
           const action = createSendUserAction(
             Address.from(tokenContractAddress),
-            range,
+            [range],
             owner,
-            su.blockNumber
+            su.blockNumber,
+            su.chunkId
           )
+          console.log('insert send action at pendingStateUpdatesVerifier')
           await actionRepository.insertAction(su.blockNumber, range, action)
 
           this.ee.emit(UserActionEvent.SEND, action)

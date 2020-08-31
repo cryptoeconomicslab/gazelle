@@ -10,7 +10,8 @@ import {
   BigNumber,
   Bytes,
   Property,
-  Range
+  Range,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import * as ethers from 'ethers'
 import { Secp256k1Signer } from '@cryptoeconomicslab/signature'
@@ -123,6 +124,7 @@ describe('IsValidSignatureDecider', () => {
       range,
       BigNumber.from(0),
       stateObject,
+      FixedBytes.default(32),
       Address.default()
     )
     const txBytes = ovmContext.coder.encode(tx.toStruct())

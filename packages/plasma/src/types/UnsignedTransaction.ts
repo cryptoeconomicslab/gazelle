@@ -4,7 +4,8 @@ import {
   BigNumber,
   Bytes,
   Struct,
-  Property
+  Property,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import { Wallet } from '@cryptoeconomicslab/wallet'
 import { Keccak256 } from '@cryptoeconomicslab/hash'
@@ -16,6 +17,7 @@ export default class UnsignedTransaction implements Transaction {
     readonly range: Range,
     readonly maxBlockNumber: BigNumber,
     readonly stateObject: Property,
+    readonly chunkId: FixedBytes,
     readonly from: Address
   ) {}
 
@@ -28,6 +30,7 @@ export default class UnsignedTransaction implements Transaction {
       new Range(BigNumber.default(), BigNumber.default()),
       BigNumber.default(),
       new Property(Address.default(), []),
+      FixedBytes.default(32),
       Address.default()
     )
   }
@@ -38,6 +41,7 @@ export default class UnsignedTransaction implements Transaction {
       { key: 'range', value: Range.getParamType() },
       { key: 'maxBlockNumber', value: BigNumber.default() },
       { key: 'stateObject', value: Property.getParamType() },
+      { key: 'chunkId', value: FixedBytes.default(32) },
       { key: 'from', value: Address.default() }
     ])
   }
@@ -47,14 +51,16 @@ export default class UnsignedTransaction implements Transaction {
     const range = struct.data[1].value as Struct
     const maxBlockNumber = struct.data[2].value as BigNumber
     const stateObject = struct.data[3].value as Struct
-    const from = struct.data[4].value as Address
+    const chunkId = struct.data[4].value as FixedBytes
+    const from = struct.data[5].value as Address
 
     return new UnsignedTransaction(
-      depositContractAddress as Address,
-      Range.fromStruct(range as Struct),
+      depositContractAddress,
+      Range.fromStruct(range),
       maxBlockNumber,
-      Property.fromStruct(stateObject as Struct),
-      from as Address
+      Property.fromStruct(stateObject),
+      chunkId,
+      from
     )
   }
 
@@ -64,6 +70,7 @@ export default class UnsignedTransaction implements Transaction {
       { key: 'range', value: this.range.toStruct() },
       { key: 'maxBlockNumber', value: this.maxBlockNumber },
       { key: 'stateObject', value: this.stateObject.toStruct() },
+      { key: 'chunkId', value: this.chunkId },
       { key: 'from', value: this.from }
     ])
   }
@@ -78,6 +85,7 @@ export default class UnsignedTransaction implements Transaction {
       this.range,
       this.maxBlockNumber,
       this.stateObject,
+      this.chunkId,
       this.from,
       signature
     )
@@ -94,7 +102,7 @@ export default class UnsignedTransaction implements Transaction {
       this.maxBlockNumber.raw
     }, range: ${this.range.toString()}, so: ${
       this.stateObject.deciderAddress.data
-    }, from: ${this.from.raw})`
+    }, chunkId: ${this.chunkId.toHexString()}, from: ${this.from.raw})`
   }
 
   public get message(): Bytes {

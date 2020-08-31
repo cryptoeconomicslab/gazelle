@@ -6,7 +6,8 @@ import {
   BigNumber,
   Integer,
   Property,
-  Range
+  Range,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import Coder from '@cryptoeconomicslab/coder'
 import { setupContext } from '@cryptoeconomicslab/context'
@@ -17,7 +18,8 @@ const su = new StateUpdate(
   Address.default(),
   new Range(BigNumber.from(0), BigNumber.from(10)),
   BigNumber.from(1),
-  new Property(Address.default(), [Bytes.fromHexString('0x01')])
+  new Property(Address.default(), [Bytes.fromHexString('0x01')]),
+  FixedBytes.default(32)
 )
 
 describe('BlockItem', () => {

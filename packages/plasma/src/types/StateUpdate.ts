@@ -4,7 +4,8 @@ import {
   BigNumber,
   Range,
   Property,
-  Struct
+  Struct,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
 import { RangeRecord } from '@cryptoeconomicslab/db'
@@ -22,7 +23,8 @@ export default class StateUpdate {
     public depositContractAddress: Address,
     public range: Range,
     public blockNumber: BigNumber,
-    public stateObject: Property
+    public stateObject: Property,
+    public chunkId: FixedBytes
   ) {}
 
   public get amount(): JSBI {
@@ -33,12 +35,14 @@ export default class StateUpdate {
     depositContractAddress,
     range,
     blockNumber,
-    stateObject
+    stateObject,
+    chunkId
   }: {
     depositContractAddress?: Address
     range?: Range
     blockNumber?: BigNumber
     stateObject?: Property
+    chunkId?: FixedBytes
   }) {
     if (depositContractAddress) {
       this.depositContractAddress = depositContractAddress
@@ -51,6 +55,9 @@ export default class StateUpdate {
     }
     if (stateObject) {
       this.stateObject = stateObject
+    }
+    if (chunkId) {
+      this.chunkId = chunkId
     }
   }
 
@@ -69,7 +76,8 @@ export default class StateUpdate {
       record.depositContractAddress,
       range,
       record.blockNumber,
-      record.stateObject
+      record.stateObject,
+      record.chunkId
     )
   }
 
@@ -81,14 +89,15 @@ export default class StateUpdate {
     return new StateUpdateRecord(
       this.depositContractAddress,
       this.blockNumber,
-      this.stateObject
+      this.stateObject,
+      this.chunkId
     )
   }
 
   public toString(): string {
     return `StateUpdate(depositContractAddress: ${this.depositContractAddress.toString()}, blockNumber: ${this.blockNumber.toString()}, range: ${this.range.toString()}, so: ${
       this.stateObject.deciderAddress.data
-    })`
+    }, chunkId: ${this.chunkId.toHexString()})`
   }
 
   public static getParamType(): Struct {
@@ -96,7 +105,8 @@ export default class StateUpdate {
       { key: 'depositContractAddress', value: Address.default() },
       { key: 'range', value: Range.getParamType() },
       { key: 'blockNumber', value: BigNumber.default() },
-      { key: 'stateObject', value: Property.getParamType() }
+      { key: 'stateObject', value: Property.getParamType() },
+      { key: 'chunkId', value: FixedBytes.default(32) }
     ])
   }
 
@@ -105,12 +115,14 @@ export default class StateUpdate {
     const range = struct.data[1].value as Struct
     const blockNumber = struct.data[2].value as BigNumber
     const stateObject = struct.data[3].value as Struct
+    const chunkId = struct.data[4].value as FixedBytes
 
     return new StateUpdate(
       depositContractAddress,
       Range.fromStruct(range),
       blockNumber,
-      Property.fromStruct(stateObject)
+      Property.fromStruct(stateObject),
+      chunkId
     )
   }
 
@@ -119,7 +131,8 @@ export default class StateUpdate {
       { key: 'depositContractAddress', value: this.depositContractAddress },
       { key: 'range', value: this.range.toStruct() },
       { key: 'blockNumber', value: this.blockNumber },
-      { key: 'stateObject', value: this.stateObject.toStruct() }
+      { key: 'stateObject', value: this.stateObject.toStruct() },
+      { key: 'chunkId', value: this.chunkId }
     ])
   }
 }

@@ -158,7 +158,8 @@ export default class StateManager {
       tx.depositContractAddress,
       tx.range,
       nextBlockNumber,
-      tx.stateObject
+      tx.stateObject,
+      tx.chunkId
     )
 
     console.log('store tx data')

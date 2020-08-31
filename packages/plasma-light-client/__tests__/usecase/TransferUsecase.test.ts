@@ -8,7 +8,8 @@ import {
   BigNumber,
   Bytes,
   Property,
-  Range
+  Range,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import {
   StateUpdate,
@@ -18,6 +19,7 @@ import {
 import { generateRandomWallet } from '../helper/MockWallet'
 import { prepareSU } from '../helper/prepare'
 import { Wallet } from '@cryptoeconomicslab/wallet'
+import { getChunkId } from '../../src/helper/stateUpdateHelper'
 setupContext({ coder: JsonCoder })
 
 const depositContractAddress = Address.default()
@@ -36,13 +38,20 @@ async function prepareTransaction(
   blockNumber: number,
   owner: Address,
   from: Address,
-  wallet: Wallet
+  wallet: Wallet,
+  chunkId?: FixedBytes
 ): Promise<SignedTransaction> {
   const tx = new UnsignedTransaction(
     depositContractAddress,
     new Range(BigNumber.from(start), BigNumber.from(end)),
-    BigNumber.from(blockNumber),
+    BigNumber.from(blockNumber + 5),
     new Property(Address.default(), [ovmContext.coder.encode(owner)]),
+    chunkId ||
+      getChunkId(
+        depositContractAddress,
+        BigNumber.from(blockNumber),
+        BigNumber.from(start)
+      ),
     from
   )
   return await tx.sign(wallet)
@@ -52,13 +61,20 @@ function createStateUpdate(
   start: number,
   end: number,
   blockNumber: number,
-  owner: Address
+  owner: Address,
+  chunkId?: FixedBytes
 ): StateUpdate {
   return new StateUpdate(
     depositContractAddress,
     new Range(BigNumber.from(start), BigNumber.from(end)),
     BigNumber.from(blockNumber),
-    createStateObject(owner)
+    createStateObject(owner),
+    chunkId ||
+      getChunkId(
+        depositContractAddress,
+        BigNumber.from(blockNumber),
+        BigNumber.from(start)
+      )
   )
 }
 
@@ -107,7 +123,7 @@ describe('TransferUsecase', () => {
     const expectedTx = await prepareTransaction(
       100,
       300,
-      5,
+      0,
       BOB.getAddress(),
       ALICE.getAddress(),
       ALICE
@@ -133,7 +149,7 @@ describe('TransferUsecase', () => {
     const expectedTx = await prepareTransaction(
       100,
       250,
-      5,
+      0,
       BOB.getAddress(),
       ALICE.getAddress(),
       ALICE
@@ -160,7 +176,7 @@ describe('TransferUsecase', () => {
     const expectedTx = await prepareTransaction(
       100,
       350,
-      5,
+      0,
       BOB.getAddress(),
       ALICE.getAddress(),
       ALICE
@@ -183,21 +199,28 @@ describe('TransferUsecase', () => {
       tokenAddress.data,
       createStateObject(BOB.getAddress())
     )
+    const chunkId = getChunkId(
+      tokenAddress,
+      BigNumber.from(0),
+      BigNumber.from(100)
+    )
     const expectedTx1 = await prepareTransaction(
       100,
       200,
-      5,
+      0,
       BOB.getAddress(),
       ALICE.getAddress(),
-      ALICE
+      ALICE,
+      chunkId
     )
     const expectedTx2 = await prepareTransaction(
       300,
       350,
-      5,
+      0,
       BOB.getAddress(),
       ALICE.getAddress(),
-      ALICE
+      ALICE,
+      chunkId
     )
     expect(mockSendTransaction).toHaveBeenCalledWith([expectedTx1, expectedTx2])
   })

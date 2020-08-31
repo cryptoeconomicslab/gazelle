@@ -71,8 +71,9 @@ export class ExitUsecase {
         // save exit action
         const action = createExitUserAction(
           addr,
-          stateUpdate.range,
-          claimedBlockNumber
+          [stateUpdate.range],
+          claimedBlockNumber,
+          stateUpdate.chunkId
         )
         const repo = await UserActionRepository.init(this.witnessDb)
         await repo.insertAction(claimedBlockNumber, stateUpdate.range, action)

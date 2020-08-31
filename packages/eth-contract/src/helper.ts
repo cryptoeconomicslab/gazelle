@@ -33,7 +33,8 @@ export function logToStateUpdate(value: any): StateUpdate {
     Address.from(value[0]),
     logToRange(value[1]),
     BigNumber.fromString(value[2].toString()),
-    stateObject
+    stateObject,
+    FixedBytes.fromHexString(32, value[4])
   )
 }
 
@@ -48,8 +49,9 @@ export function logToSignedTransaction(value: any): SignedTransaction {
     logToRange(value[1]),
     BigNumber.fromString(value[2].toString()),
     stateObject,
-    Address.from(value[4]),
-    Bytes.fromHexString(value[5])
+    FixedBytes.fromHexString(32, value[4]),
+    Address.from(value[5]),
+    Bytes.fromHexString(value[6])
   )
 }
 
@@ -99,6 +101,7 @@ export function stateUpdateToLog(stateUpdate: StateUpdate) {
     stateUpdate.depositContractAddress.data,
     rangeToLog(stateUpdate.range),
     ethers.utils.bigNumberify(stateUpdate.blockNumber.raw),
-    propertyToLog(stateUpdate.stateObject)
+    propertyToLog(stateUpdate.stateObject),
+    stateUpdate.chunkId.toHexString()
   ]
 }

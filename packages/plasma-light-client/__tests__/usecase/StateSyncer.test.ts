@@ -28,7 +28,6 @@ const commitmentVerifierAddress = Address.default()
 const checkpointAddress = Address.default()
 const depositContractAddress = Address.default()
 const tokenAddress = Address.default()
-const stateUpdateAddress = Address.default()
 const stateUpdate = su(0, 100)
 const remainStateUpdate = su(50, 100)
 const alice = Address.default()
@@ -51,6 +50,7 @@ function createTransaction(
     new Range(BigNumber.from(start), BigNumber.from(end)),
     BigNumber.from(blockNumber),
     new Property(Address.default(), [ovmContext.coder.encode(owner)]),
+    FixedBytes.default(32),
     from,
     Bytes.default(),
     BigNumber.from(blockNumber)
@@ -67,7 +67,8 @@ function createStateUpdate(
     depositContractAddress,
     new Range(BigNumber.from(start), BigNumber.from(end)),
     BigNumber.from(blockNumber),
-    new Property(Address.default(), [ovmContext.coder.encode(owner)])
+    new Property(Address.default(), [ovmContext.coder.encode(owner)]),
+    FixedBytes.default(32)
   )
 }
 
@@ -164,8 +165,6 @@ const MockTokenManager = jest
 const MockCheckpointDispute = jest.fn().mockImplementation(() => ({}))
 
 describe('StateSyncer', () => {
-  beforeEach(async () => {})
-
   test('sync latest checkpoint state 0-100', async () => {
     const witnessDb = new InMemoryKeyValueStore(Bytes.default())
     const checkpointRepository = await CheckpointRepository.init(witnessDb)

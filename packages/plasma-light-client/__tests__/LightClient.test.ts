@@ -4,7 +4,6 @@ import {
   UserActionRepository,
   SyncRepository,
   InclusionProofRepository,
-  ExitRepository,
   DepositedRangeRepository
 } from '../src/repository'
 import { setupContext } from '@cryptoeconomicslab/context'
@@ -18,7 +17,8 @@ import {
   BigNumber,
   Integer,
   Property,
-  Range
+  Range,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import deciderConfig from './config.local'
 import { DeciderConfig } from '@cryptoeconomicslab/ovm'
@@ -304,7 +304,8 @@ describe('LightClient', () => {
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(20)),
         BigNumber.from(0),
-        client.ownershipProperty(Address.from(client.address))
+        client.ownershipProperty(Address.from(client.address)),
+        FixedBytes.default(32)
       )
     })
 
@@ -341,13 +342,15 @@ describe('LightClient', () => {
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(20)),
         BigNumber.from(0),
-        client.ownershipProperty(Address.from(client.address))
+        client.ownershipProperty(Address.from(client.address)),
+        FixedBytes.default(32)
       )
       su2 = new StateUpdate(
         Address.from(depositContractAddress),
         new Range(BigNumber.from(30), BigNumber.from(40)),
         BigNumber.from(1),
-        client.ownershipProperty(Address.from(client.address))
+        client.ownershipProperty(Address.from(client.address)),
+        FixedBytes.default(32)
       )
 
       proof = new DoubleLayerInclusionProof(
@@ -454,8 +457,9 @@ describe('LightClient', () => {
       const blockNumber = BigNumber.from(1)
       const action = createDepositUserAction(
         tokenContractAddress,
-        range,
-        blockNumber
+        [range],
+        blockNumber,
+        FixedBytes.default(32)
       )
       const repository = await UserActionRepository.init(db)
       await repository.insertAction(blockNumber, range, action)
@@ -470,7 +474,8 @@ describe('LightClient', () => {
         Address.from(depositContractAddress),
         new Range(BigNumber.from(0), BigNumber.from(20)),
         BigNumber.from(0),
-        client.ownershipProperty(Address.from(client.address))
+        client.ownershipProperty(Address.from(client.address)),
+        FixedBytes.default(32)
       )
     )
     expect(owner).toEqual(Address.from(client.address))

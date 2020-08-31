@@ -5,7 +5,8 @@ import {
   Bytes,
   Range,
   BigNumber,
-  Property
+  Property,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import { setupContext } from '@cryptoeconomicslab/context'
 import Coder from '@cryptoeconomicslab/eth-coder'
@@ -101,7 +102,13 @@ describe('CheckpointDispute', () => {
   }
 
   function SU(range: Range, blockNumber: BigNumber, owner: Wallet) {
-    return new StateUpdate(TOKEN_ADDRESS, range, blockNumber, ownership(owner))
+    return new StateUpdate(
+      TOKEN_ADDRESS,
+      range,
+      blockNumber,
+      ownership(owner),
+      FixedBytes.default(32)
+    )
   }
 
   describe('handleCheckpointClaimed', () => {

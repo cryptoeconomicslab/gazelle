@@ -3,7 +3,9 @@ import {
   Bytes,
   Range,
   Struct,
-  Address
+  Address,
+  FixedBytes,
+  List
 } from '@cryptoeconomicslab/primitives'
 import JSBI from 'jsbi'
 
@@ -16,53 +18,67 @@ export enum ActionType {
 
 export function createDepositUserAction(
   tokenAddress: Address,
-  range: Range,
-  blockNumber: BigNumber
+  ranges: Range[],
+  blockNumber: BigNumber,
+  chunkId: FixedBytes
 ): UserAction {
   return new UserAction(
     ActionType.Deposit,
     tokenAddress,
-    range,
+    ranges,
     Address.default(),
-    blockNumber
+    blockNumber,
+    chunkId
   )
 }
 
 export function createExitUserAction(
   tokenAddress: Address,
-  range: Range,
-  blockNumber: BigNumber
+  ranges: Range[],
+  blockNumber: BigNumber,
+  chunkId: FixedBytes
 ): UserAction {
   return new UserAction(
     ActionType.Exit,
     tokenAddress,
-    range,
+    ranges,
     Address.default(),
-    blockNumber
+    blockNumber,
+    chunkId
   )
 }
 
 export function createSendUserAction(
   tokenAddress: Address,
-  range: Range,
+  ranges: Range[],
   to: Address,
-  blockNumber: BigNumber
+  blockNumber: BigNumber,
+  chunkId: FixedBytes
 ): UserAction {
-  return new UserAction(ActionType.Send, tokenAddress, range, to, blockNumber)
+  return new UserAction(
+    ActionType.Send,
+    tokenAddress,
+    ranges,
+    to,
+    blockNumber,
+    chunkId
+  )
 }
 
 export function createReceiveUserAction(
   tokenAddress: Address,
-  range: Range,
+  ranges: Range[],
   from: Address,
-  blockNumber: BigNumber
+  blockNumber: BigNumber,
+  chunkId: FixedBytes
 ): UserAction {
   return new UserAction(
     ActionType.Receive,
     tokenAddress,
-    range,
+    ranges,
     from,
-    blockNumber
+    blockNumber,
+    chunkId
   )
 }
 
@@ -73,9 +89,10 @@ export default class UserAction {
   constructor(
     private _type: ActionType,
     private _tokenContractAddress: Address,
-    private _range: Range,
+    private _ranges: Range[],
     private _counterParty: Address,
-    private _blockNumber: BigNumber
+    private _blockNumber: BigNumber,
+    private _chunkId: FixedBytes
   ) {}
 
   public toStruct(): Struct {
@@ -83,8 +100,11 @@ export default class UserAction {
       { key: 'type', value: Bytes.fromString(this._type) },
       { key: 'tokenContractAddress', value: this._tokenContractAddress },
       {
-        key: 'range',
-        value: this._range.toStruct()
+        key: 'ranges',
+        value: List.from(
+          { default: () => Range.getParamType() },
+          this._ranges.map(r => r.toStruct())
+        )
       },
       {
         key: 'counterParty',
@@ -93,6 +113,10 @@ export default class UserAction {
       {
         key: 'blockNumber',
         value: this._blockNumber
+      },
+      {
+        key: 'chunkId',
+        value: this._chunkId
       }
     ])
   }
@@ -102,8 +126,11 @@ export default class UserAction {
       { key: 'type', value: Bytes.default() },
       { key: 'tokenContractAddress', value: Address.default() },
       {
-        key: 'range',
-        value: Range.getParamType()
+        key: 'ranges',
+        value: List.default(
+          { default: () => Range.getParamType() },
+          Range.getParamType()
+        )
       },
       {
         key: 'counterParty',
@@ -112,6 +139,10 @@ export default class UserAction {
       {
         key: 'blockNumber',
         value: BigNumber.default()
+      },
+      {
+        key: 'chunkId',
+        value: FixedBytes.default(32)
       }
     ])
   }
@@ -119,15 +150,17 @@ export default class UserAction {
   public static fromStruct(struct: Struct): UserAction {
     const type = ActionType[(struct.data[0].value as Bytes).intoString()]
     const tokenAddress = struct.data[1].value as Address
-    const range = struct.data[2].value as Struct
+    const ranges = struct.data[2].value as List<Struct>
     const counterParty = struct.data[3].value as Address
     const blockNumber = struct.data[4].value as BigNumber
+    const chunkId = struct.data[5].value as FixedBytes
     return new UserAction(
       type,
       tokenAddress,
-      Range.fromStruct(range),
+      ranges.data.map(Range.fromStruct),
       counterParty,
-      blockNumber
+      blockNumber,
+      chunkId
     )
   }
 
@@ -140,7 +173,11 @@ export default class UserAction {
   }
 
   public get amount(): JSBI {
-    return JSBI.subtract(this._range.end.data, this._range.start.data)
+    return this._ranges.reduce(
+      (prev, current) =>
+        JSBI.add(prev, JSBI.subtract(current.end.data, current.start.data)),
+      JSBI.BigInt(0)
+    )
   }
 
   public get counterParty(): string {
@@ -151,10 +188,14 @@ export default class UserAction {
     return this._blockNumber.data
   }
 
-  public get range(): { start: string; end: string } {
-    return {
-      start: this._range.start.raw,
-      end: this._range.end.raw
-    }
+  public get chunkId(): string {
+    return this._chunkId.toHexString()
+  }
+
+  public get ranges(): Array<{ start: string; end: string }> {
+    return this._ranges.map(range => ({
+      start: range.start.raw,
+      end: range.end.raw
+    }))
   }
 }

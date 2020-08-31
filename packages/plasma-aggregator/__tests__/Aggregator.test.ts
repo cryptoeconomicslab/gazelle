@@ -17,7 +17,8 @@ import {
   Address,
   Bytes,
   BigNumber,
-  Range
+  Range,
+  FixedBytes
 } from '@cryptoeconomicslab/primitives'
 import { EthCoder as Coder } from '@cryptoeconomicslab/eth-coder'
 import { Wallet, Balance } from '@cryptoeconomicslab/wallet'
@@ -142,7 +143,8 @@ describe('Aggregator integration', () => {
       depositContractAddress,
       new Range(BigNumber.from(0), BigNumber.from(10)),
       BigNumber.from(0),
-      ownershipPredicate.makeProperty([coder.encode(ALIS_ADDRESS)])
+      ownershipPredicate.makeProperty([coder.encode(ALIS_ADDRESS)]),
+      FixedBytes.default(32)
     )
     const depositTx = new DepositTransaction(
       depositContractAddress,
@@ -176,7 +178,8 @@ describe('Aggregator integration', () => {
       depositContractAddress,
       new Range(BigNumber.from(0), BigNumber.from(10)),
       BigNumber.from(0),
-      ownershipPredicate.makeProperty([coder.encode(ALIS_ADDRESS)])
+      ownershipPredicate.makeProperty([coder.encode(ALIS_ADDRESS)]),
+      FixedBytes.default(32)
     )
     const depositTx = new DepositTransaction(
       depositContractAddress,
@@ -196,6 +199,7 @@ describe('Aggregator integration', () => {
       new Range(BigNumber.from(0), BigNumber.from(5)),
       BigNumber.from(5),
       nextStateObject,
+      FixedBytes.default(32),
       ALIS_ADDRESS
     )
     const signedTx = await tx.sign(ALIS_WALLET)
@@ -214,13 +218,15 @@ describe('Aggregator integration', () => {
         depositContractAddress,
         new Range(BigNumber.from(0), BigNumber.from(5)),
         BigNumber.from(1),
-        ownershipPredicate.makeProperty([coder.encode(BOB_ADDRESS)])
+        ownershipPredicate.makeProperty([coder.encode(BOB_ADDRESS)]),
+        FixedBytes.default(32)
       ),
       new StateUpdate(
         depositContractAddress,
         new Range(BigNumber.from(5), BigNumber.from(10)),
         BigNumber.from(0),
-        ownershipPredicate.makeProperty([coder.encode(ALIS_ADDRESS)])
+        ownershipPredicate.makeProperty([coder.encode(ALIS_ADDRESS)]),
+        FixedBytes.default(32)
       )
     ])
   })
