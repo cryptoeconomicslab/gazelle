@@ -1,6 +1,6 @@
 {
   "name": "@cryptoeconomicslab/eth-contract",
-  "version": "0.6.0-alpha.0",
+  "version": "0.6.0",
   "description": "eth-contract",
   "author": {
     "name": "Cryptoeconomics Lab",
@@ -29,15 +29,15 @@
     "clean": "rm -rf lib docs"
   },
   "dependencies": {
-    "@cryptoeconomicslab/contract": "^0.6.0-alpha.0",
-    "@cryptoeconomicslab/db": "^0.6.0-alpha.0",
-    "@cryptoeconomicslab/merkle-tree": "^0.6.0-alpha.0",
-    "@cryptoeconomicslab/ovm": "^0.6.0-alpha.0",
-    "@cryptoeconomicslab/plasma": "^0.6.0-alpha.0",
+    "@cryptoeconomicslab/contract": "^0.6.0",
+    "@cryptoeconomicslab/db": "^0.6.0",
+    "@cryptoeconomicslab/merkle-tree": "^0.6.0",
+    "@cryptoeconomicslab/ovm": "^0.6.0",
+    "@cryptoeconomicslab/plasma": "^0.6.0",
     "jsbi": "^3.1.2"
   },
   "devDependencies": {
-    "@cryptoeconomicslab/primitives": "^0.6.0-alpha.0",
+    "@cryptoeconomicslab/primitives": "^0.6.0",
     "ethers": "4.0.47"
   },
   "peerDependencies": {

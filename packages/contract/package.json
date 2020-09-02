@@ -1,6 +1,6 @@
 {
   "name": "@cryptoeconomicslab/contract",
-  "version": "0.6.0-alpha.0",
+  "version": "0.6.0",
   "description": "contract",
   "author": {
     "name": "Cryptoeconomics Lab",
@@ -29,16 +29,16 @@
     "clean": "rm -rf lib docs"
   },
   "dependencies": {
-    "@cryptoeconomicslab/coder": "^0.6.0-alpha.0",
-    "@cryptoeconomicslab/db": "^0.6.0-alpha.0",
-    "@cryptoeconomicslab/merkle-tree": "^0.6.0-alpha.0",
-    "@cryptoeconomicslab/ovm": "^0.6.0-alpha.0",
-    "@cryptoeconomicslab/plasma": "^0.6.0-alpha.0"
+    "@cryptoeconomicslab/coder": "^0.6.0",
+    "@cryptoeconomicslab/db": "^0.6.0",
+    "@cryptoeconomicslab/merkle-tree": "^0.6.0",
+    "@cryptoeconomicslab/ovm": "^0.6.0",
+    "@cryptoeconomicslab/plasma": "^0.6.0"
   },
   "gitHead": "7fc394b1b6fa00c275cf580edc8395268726be85",
   "devDependencies": {
     "@cryptoeconomicslab/level-kvs": "^0.0.4",
-    "@cryptoeconomicslab/primitives": "^0.6.0-alpha.0"
+    "@cryptoeconomicslab/primitives": "^0.6.0"
   },
   "peerDependencies": {
     "@cryptoeconomicslab/primitives": "^0.0.36"
