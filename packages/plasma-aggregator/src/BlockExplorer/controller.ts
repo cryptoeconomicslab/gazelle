@@ -1,4 +1,4 @@
-import { BigNumber, Address } from '@cryptoeconomicslab/primitives'
+import { FixedBytes, BigNumber, Address } from '@cryptoeconomicslab/primitives'
 import { Block } from '@cryptoeconomicslab/plasma'
 import { BlockItem, TransactionItem } from './Types'
 import {
@@ -107,5 +107,24 @@ export default class BlockExplorerController {
     if (stateUpdates.length === 0) return null
 
     return transformTransactionItemFrom(stateUpdates[0], block)
+  }
+
+  public async handleChunkedTransactionList(
+    blockNumber: BigNumber,
+    chunkId: FixedBytes
+  ): Promise<TransactionItem[]> {
+    // Parameter validation
+    if (!isValidParam(blockNumber)) throw new Error('Invalid Parameter')
+    const blockManager = this.blockManager
+    const latestBlockNumber = await blockManager.getCurrentBlockNumber()
+    if (JSBI.greaterThan(blockNumber.data, latestBlockNumber.data))
+      throw new Error('Invalid Parameter')
+
+    const block = await blockManager.getBlock(blockNumber)
+    if (!block) throw new Error('Unexpected error: Block not found')
+    return Array.from(block.stateUpdatesMap.values())
+      .reduce((prev, current) => prev.concat(current), [])
+      .filter(su => su.chunkId.equals(chunkId))
+      .map(su => transformTransactionItemFrom(su, block))
   }
 }

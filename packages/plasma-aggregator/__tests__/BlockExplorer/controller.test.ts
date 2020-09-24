@@ -19,16 +19,26 @@ import { BlockManager, StateManager } from '../../src/managers'
 const testAddr = '0x0000000000000000000000000000000000000001'
 
 // for test data generation
-const su = (bn: number, start: number, end: number) => {
+const su = (
+  bn: number,
+  start: number,
+  end: number,
+  chunkId: FixedBytes = FixedBytes.default(32)
+) => {
   return new StateUpdate(
     Address.default(),
     new Range(BigNumber.from(start), BigNumber.from(end)),
     BigNumber.from(bn),
     new Property(Address.default(), [Bytes.fromHexString(testAddr)]),
-    FixedBytes.default(32)
+    chunkId
   )
 }
 const TIME_STAMP = DateUtils.getCurrentDate()
+
+const CHUNK_ID = FixedBytes.fromHexString(
+  32,
+  '0xaa1a5ecbb9264ad434eb2cb8e7c0c9cd34cd9df204e5c982e91af502a128c0cc'
+)
 
 const block = (bn: number, addr: string, sus: StateUpdate[]) => {
   const map = new Map()
@@ -46,7 +56,11 @@ describe('BlockExplorerController', () => {
   beforeAll(async () => {
     new Array(12)
     const blocks = [
-      block(1, testAddr, [su(1, 0, 10), su(1, 10, 20), su(1, 30, 35)])
+      block(1, testAddr, [
+        su(1, 0, 10, CHUNK_ID),
+        su(1, 10, 20),
+        su(1, 30, 35, CHUNK_ID)
+      ])
     ].concat(
       Array(12)
         .fill(0)
@@ -317,7 +331,11 @@ describe('BlockExplorerController', () => {
 
   describe('handleTransactionList', () => {
     test('returns transactions at block', async () => {
-      const stateUpdates = [su(1, 0, 10), su(1, 10, 20), su(1, 30, 35)]
+      const stateUpdates = [
+        su(1, 0, 10, CHUNK_ID),
+        su(1, 10, 20),
+        su(1, 30, 35, CHUNK_ID)
+      ]
       const controller = new BlockExplorerController(blockManager, stateManager)
       const transactions = await controller.handleTransactionList(
         BigNumber.from(1)
@@ -359,7 +377,7 @@ describe('BlockExplorerController', () => {
   describe('handleTransaction', () => {
     test('returns transaction', async () => {
       const controller = new BlockExplorerController(blockManager, stateManager)
-      const s = su(1, 0, 10)
+      const s = su(1, 0, 10, CHUNK_ID)
       const tx = await controller.handleTransaction(
         BigNumber.from(1),
         Address.default(),
@@ -403,6 +421,34 @@ describe('BlockExplorerController', () => {
         BigNumber.from(120)
       )
       expect(tx).toBeNull()
+    })
+  })
+
+  describe('handleChunkedTransactionList', () => {
+    test('returns chunked transactions', async () => {
+      const stateUpdates = [su(1, 0, 10, CHUNK_ID), su(1, 30, 35, CHUNK_ID)]
+      const controller = new BlockExplorerController(blockManager, stateManager)
+      const transactions = await controller.handleChunkedTransactionList(
+        BigNumber.from(1),
+        CHUNK_ID
+      )
+      expect(transactions).toEqual(
+        stateUpdates.map(su => ({
+          hash: su.hash.toHexString(),
+          timestamp: TIME_STAMP,
+          mainchainBlockNumber: '10',
+          blockNumber: '1',
+          depositContractAddress: su.depositContractAddress.data,
+          stateObject: {
+            address: su.stateObject.deciderAddress.data,
+            parameter: [testAddr]
+          },
+          range: {
+            start: su.range.start.raw,
+            end: su.range.end.raw
+          }
+        }))
+      )
     })
   })
 })
