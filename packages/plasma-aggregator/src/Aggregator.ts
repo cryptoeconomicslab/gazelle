@@ -5,6 +5,7 @@ import {
   DeciderConfig
 } from '@cryptoeconomicslab/ovm'
 import {
+  FixedBytes,
   Address,
   Bytes,
   BigNumber,
@@ -15,7 +16,6 @@ import {
   TransactionReceipt,
   DepositTransaction,
   TRANSACTION_STATUS,
-  Block,
   PlasmaContractConfig,
   SignedTransaction
 } from '@cryptoeconomicslab/plasma'
@@ -242,6 +242,30 @@ export default class Aggregator {
             .status(404)
             .send('Not found')
             .end(0)
+        }
+      }
+    )
+
+    this.httpServer.get(
+      '/explorer/chunk',
+      async (req: Request, res: Response) => {
+        try {
+          const blockNumber = BigNumber.from(Number(req.query.blockNumber))
+          const chunkId = FixedBytes.fromHexString(32, req.params.chunkId)
+
+          const json = await controller.handleChunkedTransactionList(
+            blockNumber,
+            chunkId
+          )
+          res
+            .send(json)
+            .status(200)
+            .end()
+        } catch (e) {
+          res
+            .status(422)
+            .send('Invalid parameter chunkId')
+            .end()
         }
       }
     )
