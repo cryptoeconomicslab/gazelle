@@ -11,6 +11,8 @@ import IncludedTransaction from './IncludedTransaction'
 import DepositTransaction from './DepositTransaction'
 import Checkpoint from './Checkpoint'
 import Exit from './Exit'
+import StateUpdateWithFrom from './StateUpdateWithFrom'
+import StateUpdateWithFromRecord from './StateUpdateWithFromRecord'
 export * from './ExitChallenge'
 
 export {
@@ -25,5 +27,7 @@ export {
   Transaction,
   UnsignedTransaction,
   SignedTransaction,
-  IncludedTransaction
+  IncludedTransaction,
+  StateUpdateWithFrom,
+  StateUpdateWithFromRecord
 }
