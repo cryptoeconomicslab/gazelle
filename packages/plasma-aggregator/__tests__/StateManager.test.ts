@@ -10,7 +10,7 @@ import {
 } from '@cryptoeconomicslab/primitives'
 import {
   DepositTransaction,
-  StateUpdate,
+  StateUpdateWithFrom,
   UnsignedTransaction
 } from '@cryptoeconomicslab/plasma'
 import {
@@ -67,20 +67,22 @@ describe('StateManager', () => {
   function ownershipStateUpdate(
     address: Address,
     range: Range,
-    blockNumber: BigNumber
+    blockNumber: BigNumber,
+    from: Address = Address.default()
   ) {
-    return new StateUpdate(
+    return new StateUpdateWithFrom(
       DEPOSIT_ADDRESS,
       range,
       blockNumber,
       ownershipPredicate.makeProperty([Coder.encode(address)]),
-      FixedBytes.default(32)
+      FixedBytes.default(32),
+      from
     )
   }
 
   function depositTx(address: Address, range: Range, blockNumber: BigNumber) {
     const stateUpdate = ownershipStateUpdate(address, range, blockNumber)
-    return new DepositTransaction(DEPOSIT_ADDRESS, stateUpdate)
+    return new DepositTransaction(DEPOSIT_ADDRESS, stateUpdate.toStateUpdate())
   }
 
   beforeEach(async () => {
@@ -200,7 +202,8 @@ describe('StateManager', () => {
         ownershipStateUpdate(
           BOB_ADDRESS,
           new Range(BigNumber.from(0), BigNumber.from(5)),
-          BigNumber.from(1)
+          BigNumber.from(1),
+          ALIS_ADDRESS
         )
       )
     })
@@ -225,7 +228,8 @@ describe('StateManager', () => {
         ownershipStateUpdate(
           BOB_ADDRESS,
           new Range(BigNumber.from(0), BigNumber.from(3)),
-          BigNumber.from(1)
+          BigNumber.from(1),
+          ALIS_ADDRESS
         )
       )
     })
@@ -250,7 +254,8 @@ describe('StateManager', () => {
         ownershipStateUpdate(
           BOB_ADDRESS,
           new Range(BigNumber.from(0), BigNumber.from(10)),
-          BigNumber.from(1)
+          BigNumber.from(1),
+          ALIS_ADDRESS
         )
       )
     })
@@ -275,7 +280,8 @@ describe('StateManager', () => {
         ownershipStateUpdate(
           BOB_ADDRESS,
           new Range(BigNumber.from(2), BigNumber.from(7)),
-          BigNumber.from(1)
+          BigNumber.from(1),
+          ALIS_ADDRESS
         )
       )
     })

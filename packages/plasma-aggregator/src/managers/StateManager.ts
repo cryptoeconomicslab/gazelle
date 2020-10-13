@@ -1,5 +1,6 @@
 import {
   StateUpdate,
+  StateUpdateWithFrom,
   SignedTransaction,
   IncludedTransaction,
   DepositTransaction,
@@ -32,13 +33,13 @@ export default class StateManager {
     blockNumber: BigNumber,
     start: BigNumber,
     end: BigNumber
-  ): Promise<StateUpdate[]> {
+  ): Promise<StateUpdateWithFrom[]> {
     const { coder } = ovmContext
     const bucket = await this.db.bucket(Bytes.fromString('SU_AT_BLOCK'))
     const addressBucket = await bucket.bucket(Bytes.fromHexString(address.data))
     const blockBucket = await addressBucket.bucket(coder.encode(blockNumber))
     return (await blockBucket.get(start.data, end.data)).map(
-      StateUpdate.fromRangeRecord
+      StateUpdateWithFrom.fromRangeRecord
     )
   }
 
@@ -46,14 +47,14 @@ export default class StateManager {
     address: Address,
     start: BigNumber,
     end: BigNumber
-  ): Promise<StateUpdate[]> {
+  ): Promise<StateUpdateWithFrom[]> {
     const bucket = await this.db.bucket(Bytes.fromHexString(address.data))
     return (await bucket.get(start.data, end.data)).map(
-      StateUpdate.fromRangeRecord
+      StateUpdateWithFrom.fromRangeRecord
     )
   }
 
-  private async putStateUpdate(su: StateUpdate) {
+  private async putStateUpdate(su: StateUpdateWithFrom) {
     const bucket = await this.db.bucket(
       Bytes.fromHexString(su.depositContractAddress.data)
     )
@@ -64,7 +65,10 @@ export default class StateManager {
     )
   }
 
-  private async putStateUpdateAtBlock(su: StateUpdate, blockNumber: BigNumber) {
+  private async putStateUpdateAtBlock(
+    su: StateUpdateWithFrom,
+    blockNumber: BigNumber
+  ) {
     const { coder } = ovmContext
     const bucket = await this.db.bucket(Bytes.fromString('SU_AT_BLOCK'))
     const addressBucket = await bucket.bucket(
@@ -91,7 +95,7 @@ export default class StateManager {
     tx: SignedTransaction,
     nextBlockNumber: BigNumber,
     deciderManager: DeciderManager
-  ): Promise<StateUpdate> {
+  ): Promise<StateUpdateWithFrom> {
     console.log('execute state transition')
     const range = tx.range
     const prevStates = await this.resolveStateUpdates(
@@ -146,7 +150,7 @@ export default class StateManager {
     console.log('decide state transition')
     const decisions = await Promise.all(
       prevStates.map(async su =>
-        this.verifyStateTransition(su, tx, deciderManager)
+        this.verifyStateTransition(su.toStateUpdate(), tx, deciderManager)
       )
     )
 
@@ -154,19 +158,20 @@ export default class StateManager {
       throw new Error('InvalidTransaction')
     }
 
-    const nextStateUpdate = new StateUpdate(
+    const nextStateUpdate = new StateUpdateWithFrom(
       tx.depositContractAddress,
       tx.range,
       nextBlockNumber,
       tx.stateObject,
-      tx.chunkId
+      tx.chunkId,
+      tx.from
     )
 
     console.log('store tx data')
     // store data in db
     await this.storeTx(
       IncludedTransaction.fromSignedTransaction(tx, nextBlockNumber),
-      prevStates
+      prevStates.map(su => su.toStateUpdate())
     )
     await this.putStateUpdate(nextStateUpdate)
     await this.putStateUpdateAtBlock(nextStateUpdate, nextBlockNumber)
@@ -206,8 +211,9 @@ export default class StateManager {
     console.log('Deposited: ', tx.stateUpdate.toString())
     const stateUpdate = tx.stateUpdate
     stateUpdate.update({ blockNumber })
-    await this.putStateUpdate(stateUpdate)
-    await this.putStateUpdateAtBlock(stateUpdate, blockNumber)
+    const suWithFrom = stateUpdate.withFrom(Address.default())
+    await this.putStateUpdate(suWithFrom)
+    await this.putStateUpdateAtBlock(suWithFrom, blockNumber)
   }
 
   /**

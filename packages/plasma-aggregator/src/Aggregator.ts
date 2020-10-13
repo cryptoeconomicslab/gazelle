@@ -352,7 +352,6 @@ export default class Aggregator {
             })
         )
       ).reduce((acc, val) => [...acc, ...val], [])
-      console.log(stateUpdates)
       res
         .send(
           stateUpdates.map(s =>
@@ -488,12 +487,14 @@ export default class Aggregator {
         return
       }
 
-      const sus = await this.stateManager.resolveStateUpdatesAtBlock(
-        address,
-        BigNumber.from(b),
-        range.start,
-        range.end
-      )
+      const sus = (
+        await this.stateManager.resolveStateUpdatesAtBlock(
+          address,
+          BigNumber.from(b),
+          range.start,
+          range.end
+        )
+      ).map(su => su.toStateUpdate())
 
       try {
         witnesses = witnesses.concat(
@@ -576,7 +577,9 @@ export default class Aggregator {
         this.decider
       )
 
-      await this.blockManager.enqueuePendingStateUpdate(nextState)
+      await this.blockManager.enqueuePendingStateUpdate(
+        nextState.toStateUpdate()
+      )
       return new TransactionReceipt(
         TRANSACTION_STATUS.TRUE,
         nextBlockNumber,

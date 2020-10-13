@@ -13,6 +13,7 @@ import StateUpdateWithFromRecord from './StateUpdateWithFromRecord'
 
 import { Keccak256 } from '@cryptoeconomicslab/hash'
 import JSBI from 'jsbi'
+import { StateUpdate } from '.'
 
 /**
  * StateUpdate wrapper class
@@ -147,5 +148,15 @@ export default class StateUpdateWithFrom {
       { key: 'chunkId', value: this.chunkId },
       { key: 'from', value: this.from }
     ])
+  }
+
+  public toStateUpdate(): StateUpdate {
+    return new StateUpdate(
+      this.depositContractAddress,
+      this.range,
+      this.blockNumber,
+      this.stateObject,
+      this.chunkId
+    )
   }
 }

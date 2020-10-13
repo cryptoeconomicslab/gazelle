@@ -89,7 +89,10 @@ export async function initializeAggregatorWithBlocks(
     )) {
       await Promise.all(
         stateUpdates.map(async su => {
-          await stateManager['putStateUpdateAtBlock'](su, block.blockNumber)
+          await stateManager['putStateUpdateAtBlock'](
+            su.withFrom(Address.default()),
+            block.blockNumber
+          )
         })
       )
     }

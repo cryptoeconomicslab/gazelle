@@ -305,7 +305,7 @@ describe('light client', () => {
       {
         type: ActionType.Receive,
         amount: parseUnitsToJsbi('0.1'),
-        counterParty: bobLightClient.address
+        counterParty: aliceLightClient.address
       },
       {
         type: ActionType.Exit,
@@ -351,7 +351,7 @@ describe('light client', () => {
       {
         type: ActionType.Receive,
         amount: parseUnitsToJsbi('0.1'),
-        counterParty: bobLightClient.address
+        counterParty: aliceLightClient.address
       }
     ])
 
@@ -626,7 +626,7 @@ describe('light client', () => {
       {
         type: ActionType.Receive,
         amount: parseUnitsToJsbi('0.8'),
-        counterParty: aliceLightClient.address
+        counterParty: bobLightClient.address
       },
       {
         type: ActionType.Send,
@@ -779,7 +779,7 @@ describe('light client', () => {
       {
         type: ActionType.Receive,
         amount: parseUnitsToJsbi('0.2'),
-        counterParty: bobLightClient.address
+        counterParty: aliceLightClient.address
       }
     ])
   })
