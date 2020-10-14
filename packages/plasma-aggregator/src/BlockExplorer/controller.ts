@@ -106,7 +106,7 @@ export default class BlockExplorerController {
     )
     if (stateUpdates.length === 0) return null
 
-    return transformTransactionItemFrom(stateUpdates[0], block)
+    return transformTransactionItemFrom(stateUpdates[0].toStateUpdate(), block)
   }
 
   public async handleChunkedTransactionList(

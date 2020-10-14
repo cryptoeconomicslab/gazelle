@@ -8,7 +8,11 @@ import {
   Range
 } from '@cryptoeconomicslab/primitives'
 import { decodeStructable } from '@cryptoeconomicslab/coder'
-import { IncludedTransaction, StateUpdate } from '@cryptoeconomicslab/plasma'
+import {
+  IncludedTransaction,
+  StateUpdate,
+  StateUpdateWithFrom
+} from '@cryptoeconomicslab/plasma'
 import { KeyValueStore, putWitness } from '@cryptoeconomicslab/db'
 import { ICommitmentContract } from '@cryptoeconomicslab/contract'
 import { hint as Hint, DeciderManager } from '@cryptoeconomicslab/ovm'
@@ -165,17 +169,22 @@ export class StateSyncer {
 
     try {
       const res = await this.apiClient.syncState(address.data)
-      const stateUpdates: StateUpdate[] = res.data.map((s: string) =>
-        decodeStructable(StateUpdate, coder, Bytes.fromHexString(s))
+      const stateUpdates: StateUpdateWithFrom[] = res.data.map((s: string) =>
+        decodeStructable(StateUpdateWithFrom, coder, Bytes.fromHexString(s))
       )
+
       // if aggregator latest state doesn't have client state, client should check spending proof
       // clear verified state updates
       await this.syncTransfers()
       //  sync root hashes from `from` to `to`
       await this.syncRoots(from, to)
 
-      const incomingStateUpdatesMap = new Map<string, Array<StateUpdate>>()
-      for (const su of stateUpdates) {
+      const incomingStateUpdatesMap = new Map<
+        string,
+        Array<StateUpdateWithFrom>
+      >()
+      for (const suw of stateUpdates) {
+        const su = suw.toStateUpdate()
         await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
         const verified = await verifyCheckpoint(
           this.witnessDb,
@@ -188,7 +197,7 @@ export class StateSyncer {
         await stateUpdateRepository.insertVerifiedStateUpdate(su)
         const key = su.chunkId.toHexString()
         const chunkList = incomingStateUpdatesMap.get(key) || []
-        chunkList.push(su)
+        chunkList.push(suw)
         incomingStateUpdatesMap.set(key, chunkList)
       }
 
@@ -206,7 +215,7 @@ export class StateSyncer {
         const action = createReceiveUserAction(
           Address.from(tokenContractAddress),
           sus.map(su => su.range),
-          getOwner(su),
+          su.from,
           su.blockNumber,
           su.chunkId
         )
@@ -284,15 +293,20 @@ export class StateSyncer {
 
     try {
       const res = await this.apiClient.syncState(address.data, blockNumber)
-      const stateUpdates: StateUpdate[] = res.data.map((s: string) =>
-        decodeStructable(StateUpdate, coder, Bytes.fromHexString(s))
+      const stateUpdates: StateUpdateWithFrom[] = res.data.map((s: string) =>
+        decodeStructable(StateUpdateWithFrom, coder, Bytes.fromHexString(s))
       )
       await this.syncTransfers()
 
       // map from chunkId to array of stateUpdate
-      const incomingStateUpdatesMap = new Map<string, Array<StateUpdate>>()
+      const incomingStateUpdatesMap = new Map<
+        string,
+        Array<StateUpdateWithFrom>
+      >()
 
-      for (const su of stateUpdates) {
+      for (const suw of stateUpdates) {
+        const su = suw.toStateUpdate()
+
         await prepareCheckpointWitness(su, this.apiClient, this.witnessDb)
         const verified = await verifyCheckpoint(
           this.witnessDb,
@@ -313,7 +327,7 @@ export class StateSyncer {
 
         const key = su.chunkId.toHexString()
         const chunkList = incomingStateUpdatesMap.get(key) || []
-        chunkList.push(su)
+        chunkList.push(suw)
         incomingStateUpdatesMap.set(key, chunkList)
       }
 
@@ -332,7 +346,7 @@ export class StateSyncer {
         const action = createReceiveUserAction(
           Address.from(tokenContractAddress),
           sus.map(su => su.range),
-          getOwner(su), // FIXME: this is same as client's owner
+          su.from,
           su.blockNumber,
           su.chunkId
         )

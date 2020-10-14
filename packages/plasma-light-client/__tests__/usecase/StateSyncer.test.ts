@@ -12,7 +12,11 @@ import {
   Range
 } from '@cryptoeconomicslab/primitives'
 import { EventEmitter } from 'events'
-import { StateUpdate, IncludedTransaction } from '@cryptoeconomicslab/plasma'
+import {
+  StateUpdate,
+  IncludedTransaction,
+  StateUpdateWithFrom
+} from '@cryptoeconomicslab/plasma'
 import {
   CheckpointRepository,
   StateUpdateRepository
@@ -29,6 +33,7 @@ const checkpointAddress = Address.default()
 const depositContractAddress = Address.default()
 const tokenAddress = Address.default()
 const stateUpdate = su(0, 100)
+const stateUpdateWithFrom = stateUpdate.withFrom(Address.default())
 const remainStateUpdate = su(50, 100)
 const alice = Address.default()
 const bob = Address.default()
@@ -94,7 +99,7 @@ const merkleTree = generator.generate([
 // mock APIClient
 const MockApiClient = jest
   .fn()
-  .mockImplementation((latestStateUpdates: StateUpdate[]) => {
+  .mockImplementation((latestStateUpdates: StateUpdateWithFrom[]) => {
     return {
       syncState: jest.fn().mockResolvedValue({
         data: latestStateUpdates.map(su =>
@@ -174,7 +179,7 @@ describe('StateSyncer', () => {
       witnessDb,
       new MockCommitmentContract(),
       commitmentVerifierAddress,
-      new MockApiClient([stateUpdate]),
+      new MockApiClient([stateUpdateWithFrom]),
       new MockTokenManager(),
       new MockDeciderManager(),
       new MockCheckpointDispute()
@@ -195,7 +200,7 @@ describe('StateSyncer', () => {
       witnessDb,
       new MockCommitmentContract(),
       commitmentVerifierAddress,
-      new MockApiClient([stateUpdate]),
+      new MockApiClient([stateUpdateWithFrom]),
       new MockTokenManager(),
       new MockDeciderManager(),
       new MockCheckpointDispute()

@@ -7,6 +7,7 @@ import {
   DepositTransaction,
   UnsignedTransaction,
   StateUpdate,
+  StateUpdateWithFrom,
   TRANSACTION_STATUS,
   PlasmaContractConfig
 } from '@cryptoeconomicslab/plasma'
@@ -161,7 +162,7 @@ describe('Aggregator integration', () => {
       BigNumber.from(100)
     )
     expect(result.length).toBe(1)
-    expect(result).toEqual([stateUpdate])
+    expect(result).toEqual([stateUpdate.withFrom(Address.default())])
   })
 
   test('state transition', async () => {
@@ -214,19 +215,21 @@ describe('Aggregator integration', () => {
     )
     expect(stateUpdates.length).toBe(2)
     expect(stateUpdates).toEqual([
-      new StateUpdate(
+      new StateUpdateWithFrom(
         depositContractAddress,
         new Range(BigNumber.from(0), BigNumber.from(5)),
         BigNumber.from(1),
         ownershipPredicate.makeProperty([coder.encode(BOB_ADDRESS)]),
-        FixedBytes.default(32)
+        FixedBytes.default(32),
+        ALIS_ADDRESS
       ),
-      new StateUpdate(
+      new StateUpdateWithFrom(
         depositContractAddress,
         new Range(BigNumber.from(5), BigNumber.from(10)),
         BigNumber.from(0),
         ownershipPredicate.makeProperty([coder.encode(ALIS_ADDRESS)]),
-        FixedBytes.default(32)
+        FixedBytes.default(32),
+        Address.default()
       )
     ])
   })
